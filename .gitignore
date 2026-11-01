@@ -21,3 +21,9 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# Local-only notes (never commit)
+SCOPING.md
+AGENTS.md
+notes_Q&A.md
+CLAUDE.md
