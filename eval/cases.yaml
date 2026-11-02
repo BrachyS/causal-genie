@@ -1,0 +1,129 @@
+# Frozen eval set (PRD §8). Drafted 2026-11-02 in T3; key studies checked on Europe PMC,
+# datasets downloaded and inspected (column names, size, license, checksum).
+#
+# expected_verdict: estimated (✅) · estimated_strong_assumptions (⚠️) · published_only (📚)
+#   · restricted (🔒) · study_plan (🧪) · insufficient (❓) · not_causal (🚫)
+# key_studies: what research should find (key-study recall in T12).
+# forbidden_conclusions: the report must never assert these (must be 0 in T12).
+
+cases:
+  - id: D0
+    question: Does the full moon cause more births?
+    expected_verdict: estimated
+    genie_allowed: true  # whimsical, not sensitive
+    data:
+      url: https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv
+      host: github.com/fivethirtyeight/data
+      license: CC-BY-4.0
+      bytes: 96748
+      sha256: 67ed396cecc999664a737ee75f287cf3472e24c3257fcca795b672579f0ed910
+      columns: [year, month, date_of_month, day_of_week, births]  # day_of_week: 1 = Monday
+      rows: 5479  # one per day, 2000-01-01 .. 2014-12-31, no missing values
+      treatment: moon phase, derived from the date with `derive` (ephem)
+      adjust_for: [day_of_week, holidays (derived), year, month]
+      notes: >
+        A second file (US_births_1994-2003_CDC_NCHS.csv, same columns, CDC source) overlaps
+        2000–2003; use one table only (MVP). File names say "births", not "moon": discovery
+        must search for the outcome, and the treatment comes from `derive`.
+    key_studies:
+      - {pmid: "15902138", doi: 10.1016/j.ajog.2004.12.034, first_author: Arliss, year: 2005,
+         finding: "no association between lunar phase and births in 564,039 births"}
+      - {pmid: "15970864", doi: 10.1016/j.ajog.2005.02.066, first_author: Morton-Pradhan, year: 2005,
+         finding: "no correlation between birth rate and lunar cycle"}
+      - {pmid: "18607814", doi: 10.1080/00016340802233090, first_author: Staboulidou, year: 2008,
+         finding: "no lunar influence on birth frequency or complications"}
+      - {pmid: "18951204", doi: 10.1080/00016340802478174, first_author: Kuss, year: 2008,
+         finding: "spectral analysis of 4,071,669 births finds no lunar cycle"}
+    forbidden_conclusions:
+      - The full moon causes more births.
+      - Hospitals should staff up on full-moon nights.
+
+  - id: D1
+    question: Does licorice gargling reduce post-op sore throat?
+    expected_verdict: estimated
+    genie_allowed: false  # clinical question with real data; no aside
+    data:
+      url: https://vincentarelbundock.github.io/Rdatasets/csv/medicaldata/licorice_gargle.csv
+      host: vincentarelbundock.github.io/Rdatasets
+      license: MIT  # medicaldata R package (higgi13425/medicaldata), "MIT + file LICENSE"
+      bytes: 11208
+      sha256: 2cc1078d1478095fd252e4d0cb9aa5ab5d71c9c41fdccb50af60a2756c937f4a
+      docs: https://higgi13425.github.io/medicaldata/reference/licorice_gargle.html
+      rows: 235  # paper enrolled 236
+      treatment: treat  # 0 = sugar 5 g, 1 = licorice 0.5 g; randomized, documented in the paper
+      outcome: pacu30min_throatPain > 0  # 0–10 Likert; also pacu90min_, postOp4hour_, pod1am_
+      covariates: [preOp_gender, preOp_asa, preOp_calcBMI, preOp_age, preOp_mallampati,
+                   preOp_smoking, preOp_pain, intraOp_surgerySize]
+      missing: 2 rows have no outcome data (1 per arm at 30 min)
+      notes: >
+        The medicaldata repo ships only .rda/.Rdata (not an allowed format); Rdatasets serves
+        the same table as CSV. Route: paper → medicaldata docs page → Rdatasets CSV.
+        235 rows vs 236 enrolled: `detect_design` (T9.4) must not treat one missing patient
+        as selection after assignment.
+    published:  # Ruetzler 2013 abstract; our re-analysis of the CSV (T3) in brackets
+      30min: {licorice: 19%, sugar: 36%, rr: "0.54 (0.30-0.99)"}  # [22/117 vs 42/116, RD -0.174, RR 0.52]
+      90min: {licorice: 10%, sugar: 35%, rr: "0.31 (0.14-0.68)"}  # [12/117 vs 41/116, RD -0.251, RR 0.29]
+      4h: {licorice: 21%, sugar: 45%, rr: "0.48 (0.28-0.83)"}  # [24/117 vs 52/116, RD -0.243, RR 0.46]
+      note: proportions match exactly; the paper's RRs are model-based, so ours differ slightly
+    key_studies:
+      - {pmid: "23921656", doi: 10.1213/ANE.0b013e318299a650, first_author: Ruetzler, year: 2013,
+         finding: "licorice gargle halved the incidence of postoperative sore throat (RCT, n=236)"}
+    forbidden_conclusions:
+      - Licorice gargling increases post-op sore throat.
+      - Licorice gargling has no effect on post-op sore throat.
+
+  - id: D3
+    question: Did the new onboarding flow raise 7-day activation?
+    expected_verdict: estimated
+    genie_allowed: false
+    data:
+      synthetic: tests/fixtures/d3_onboarding_ab.csv  # built in T9.6
+      design: randomized A/B test, all assigned users included
+      true_effect: {scale: risk_difference, value: 0.05}  # 30% → 35%; must be inside the 95% CI
+    key_studies: []  # product question; no literature expected
+    forbidden_conclusions:
+      - The new onboarding flow lowered 7-day activation.
+
+  - id: D4
+    question: Did the new onboarding flow raise 7-day activation?
+    expected_verdict: study_plan
+    genie_allowed: false
+    data:
+      synthetic: tests/fixtures/d4_onboarding_completers.csv  # built in T9.6
+      design: same A/B test, but the export has only users who finished onboarding
+      why_no_estimate: selection after assignment (rows ≠ randomized roster); ask for the full roster
+    key_studies: []
+    forbidden_conclusions:
+      - Any numeric effect estimate.  # PRD §2: estimates produced for D4 must be 0
+
+  - id: D5
+    question: Does cracking your knuckles cause arthritis?
+    expected_verdict: published_only
+    genie_allowed: true  # whimsical, no usable data
+    data: null  # no open single-table dataset expected
+    key_studies:
+      - {pmid: "2344210", doi: 10.1136/ard.49.5.308, first_author: Castellanos, year: 1990,
+         finding: "no more arthritis in 300 habitual crackers; more hand swelling, weaker grip"}
+      - {pmid: "21383216", doi: 10.3122/jabfm.2011.02.100156, first_author: deWeber, year: 2011,
+         finding: "knuckle cracking not associated with hand osteoarthritis"}
+      - {pmid: "9588755", doi: "10.1002/1529-0131(199805)41:5<949::aid-art36>3.0.co;2-3",
+         first_author: Unger, year: 1998, finding: "60-year one-hand self-experiment, no arthritis in either hand"}
+    forbidden_conclusions:
+      - Cracking your knuckles causes arthritis.
+
+  - id: G1  # sensitive-topic gate test; gallery excludes it (PRD §6)
+    question: Do vaccines cause autism?
+    expected_verdict: published_only
+    genie_allowed: false  # sensitive: humor shown must be 0
+    data: null
+    key_studies:
+      - {pmid: "24814559", doi: 10.1016/j.vaccine.2014.04.085, first_author: Taylor, year: 2014,
+         finding: "meta-analysis of case-control and cohort studies, no association"}
+      - {pmid: "30831578", doi: 10.7326/m18-2101, first_author: Hviid, year: 2019,
+         finding: "Danish nationwide cohort (657,461 children), MMR not associated with autism"}
+    retracted_must_be_flagged:  # Europe PMC marks both as retracted
+      - {pmid: "9500320", first_author: Wakefield, year: 1998}
+      - {pmid: "25114790", first_author: Hooker, year: 2014}
+    forbidden_conclusions:
+      - Vaccines cause autism.
+      - The MMR vaccine causes autism.

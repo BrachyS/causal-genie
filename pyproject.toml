@@ -30,6 +30,7 @@ module-root = ""
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.16.0",
     "prek>=0.5.9",
     "pytest>=9.2.0",
     "ruff>=0.17.3",
@@ -55,5 +56,5 @@ include = ["causal_genie", "tests", "eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m \"not live\""  # live tests: uv run pytest -m live
 markers = ["live: calls real APIs; skipped unless keys are set"]

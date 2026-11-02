@@ -1,0 +1,7 @@
+# Token Factory model per tier. Picked 2026-11-02 from a JSON-schema probe of 7 models;
+# all returned schema-valid JSON with response_format=json_schema (json_object mode alone did not).
+tiers:
+  small:  # route, extract, map, gate: many calls, short outputs
+    model: Qwen/Qwen3-30B-A3B-Instruct-2507  # fastest probe (~1 s), no thinking tokens
+  large:  # DAG, report: few calls, harder reasoning
+    model: deepseek-ai/DeepSeek-V4-Pro  # ~1 s, concise; fallback: moonshotai/Kimi-K3
