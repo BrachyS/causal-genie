@@ -2,7 +2,7 @@
 
 > 2026-11-01 · Owner: Shuangshuang Liu · Team: **Sample Size of One** (solo)
 > Hackathon: [ODSC × Nebius](https://hackathon.odsc.ai/), **submissions close Fri Nov 20**. Required: **Nebius Token Factory** (models) and **Tavily** (search).
-> Budget: 5–10 h/week ≈ **14–27 h** total. This plan is **≈ 18.5 h**, leaving room for overruns.
+> Budget: 5–10 h/week ≈ **14–27 h** total. This plan is **≈ 19 h**, leaving room for overruns.
 > Background (landscape, full v2 design, checklists, IP notes) and coding-agent rules are kept in local-only files that are not in this repo.
 
 > [!WARNING]
@@ -36,7 +36,7 @@
 | Sourced, verifiable answers | 30% | Click a claim → source passage; click a number → tool result; primary sources; conflicts shown; certainty label |
 | Works end to end | 25% | Live run with real Token Factory + Tavily calls; graceful empty results and API failures |
 | Usefulness | 20% | Clear decision: "Can I trust this causal claim, and what would settle it?" |
-| Agent design | 15% | Planned queries incl. a disproving search, dedupe by study, evidence-flow counts, bounded loops |
+| Agent design | 15% | Hybrid research loop: the model plans each round (queries, `search` vs `extract`, proposed stop, a `why` per query) and the controller enforces caps and required coverage; disproving search, dedupe by study, evidence-flow counts |
 | Token Factory + Tavily | 10% | Both essential and visible in the trace |
 
 Submission: public repo · README · short demo video · no keys in the repo.
@@ -104,8 +104,14 @@ flowchart TD
     RT -->|not causal| NC[Short answer + causal rewrite]
     RT -->|causal| F[Frame as PECO]
 
-    F --> R[Research loop, max 3 rounds:<br/>search → dedupe → extract → check quotes]
-    R --> G[DAG from cited claims]
+    F --> P
+
+    subgraph RL [Research loop · max 3 rounds]
+        P[Model plans round:<br/>queries, search or extract, done?] --> T[Harness runs Tavily<br/>+ auto metadata → dedupe →<br/>extract records → check quotes]
+        T --> C{Controller:<br/>caps hit, saturated, or<br/>done + coverage met?}
+        C -->|no: hint missing coverage| P
+    end
+    C -->|yes| G[DAG from cited claims]
     G --> D[Data: find candidates → score → download]
     D -->|no usable data| VD
     D -->|dataset| I[Map columns → identify]
@@ -116,7 +122,7 @@ flowchart TD
     W --> OUT[Brief + DAG + sources]
 ```
 
-Loops are bounded. **Research:** repeat only for a named gap (no review/RCT found, a confounder type missing, an unsourced edge, a claim only from a secondary source); stop at 3 rounds or when a round adds < 2 new studies. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
+Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, when a round adds < 2 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim, a source for each DAG edge). If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
 
 ### 5.2 Verdicts (picked by the controller, never by the model)
 
@@ -137,7 +143,7 @@ A scaled-down **systematic review**. Each step is a prompt + schema or a simple 
 | Step | Lean MVP |
 |---|---|
 | **Frame** | PECO from `CausalQuery` drives every query and every include/exclude decision |
-| **Plan queries** | One query set per group: best existing answer (reviews first) · primary studies, incl. natural experiments (policy changes, staggered launches, thresholds) · mechanism · confounders · **evidence against the leading answer** · data availability. Lay + technical terms. Controller checks every group is present; ≤ 12 queries in round 1 |
+| **Plan each round** (model) | Round 1 covers every group: best existing answer (reviews first) · primary studies, incl. natural experiments (policy changes, staggered launches, thresholds) · mechanism · confounders · **evidence against the leading answer** · data availability. Lay + technical terms. ≤ 12 queries in round 1. Later rounds target what's missing, using the state summary (included studies, snippet-only sources, gaps, rounds left). Controller rejects a round-1 plan missing a group |
 | **Search** | Tavily `search` (advanced) + `extract`, preferring PubMed, Europe PMC, Cochrane, NIH/CDC, NBER, medRxiv. News, blogs and Wikipedia are leads only: follow them to the paper or mark the claim "secondary only" |
 | **Enrich** | Europe PMC: DOI, publication type, **retraction status** |
 | **Dedupe by study** | Group by DOI/PMID, then fuzzy title + first author + year. Ten news stories about one paper = one study |
@@ -145,6 +151,8 @@ A scaled-down **systematic review**. Each step is a prompt + schema or a simple 
 | **Check citations** | Tool: fuzzy match confirms the quote is in the fetched text. Model: does the quote support the claim? Failures are dropped or marked unresolved |
 | **Certainty** | Rule-based label, inspired by GRADE (§5.4) |
 | **Evidence flow** | Counts shown in the report: found → after dedupe → included, with exclusion reasons (PRISMA-style) |
+
+**Who decides in research:** the **model** writes query text, picks `search` or `extract` for each, and proposes when to stop. **Code** runs metadata on every new study (no judgment needed), dedupes, checks quotes, enforces caps and coverage, and makes the final stop decision. Tavily is the only search tool on the menu.
 
 ### 5.4 Certainty rule (controller)
 
@@ -175,6 +183,16 @@ class Study(BaseModel):
     retracted: bool; secondary_only: bool
     quotes: dict[str, str]             # field → verbatim passage
 
+class Query(BaseModel):
+    text: str
+    tool: Literal["search", "extract"]   # search = Tavily search; extract = Tavily extract (text = URL)
+    why: str                             # logged in the research log; not used for control
+
+class ResearchPlan(BaseModel):
+    queries: list[Query]
+    done: bool                           # a proposal; the controller makes the final call
+    done_reason: str
+
 class Claim(BaseModel):
     id: str; text: str
     kind: Literal["edge", "confounder", "effect_estimate", "null_result", "mechanism", "data_availability"]
@@ -200,7 +218,8 @@ The **claim ledger** is the list of `Claim`s; the report may only use ledger ent
 
 ### 5.6 Data discovery
 
-- **Sources:** data links from included studies first (Zenodo, Dataverse, Dryad, GitHub), then Tavily + repository search on allowlisted hosts: FiveThirtyEight, `medicaldata`, Rdatasets, Zenodo, Harvard Dataverse, CDC NHANES, ClinicalTrials.gov v2. Restricted hosts (Vivli, YODA, BioLINCC, PhysioNet/MIMIC) → 🔒, never downloaded.
+- **Sources:** data links from included studies first, then Tavily + repository search, both limited to the allowlist: Zenodo, Harvard Dataverse, Dryad, figshare, OSF, Rdatasets, ClinicalTrials.gov v2, and named GitHub repos only (FiveThirtyEight `data`, `medicaldata`). Restricted hosts (Vivli, YODA, BioLINCC, PhysioNet/MIMIC, UK Biobank) → 🔒, never downloaded.
+- **Single table only in the MVP.** Multi-table datasets (e.g., NHANES, which also needs survey weights) are reported as candidates the MVP can't use yet, usually → ⚠️ or 📚. Safe joins are stretch work.
 - **Screening:** rule filter (host, license, format, size, keywords; no tokens) → small model scores the top 10 on coverage of DAG nodes → download the top 1, next if it fails, ≤ 3. The eval logs the accepted dataset's rank so the top-10 cap can be checked.
 - **Must-haves:** treatment, outcome and adjustment set covered · open license · matching population/period · single table · ≤ 50 MB.
 - **Hard rules:** allowlist only · no private-network addresses · CSV/TSV/XLSX/Parquet/ZIP only · nothing executed from downloads · DOI, license, date and checksum recorded · downloads never committed · **finding a dataset never justifies an estimate on its own.**
@@ -227,6 +246,8 @@ Sections: Verdict · Plain summary (≤ 120 words) · Question (PECO) · DAG · 
 | Search finds nothing useful | Reformulate once → ❓ listing what was searched |
 | API timeout / rate limit | Backoff + one retry → partial report naming the failed step (never "no evidence exists") |
 | Model output fails schema | One repair retry → logged error |
+| Research plan fails schema | One repair retry → fallback plan: the preset query groups (the fixed loop) |
+| Model says done too early | Controller overrides; the next prompt names the missing coverage |
 | DAG cycle | Drop the weakest-evidence edge (logged) |
 | No dataset / restricted | 📚 with rejected candidates / 🔒 with access steps |
 | Selection after assignment | Withhold the estimate; ask for the full roster |
@@ -265,7 +286,7 @@ Gallery (replay): full moon/births, sugar/hyperactivity, knuckle cracking, shavi
 
 ---
 
-## 7. Build plan (≈ 18.5 h)
+## 7. Build plan (≈ 19 h)
 
 Build a thin end-to-end slice first (D1 by end of week 1), then deepen research.
 
@@ -277,8 +298,8 @@ Build a thin end-to-end slice first (D1 by end of week 1), then deepen research.
 | T3 | Dataset audit: D0 and D1 data downloadable with needed columns | 1 h | `eval/cases.yaml` drafted |
 | T4 | Schemas, run state, LLM client (tiers + repair retry), router | 1.5 h | Unit tests pass |
 | T5 | **Thin slice D1:** few queries → paper → `medicaldata` → `rct_effect` → plain report | 2 h | D1 runs end to end; RCT tests pass |
-| **Week 2 · Nov 9–15** | | **~7.5 h** | |
-| T6 | Research method (§5.3–5.4): query groups, Europe PMC, dedupe, per-source extraction, citation checks, certainty, evidence-flow counts, gap loop | 3 h | D0/D1 key studies found; ≥ 90% quotes grounded |
+| **Week 2 · Nov 9–15** | | **~8 h** | |
+| T6 | Research method (§5.3–5.4): hybrid loop (`ResearchPlan`, tool menu, coverage check, override, fallback plan), Europe PMC, dedupe, per-source extraction, citation checks, certainty, evidence-flow counts | 3.5 h | D0/D1 key studies found; ≥ 90% quotes grounded; trace shows each round's plan and `why`; override and fallback tested |
 | T7 | DAG step + render | 1 h | Edges cite claims; acyclic |
 | T8 | Data discovery (§5.6) | 1.5 h | D0 and D1 data found automatically |
 | T9 | Mapping, `derive`, `identify`, `detect_design` (incl. DiD/IV/RDD recognition), `backdoor_effect` | 2 h | Textbook DAG + synthetic tests pass; D4 flagged; DiD and RDD fixtures recognized |
@@ -305,6 +326,7 @@ Build a thin end-to-end slice first (D1 by end of week 1), then deepen research.
 | Unsupported numbers / forbidden conclusions | Must be 0 |
 | Disproving search ran | Every case |
 | Design recognition | `detect_design` labels the DiD, IV and RDD fixtures correctly (unit tests) |
+| Fixed vs hybrid loop | Key-study recall on the 6 cases, fallback plan only vs model-planned rounds. Keep whichever wins |
 | Data rank | Rank of the accepted dataset among scored candidates |
 | Cost and latency | Per run and per route |
 
