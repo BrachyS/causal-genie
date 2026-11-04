@@ -154,6 +154,8 @@ A scaled-down **systematic review**. Each step is a prompt + schema or a simple 
 
 **Who decides in research:** the **model** writes query text, picks `search` or `extract` for each, and proposes when to stop. **Code** runs metadata on every new study (no judgment needed), dedupes, checks quotes, enforces caps and coverage, and makes the final stop decision. Tavily is the only search tool on the menu.
 
+> **Open decision (deferred): Tavily `include_domains`.** Today `Searcher.search` sends no domain filter. Options: research queries use `include_domains_mode="prefer"` with the preferred sources above (not `"restrict"`, which would cut leads, the disproving search and journal sites); data queries (§5.6) use `"restrict"` with hosts taken from `download.ALLOWLIST`. Tavily filters by domain only, so `download.py` keeps the path checks (e.g. named GitHub repos). If adopted, the replay key must include the domains, not just the query text. Decide once T6 shows whether key-study recall or off-list noise is the bigger problem.
+
 ### 5.4 Certainty rule (controller)
 
 Start at **High** if a meta-analysis or RCT matches PECO, **Low** if the best evidence is observational, **Very low** if it's only case reports or secondary sources. Go down one level if included studies point in different directions with no explanation, and one more if the best evidence is about a different population or exposure. Conflicts are explained, not averaged; no "7 studies say yes" vote counting.
@@ -218,7 +220,7 @@ The **claim ledger** is the list of `Claim`s; the report may only use ledger ent
 
 ### 5.6 Data discovery
 
-- **Sources:** data links from included studies first, then Tavily + repository search, both limited to the allowlist: Zenodo, Harvard Dataverse, Dryad, figshare, OSF, Rdatasets, ClinicalTrials.gov v2, and named GitHub repos only (FiveThirtyEight `data`, `medicaldata`). Restricted hosts (Vivli, YODA, BioLINCC, PhysioNet/MIMIC, UK Biobank) → 🔒, never downloaded.
+- **Sources:** data links from included studies first, then Tavily + repository search, both limited to the allowlist: Zenodo, Harvard Dataverse, Dryad, figshare, OSF, Rdatasets, ClinicalTrials.gov v2, and named GitHub repos only (FiveThirtyEight `data`, `medicaldata`). Restricted hosts (Vivli, YODA, BioLINCC, PhysioNet/MIMIC, UK Biobank) → 🔒, never downloaded. Whether Tavily enforces the allowlist at search time is an open decision (see §5.3).
 - **Single table only in the MVP.** Multi-table datasets (e.g., NHANES, which also needs survey weights) are reported as candidates the MVP can't use yet, usually → ⚠️ or 📚. Safe joins are stretch work.
 - **Screening:** rule filter (host, license, format, size, keywords; no tokens) → small model scores the top 10 on coverage of DAG nodes → download the top 1, next if it fails, ≤ 3. The eval logs the accepted dataset's rank so the top-10 cap can be checked.
 - **Must-haves:** treatment, outcome and adjustment set covered · open license · matching population/period · single table · ≤ 50 MB.
@@ -233,6 +235,8 @@ The **claim ledger** is the list of `Claim`s; the report may only use ledger ent
 | `rct_effect` | Risk difference + Newcombe CI; mean difference + Welch CI | Independent calculation within 1e-4; zero-event arm |
 | `backdoor_effect` | OLS/logistic adjustment with robust SEs; naive estimate alongside | Synthetic data with known effect |
 | `derive` | Day of week, holidays, moon phase (`ephem`) | Spot-check vs published moon calendars |
+
+**Estimand scope (MVP):** the MVP estimates ATE only. `target = "ATT"` is used for report labeling and for detecting a mismatch with what the design identifies (e.g., DiD → ATT); a dedicated ATT estimator (weighting/matching) is v2.
 
 ### 5.8 Report and Genie mode
 

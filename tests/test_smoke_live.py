@@ -1,12 +1,17 @@
 """Live smoke tests: real Token Factory and Tavily calls. Run with `uv run pytest -m live`."""
 
+from pathlib import Path
+
+import httpx
 import pytest
 from openai import OpenAI
 from pydantic import BaseModel
 from tavily import TavilyClient
 
+from causal_genie.agent import controller
 from causal_genie.agent.router import route
 from causal_genie.llm.client import LLMClient, load_models
+from causal_genie.tools.search import Searcher
 
 pytestmark = pytest.mark.live
 
@@ -68,3 +73,28 @@ def test_router_with_real_small_model(nebius: OpenAI, question: str, kind: str) 
 
     assert r.kind == kind
     assert llm.calls[0].tokens_in > 0
+
+
+def test_d1_end_to_end_reproduces_the_trial(
+    nebius: OpenAI, tavily: TavilyClient, tmp_path: Path
+) -> None:
+    llm = LLMClient(openai=nebius, models=load_models())
+
+    with httpx.Client(timeout=60) as http:
+        state = controller.run(
+            "Does licorice gargling reduce post-op sore throat?",
+            llm,
+            Searcher(tavily),
+            http,
+            tmp_path / "runs",
+            tmp_path / "cache",
+            ask=None,
+        )
+
+    assert state.verdict == "estimated"
+    out = state.results[0].outputs
+    # Ruetzler 2013: 19% vs 36% sore throat at 30 min (eval/cases.yaml, D1)
+    assert (out["events_treated"], out["n_treated"]) == (22, 117)
+    assert (out["events_control"], out["n_control"]) == (42, 116)
+    urls = [h.url for call in state.searches for h in call.hits]
+    assert any("23921656" in url for url in urls)  # the trial paper was found

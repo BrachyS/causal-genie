@@ -11,14 +11,17 @@ from causal_genie.llm.client import LLMClient
 
 
 def normalize(question: str) -> str:
+    """Key for exact-repeat matching: lowercase, no punctuation, so trivial edits still match."""
     return re.sub(r"[^a-z0-9 ]", "", question.lower()).strip()
 
 
 def route(question: str, llm: LLMClient, cached: dict[str, str], gallery: dict[str, str]) -> Route:
     """Pick the route for `question`; `cached` and `gallery` map past questions to run ids.
 
-    Replays need an exact match after normalizing case and punctuation: fuzzy text scores rate
-    one-word changes ("sugar" → "salt") as near-identical, which would replay the wrong answer.
+    A past run is reused only if the question is identical, ignoring case and punctuation.
+    We don't use fuzzy matching: "Does sugar raise blood pressure?" and "Does salt raise blood
+    pressure?" look almost the same as text but are different questions, so a fuzzy match would
+    return the wrong answer.
     """
     key = normalize(question)
     for kind, runs in (("cache", cached), ("gallery", gallery)):

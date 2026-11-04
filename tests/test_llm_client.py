@@ -24,7 +24,7 @@ def test_complete_returns_validated_output_and_records_call(make_llm) -> None:
     assert request["messages"][1] == {"role": "user", "content": "what is 3+4?"}
     assert request["response_format"]["type"] == "json_schema"
     (call,) = llm.calls
-    assert (call.prompt, call.tier, call.model) == ("echo", "small", "test/small")
+    assert (call.prompt_name, call.tier, call.model) == ("echo", "small", "test/small")
     assert (call.response, call.tokens_in, call.tokens_out) == ('{"value": 7}', 10, 5)
 
 
@@ -44,6 +44,30 @@ def test_second_invalid_output_raises(make_llm) -> None:
 
     with pytest.raises(ValidationError):
         llm.complete("small", "echo", "what is 3+4?", Answer)
+
+
+def test_failed_repair_is_recorded_with_its_tokens_and_error(make_llm) -> None:
+    llm, _ = make_llm(["not json", '{"wrong": 1}'])
+
+    with pytest.raises(ValidationError):
+        llm.complete("small", "echo", "what is 3+4?", Answer)
+
+    (call,) = llm.calls
+    assert call.response == '{"wrong": 1}'
+    assert (call.tokens_in, call.tokens_out) == (20, 10)  # both attempts are counted
+    assert call.error is not None and "value" in call.error
+
+
+def test_replay_of_a_failed_call_raises_again(make_llm, prompts_dir) -> None:
+    live, _ = make_llm(["not json", '{"wrong": 1}'])
+    with pytest.raises(ValidationError):
+        live.complete("small", "echo", "what is 3+4?", Answer)
+
+    replay = LLMClient.from_replay(live.calls, prompts_dir=prompts_dir)
+
+    with pytest.raises(ValidationError):
+        replay.complete("small", "echo", "what is 3+4?", Answer)
+    assert replay.calls == live.calls
 
 
 def test_transient_api_error_gets_one_retry(make_llm) -> None:

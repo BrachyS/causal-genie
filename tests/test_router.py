@@ -7,6 +7,7 @@ GALLERY = {"Does sugar cause hyperactivity in kids?": "gallery-sugar"}
 
 
 def decision(causal: bool, rewrite: str | None = None) -> str:
+    """Router model output saying whether the question is causal."""
     return json.dumps({"causal": causal, "reason": "test", "causal_rewrite": rewrite})
 
 

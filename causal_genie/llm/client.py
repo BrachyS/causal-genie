@@ -48,6 +48,11 @@ def make_openai() -> OpenAI:
 
 
 class LLMClient:
+    """Calls models with a prompt file and a schema, recording every call for replay.
+
+    With `openai=None` it answers only from `replay`, so saved runs reproduce offline.
+    """
+
     def __init__(
         self,
         openai: OpenAI | None,
@@ -60,7 +65,7 @@ class LLMClient:
         self.models = models
         self.prompts_dir = prompts_dir
         self.retry_wait_s = retry_wait_s
-        self.replay = {(c.prompt, c.user): c for c in replay or []}
+        self.replay = {(c.prompt_name, c.user_content): c for c in replay or []}
         self.calls: list[LLMCall] = []
 
     @classmethod
@@ -69,30 +74,45 @@ class LLMClient:
         models: dict[str, str] = {c.tier: c.model for c in calls}
         return cls(openai=None, models=models, prompts_dir=prompts_dir, replay=calls)
 
-    def complete(self, tier: Tier, prompt: str, user: str, schema: type[T]) -> T:
-        """Run prompt `prompt` on `user` content with the `tier` model; return validated output."""
-        inputs = {"prompt": prompt, "tier": tier, "user": user[:200], "user_chars": len(user)}
+    def complete(self, tier: Tier, prompt_name: str, user_content: str, schema: type[T]) -> T:
+        """Ask the `tier` model to apply `prompts/<prompt_name>.md` to `user_content`.
+
+        Returns an instance of `schema`: the model is forced to answer in that shape, and its
+        JSON is validated into it.
+        """
+        inputs = {
+            "prompt_name": prompt_name,
+            "tier": tier,
+            "user_content": user_content[:200],
+            "user_chars": len(user_content),
+        }
         with log_step("llm", **inputs) as rec:
             if self.openai is None:
-                call = self._replayed(prompt, user)
-                output = schema.model_validate_json(call.response)
+                call = self._replayed(prompt_name, user_content)
             else:
-                call, output = self._live(tier, prompt, user, schema)
+                call = self._live(tier, prompt_name, user_content, schema)
+            # Recorded before validating, so a failed call still shows its tokens and output.
             self.calls.append(call)
             rec.update(model=call.model, tokens_in=call.tokens_in, tokens_out=call.tokens_out)
+            output = schema.model_validate_json(call.response)
             rec["output"] = output.model_dump()
             return output
 
-    def _replayed(self, prompt: str, user: str) -> LLMCall:
-        if (prompt, user) not in self.replay:
-            raise KeyError(f"no recorded call for prompt {prompt!r} with this input")
-        return self.replay[(prompt, user)]
+    def _replayed(self, prompt_name: str, user_content: str) -> LLMCall:
+        """The recorded call for this prompt and input; a miss is an error, not a live call."""
+        if (prompt_name, user_content) not in self.replay:
+            raise KeyError(f"no recorded call for prompt {prompt_name!r} with this input")
+        return self.replay[(prompt_name, user_content)]
 
-    def _live(self, tier: Tier, prompt: str, user: str, schema: type[T]) -> tuple[LLMCall, T]:
+    def _live(self, tier: Tier, prompt_name: str, user_content: str, schema: type[T]) -> LLMCall:
+        """Call the model, with one repair retry if its JSON fails the schema check.
+
+        If the repair also fails, the call is returned with `error` set; `complete` then raises.
+        """
         model = self.models[tier]
         messages = [
-            {"role": "system", "content": (self.prompts_dir / f"{prompt}.md").read_text()},
-            {"role": "user", "content": user},
+            {"role": "system", "content": (self.prompts_dir / f"{prompt_name}.md").read_text()},
+            {"role": "user", "content": user_content},
         ]
         response_format: ResponseFormatJSONSchema = {
             "type": "json_schema",
@@ -105,10 +125,11 @@ class LLMClient:
         start = time.perf_counter()
 
         text, tokens_in, tokens_out = self._ask(model, messages, response_format)
+        error = None
         try:
-            output = schema.model_validate_json(text)
+            schema.model_validate_json(text)
         except ValidationError as e:
-            log.warning("prompt=%s output failed schema, repairing: %s", prompt, e)
+            log.warning("prompt=%s output failed schema, repairing: %s", prompt_name, e)
             messages += [
                 {"role": "assistant", "content": text},
                 {
@@ -119,19 +140,23 @@ class LLMClient:
             ]
             text, more_in, more_out = self._ask(model, messages, response_format)
             tokens_in, tokens_out = tokens_in + more_in, tokens_out + more_out
-            output = schema.model_validate_json(text)
+            try:
+                schema.model_validate_json(text)
+            except ValidationError as e2:
+                error = str(e2)
 
         call = LLMCall(
-            prompt=prompt,
+            prompt_name=prompt_name,
             tier=tier,
             model=model,
-            user=user,
+            user_content=user_content,
             response=text,
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             latency_s=time.perf_counter() - start,
+            error=error,
         )
-        return call, output
+        return call
 
     def _ask(
         self, model: str, messages: list, response_format: ResponseFormatJSONSchema
@@ -149,6 +174,7 @@ class LLMClient:
         return response.choices[0].message.content or "", *tokens
 
     def _create(self, model: str, messages: list, response_format: ResponseFormatJSONSchema):
+        """The raw API request; deterministic (temperature 0) and token-capped."""
         assert self.openai is not None
         return self.openai.chat.completions.create(
             model=model,

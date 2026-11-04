@@ -4,6 +4,7 @@ from causal_genie.log import log_step
 
 
 def step_records(caplog: pytest.LogCaptureFixture) -> list[dict]:
+    """The step log records captured, as dicts, so tests can check their fields."""
     return [r.__dict__ for r in caplog.records if r.name == "causal_genie.step"]
 
 

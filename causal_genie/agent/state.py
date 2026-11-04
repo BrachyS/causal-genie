@@ -131,23 +131,64 @@ class Route(Schema):
     causal_rewrite: str | None
 
 
+class SearchHit(Schema):
+    url: str
+    title: str
+    content: str  # Tavily's snippet: data to read, never instructions
+    score: float
+
+
+class SearchCall(Schema):
+    """One web search as recorded for tracing and replay."""
+
+    query: str
+    hits: list[SearchHit]
+    latency_s: float
+
+
+class Download(Schema):
+    """Provenance of one downloaded file, so any estimate can be traced to exact bytes."""
+
+    url: str
+    path: str  # local file under cache/; never committed
+    sha256: str
+    bytes: int
+    retrieved_at: str  # ISO 8601, UTC
+    doi: str | None
+    license: str | None
+
+
+Verdict = Literal[
+    "estimated",
+    "estimated_strong_assumptions",
+    "published_only",
+    "restricted",
+    "study_plan",
+    "insufficient",
+    "not_causal",
+]
+
+
 class LLMCall(Schema):
     """One model call as recorded for tracing, token counts and replay."""
 
-    prompt: str
+    prompt_name: str
     tier: Literal["small", "large"]
     model: str
-    user: str
-    response: str  # final, schema-valid output text
+    user_content: str
+    response: str  # final output text; schema-valid unless `error` is set
     tokens_in: int  # summed over the repair attempt, if any
     tokens_out: int
     latency_s: float
+    error: str | None = None  # validation error left after the repair attempt
 
 
 class RunState(Schema):
     run_id: str
     question: str
     route: Route | None = None
+    # clarifying question → user's answer; replay reuses the answers
+    clarifications: dict[str, str] = Field(default_factory=dict)
     query: CausalQuery | None = None
     plans: list[ResearchPlan] = Field(default_factory=list)
     studies: list[Study] = Field(default_factory=list)
@@ -155,11 +196,16 @@ class RunState(Schema):
     edges: list[DagEdge] = Field(default_factory=list)
     datasets: list[DatasetCandidate] = Field(default_factory=list)
     results: list[Result] = Field(default_factory=list)
+    searches: list[SearchCall] = Field(default_factory=list)
+    downloads: list[Download] = Field(default_factory=list)
+    verdict: Verdict | None = None  # set by the controller only
+    report: str | None = None
     llm_calls: list[LLMCall] = Field(default_factory=list)
     versions: dict[str, str] = Field(default_factory=dict)  # models, tools, package
 
     @property
     def tokens(self) -> dict[str, int]:
+        """Total model tokens in and out across the run, for cost tracking."""
         return {
             "in": sum(c.tokens_in for c in self.llm_calls),
             "out": sum(c.tokens_out for c in self.llm_calls),
@@ -167,6 +213,7 @@ class RunState(Schema):
 
     @property
     def llm_latency_s(self) -> float:
+        """Total time spent waiting on the model across the run."""
         return sum(c.latency_s for c in self.llm_calls)
 
     def save(self, runs_dir: Path) -> Path:
@@ -178,4 +225,5 @@ class RunState(Schema):
 
     @classmethod
     def load(cls, path: Path) -> "RunState":
+        """Read a run saved by `save`, validating it against the schema."""
         return cls.model_validate_json(path.read_text())
