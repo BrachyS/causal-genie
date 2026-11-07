@@ -18,6 +18,7 @@ def test_search_returns_hits_and_records_call(searcher, fake_tavily) -> None:
 
     assert [h.url for h in hits] == ["https://pubmed.ncbi.nlm.nih.gov/23921656/"]
     assert fake_tavily.requests[0]["search_depth"] == "advanced"
+    assert fake_tavily.requests[0]["max_results"] == 10  # same credit cost as 5; more recall
     (call,) = searcher.calls
     assert call.query == "licorice gargle sore throat"
     assert call.hits == hits

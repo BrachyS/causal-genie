@@ -36,7 +36,7 @@ class Searcher:
     def __init__(
         self,
         tavily: TavilyClient | None,
-        max_results: int = 5,
+        max_results: int = 10,
         replay: list[SearchCall] | None = None,
         replay_extracts: list[ExtractCall] | None = None,
     ) -> None:
