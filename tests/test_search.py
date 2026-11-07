@@ -3,7 +3,8 @@ from typing import cast
 import pytest
 from tavily import TavilyClient
 
-from causal_genie.tools.search import Searcher
+from causal_genie.agent.state import SearchCall
+from causal_genie.tools.search import RESEARCH_DOMAINS, Searcher
 
 
 @pytest.fixture
@@ -55,3 +56,35 @@ def test_extract_replays_without_tavily(searcher) -> None:
     assert replay.extract("https://example.org/paper") == live
     with pytest.raises(KeyError, match="no recorded extract"):
         replay.extract("https://example.org/other")
+
+
+def test_search_without_domains_sends_no_domain_filter(searcher, fake_tavily) -> None:
+    searcher.search("licorice gargle sore throat")
+
+    assert "include_domains" not in fake_tavily.requests[0]
+    assert searcher.calls[0].domains == []
+
+
+def test_preferred_domains_are_sent_in_prefer_mode_and_recorded(searcher, fake_tavily) -> None:
+    searcher.search("licorice gargle sore throat", domains=RESEARCH_DOMAINS)
+
+    request = fake_tavily.requests[0]
+    assert request["include_domains"] == list(RESEARCH_DOMAINS)
+    assert request["include_domains_mode"] == "prefer"  # never restrict: news stays a lead
+    assert searcher.calls[0].domains == list(RESEARCH_DOMAINS)
+
+
+def test_replay_matches_on_query_and_domains(searcher) -> None:
+    searcher.search("licorice gargle sore throat", domains=RESEARCH_DOMAINS)
+
+    replay = Searcher.from_replay(searcher.calls)
+
+    assert replay.search("licorice gargle sore throat", domains=RESEARCH_DOMAINS)
+    with pytest.raises(KeyError, match="no recorded search"):
+        replay.search("licorice gargle sore throat")  # same text, no domains: another search
+
+
+def test_runs_saved_before_domains_still_load() -> None:
+    call = SearchCall.model_validate({"query": "q", "hits": [], "latency_s": 0.1})
+
+    assert call.domains == []

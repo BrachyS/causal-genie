@@ -33,7 +33,7 @@ from causal_genie.agent.state import (
 from causal_genie.agent.steps.sources import process_sources
 from causal_genie.llm.client import LLMClient
 from causal_genie.tools.metadata import EuropePMC
-from causal_genie.tools.search import Searcher
+from causal_genie.tools.search import RESEARCH_DOMAINS, Searcher
 
 log = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ def run_query(query: Query, number: int, searcher: Searcher) -> None:
         query.why,
     )
     if query.tool == "search":
-        searcher.search(query.text)
+        searcher.search(query.text, domains=RESEARCH_DOMAINS)
     else:
         searcher.extract(query.text)
 

@@ -320,6 +320,8 @@ class SearchCall(Schema):
     query: str
     hits: list[SearchHit]
     latency_s: float
+    # domains Tavily was asked to prefer; empty = no filter (and for runs saved before this)
+    domains: list[str] = Field(default_factory=list)
 
 
 class ExtractCall(Schema):

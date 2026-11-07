@@ -17,7 +17,7 @@ from causal_genie.agent.state import (
 )
 from causal_genie.agent.steps.research import fallback_plan, missing_coverage, research
 from causal_genie.tools.metadata import EuropePMC
-from causal_genie.tools.search import Searcher
+from causal_genie.tools.search import RESEARCH_DOMAINS, Searcher
 
 GROUPS: tuple[str, ...] = get_args(QueryGroup)
 
@@ -96,6 +96,7 @@ def test_each_query_runs_with_its_tool(state, make_llm, searcher, papers) -> Non
     research(state, llm, searcher, papers)
 
     assert len(searcher.calls) == len(GROUPS)
+    assert all(call.domains == list(RESEARCH_DOMAINS) for call in searcher.calls)
     assert [e.url for e in searcher.extracts] == [extract["text"]]
     (only,) = state.rounds
     assert only.planned_by == "model" and len(only.plan.queries) == len(GROUPS) + 1
