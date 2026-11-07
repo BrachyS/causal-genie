@@ -33,37 +33,112 @@ class CausalQuery(Schema):
     ambiguities: list[str]  # non-empty → one clarifying question
 
 
+Design = Literal[
+    "meta_analysis",
+    "systematic_review",
+    "RCT",
+    "natural_experiment",
+    "cohort",
+    "case_control",
+    "cross_sectional",
+    "case_report",
+    "other",
+]
+# how the study identified its effect
+Strategy = Literal["randomization", "adjustment", "DiD", "IV", "RDD", "other", "unclear"]
+Direction = Literal["+", "-", "null", "mixed", "unclear"]
+# Why a source was left out. The model picks the first five; the harness sets `retracted`.
+ExclusionReason = Literal[
+    "off_topic",
+    "wrong_population",
+    "wrong_exposure",
+    "wrong_outcome",
+    "not_a_study",
+    "retracted",
+]
+PecoMatch = Literal["direct", "indirect"]
+# What a review or meta-analysis pools; n/a for any other design.
+Pooled = Literal["trials", "observational", "mixed", "n/a"]
+# Study fields the extraction model must back with a verbatim quote.
+QuotedField = Literal["design", "population", "n", "effect", "adjusted_for", "data_link"]
+
+
+class Quote(Schema):
+    field: QuotedField
+    text: str  # copied verbatim from the source text
+
+
+class QuoteFix(Schema):
+    field: QuotedField
+    text: str | None  # a verbatim passage, or None if the source has none for this field
+
+
+class QuoteFixes(Schema):
+    """The model's second try at quotes the harness could not find in the source."""
+
+    fixes: list[QuoteFix]
+
+
+class Extraction(Schema):
+    """The model's reading of one source (one call per source). The harness turns it into a
+    `Study`, adding what the model must not decide: id, URL, DOI/PMID and retraction status."""
+
+    # paper = the study's own report (article, abstract, preprint, registry entry);
+    # secondary = news, blog, Wikipedia or another page describing someone else's study
+    source_kind: Literal["paper", "secondary"]
+    included: bool
+    exclusion_reason: ExclusionReason | None
+    # direct = same population and exposure as the question; indirect = a close one
+    peco_match: PecoMatch
+    # For a secondary source, these describe the study it reports on.
+    title: str
+    first_author: str | None  # surname only
+    year: int | None
+    design: Design
+    pooled: Pooled
+    strategy: Strategy
+    population: str
+    n: int | None
+    effect: str | None
+    direction: Direction
+    adjusted_for: list[str]
+    data_link: str | None
+    quotes: list[Quote]
+
+    @model_validator(mode="after")
+    def reason_matches_decision(self) -> Self:
+        """An excluded source needs a reason; an included one must not have one."""
+        if self.included == (self.exclusion_reason is not None):
+            raise ValueError("set exclusion_reason if and only if included is false")
+        return self
+
+
 class Study(Schema):
     id: str
     url: str
     doi: str | None
     pmid: str | None
     title: str
+    first_author: str | None  # surname; used to dedupe
     year: int | None
-    design: Literal[
-        "meta_analysis",
-        "systematic_review",
-        "RCT",
-        "natural_experiment",
-        "cohort",
-        "case_control",
-        "cross_sectional",
-        "case_report",
-        "other",
-    ]
-    # how the study identified its effect
-    strategy: Literal["randomization", "adjustment", "DiD", "IV", "RDD", "other", "unclear"]
+    design: Design
+    pooled: Pooled  # a review counts at the level of what it pools
+    strategy: Strategy
     included: bool
-    exclusion_reason: str | None
+    exclusion_reason: ExclusionReason | None
+    peco_match: PecoMatch  # indirect evidence lowers certainty
     population: str
     n: int | None
     effect: str | None
-    direction: Literal["+", "-", "null", "mixed", "unclear"]
+    direction: Direction
     adjusted_for: list[str]  # feeds DAG confounders
     data_link: str | None  # feeds paper → data
     retracted: bool
     secondary_only: bool
     quotes: dict[str, str]  # field → verbatim passage
+    publication_types: list[str]  # from Europe PMC; empty if not found there
+    full_text: bool  # the extraction read the full page, not just the search snippet
+    also_at: list[str]  # other URLs reporting the same study, merged by dedupe
 
 
 # The kinds of evidence round 1 must search for (PRD §5.3); lets the controller check coverage.
@@ -132,20 +207,65 @@ class ResearchRound(Schema):
     number: int  # 1-based
     plan: ResearchPlan
     planned_by: Literal["model", "fallback"]
+    new_studies: int = 0  # included studies this round added, after dedupe
+    missing: list[str] = Field(default_factory=list)  # coverage still missing after the round
+    stop_reason: str | None = None  # why the controller stopped after this round, if it did
+
+
+CertaintyLevel = Literal["very_low", "low", "moderate", "high"]
+
+
+class Certainty(Schema):
+    """Rule-based certainty label (PRD §5.4), set by the controller, never by a model."""
+
+    level: CertaintyLevel
+    reasons: list[str]  # the starting level and each step down, in words
+
+
+class EvidenceFlow(Schema):
+    """PRISMA-style counts: sources found → studies after dedupe → included."""
+
+    found: int
+    after_dedupe: int
+    included: int
+    excluded: dict[str, int]  # exclusion reason → count
+
+
+ClaimKind = Literal[
+    "edge",
+    "confounder",
+    "effect_estimate",
+    "null_result",
+    "mechanism",
+    "data_availability",
+    "study_detail",  # design, population or sample size of a study
+]
 
 
 class Claim(Schema):
     id: str
     text: str
-    kind: Literal[
-        "edge", "confounder", "effect_estimate", "null_result", "mechanism", "data_availability"
-    ]
+    kind: ClaimKind
     study_id: str | None
     quote: str | None
     result_id: str | None
     status: Literal["documented", "assumed", "inferred", "unresolved"]
     grounding: Literal["quote_found", "quote_not_found", "n/a"]
     support: Literal["supports", "partial", "contradicts", "irrelevant", "unchecked"]
+
+
+Support = Literal["supports", "partial", "contradicts", "irrelevant"]
+
+
+class SupportJudgment(Schema):
+    claim_id: str
+    support: Support
+
+
+class SupportCheck(Schema):
+    """The model's verdict on whether each quote backs its claim (one call per study)."""
+
+    judgments: list[SupportJudgment]
 
 
 class DagEdge(Schema):
@@ -211,6 +331,26 @@ class ExtractCall(Schema):
     latency_s: float
 
 
+class PaperRecord(Schema):
+    """Bibliographic facts from Europe PMC; the harness trusts these over the model's reading."""
+
+    pmid: str | None
+    doi: str | None
+    title: str
+    first_author: str | None
+    year: int | None
+    publication_types: list[str]
+    retracted: bool
+
+
+class LookupCall(Schema):
+    """One Europe PMC search as recorded for tracing and replay."""
+
+    query: str  # Europe PMC query syntax, e.g. EXT_ID:23921656 AND SRC:MED
+    record: PaperRecord | None  # None: no match
+    latency_s: float
+
+
 class Download(Schema):
     """Provenance of one downloaded file, so any estimate can be traced to exact bytes."""
 
@@ -258,11 +398,13 @@ class RunState(Schema):
     rounds: list[ResearchRound] = Field(default_factory=list)
     studies: list[Study] = Field(default_factory=list)
     claims: list[Claim] = Field(default_factory=list)  # the claim ledger
+    certainty: Certainty | None = None  # set by the controller after research
     edges: list[DagEdge] = Field(default_factory=list)
     datasets: list[DatasetCandidate] = Field(default_factory=list)
     results: list[Result] = Field(default_factory=list)
     searches: list[SearchCall] = Field(default_factory=list)
     extracts: list[ExtractCall] = Field(default_factory=list)
+    lookups: list[LookupCall] = Field(default_factory=list)
     downloads: list[Download] = Field(default_factory=list)
     verdict: Verdict | None = None  # set by the controller only
     report: str | None = None

@@ -2,19 +2,24 @@
 
 The model writes the queries, picks `search` or `extract` for each and proposes when to stop.
 The harness checks the plan (round 1 must cover every query group), runs the tools, skips
-repeated queries and makes the stop decision. A plan that still fails its schema after the one
-repair retry is replaced by the preset query groups, so research never depends on the model
-planning well.
+repeated queries, turns new sources into checked studies (`sources.process_sources`) and makes
+the stop decision. A plan that still fails its schema after the one repair retry is replaced by
+the preset query groups, so research never depends on the model planning well.
 
-Stop rule for now: 3 rounds, the model says done, or a round has nothing new to run. T6.11 adds
-"< 2 new studies" and the coverage check before the model's `done` is accepted.
+Stop rule: stop when a round has nothing new to run, after 3 rounds, when a round after the
+first adds < 2 new studies, or when the model says done **and** no coverage is missing. A
+`done` with coverage missing is overridden, and every summary names what is missing. "No
+included study yet" is one of those gaps, so empty results get exactly one reformulated round
+before the "< 2 new studies" rule ends the loop.
 """
 
 import logging
+from collections import Counter
 from typing import Literal
 
 from pydantic import ValidationError
 
+from causal_genie.agent.certainty import certainty, design_tier
 from causal_genie.agent.state import (
     CausalQuery,
     FirstRoundPlan,
@@ -25,7 +30,9 @@ from causal_genie.agent.state import (
     ResearchRound,
     RunState,
 )
+from causal_genie.agent.steps.sources import process_sources
 from causal_genie.llm.client import LLMClient
+from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
@@ -34,34 +41,93 @@ MAX_ROUNDS = 3
 
 
 def research(
-    state: RunState, llm: LLMClient, searcher: Searcher, max_rounds: int = MAX_ROUNDS
+    state: RunState,
+    llm: LLMClient,
+    searcher: Searcher,
+    papers: EuropePMC,
+    max_rounds: int = MAX_ROUNDS,
 ) -> None:
-    """Run research rounds until the stop rule fires, appending each round to `state.rounds`."""
+    """Run research rounds until the stop rule fires, appending each round to `state.rounds`
+    and the studies and claims it finds to `state.studies` and `state.claims`."""
     ran: set[tuple[str, str]] = set()
     for number in range(1, max_rounds + 1):
         plan, planned_by = plan_round(state, llm, searcher, number, max_rounds)
         # Stored as a plain ResearchPlan: the round-specific checks already ran, and the saved
         # run must load back equal to the live one.
         stored = ResearchPlan.model_validate(plan.model_dump())
-        state.rounds.append(ResearchRound(number=number, plan=stored, planned_by=planned_by))
+        current = ResearchRound(number=number, plan=stored, planned_by=planned_by)
+        state.rounds.append(current)
         new = [query for query in plan.queries if (query.tool, query.text) not in ran]
         for query in new:
             run_query(query, number, searcher)
             ran.add((query.tool, query.text))
-        skipped = len(plan.queries) - len(new)
+        before = included_ids(state)
+        process_sources(state, llm, searcher, papers)
+        current.new_studies = len(included_ids(state) - before)
+        current.missing = missing_coverage(state)
+        current.stop_reason = stop_reason(current, plan, bool(new), max_rounds)
         log.info(
-            "round=%d planned_by=%s queries=%d skipped_repeats=%d done=%s done_reason=%r",
+            "round=%d planned_by=%s queries=%d skipped_repeats=%d new_studies=%d done=%s "
+            "done_reason=%r missing=%s stop=%s",
             number,
             planned_by,
             len(new),
-            skipped,
+            len(plan.queries) - len(new),
+            current.new_studies,
             plan.done,
             plan.done_reason,
+            current.missing,
+            current.stop_reason,
         )
-        if plan.done or not new:
-            log.info("research stops after round %d: %s", number, "done" if new else "no new")
-            return
-    log.info("research stops: reached %d rounds", max_rounds)
+        if current.stop_reason:
+            break
+    state.certainty = certainty(state.studies)
+    log.info("research done: certainty=%s", state.certainty)
+
+
+def included_ids(state: RunState) -> set[str]:
+    """Ids of the included studies so far."""
+    return {s.id for s in state.studies if s.included}
+
+
+def missing_coverage(state: RunState) -> list[str]:
+    """Coverage the research still lacks; the model's `done` is accepted only when empty."""
+    gaps = []
+    if "evidence_against" not in {q.group for r in state.rounds for q in r.plan.queries}:
+        gaps.append("no search for evidence against the leading answer has run yet")
+    included = [s for s in state.studies if s.included]
+    if not included:
+        gaps.append(
+            "no included study yet: reformulate the searches (synonyms, broader terms, "
+            "technical names)"
+        )
+    # A news story or summary page is a gap only if no paper we read is at least as strong:
+    # news of an RCT needs an RCT paper; a page summarizing reviews doesn't block a done.
+    papers = [s for s in included if not s.secondary_only]
+    strongest = max((design_tier(s) for s in papers), default=-1)
+    gaps += [
+        f"primary source for '{s.title}' (known only from {s.url})"
+        for s in included
+        if s.secondary_only and design_tier(s) > strongest
+    ]
+    return gaps
+
+
+def stop_reason(
+    current: ResearchRound, plan: ResearchPlan, ran_new: bool, max_rounds: int
+) -> str | None:
+    """Why research stops after this round, or None to keep going."""
+    if not ran_new:
+        return "no new queries to run"
+    if current.number >= max_rounds:
+        return f"reached {max_rounds} rounds"
+    if current.number >= 2 and current.new_studies < 2:
+        return f"round {current.number} added {current.new_studies} new studies (< 2)"
+    if plan.done and not current.missing:
+        return "model said done; coverage met"
+    if plan.done:
+        log.info("override: model said done but coverage is missing: %s", current.missing)
+    return None
 
 
 def plan_round(
@@ -117,7 +183,8 @@ def fallback_plan(query: CausalQuery) -> FirstRoundPlan:
 
 
 def summarize(state: RunState, searcher: Searcher, number: int, max_rounds: int) -> str:
-    """What the planner sees: the PECO, the round, queries already run and sources found."""
+    """What the planner sees: the PECO, the round, queries already run, studies found so far
+    (and which were read only from a snippet) and how many sources were excluded."""
     assert state.query is not None
     q = state.query
     lines = [
@@ -136,10 +203,23 @@ def summarize(state: RunState, searcher: Searcher, number: int, max_rounds: int)
     ]
     queries = [query for r in state.rounds for query in r.plan.queries]
     lines += [f"- [{x.tool} · {x.group}] {x.text}" for x in queries] or ["- (none)"]
-    hits = {h.url: h for call in searcher.calls for h in call.hits}
-    lines += ["", "Sources found so far (title — URL):"]
-    lines += [f"- {h.title} — {h.url}" for h in hits.values()] or ["- (none)"]
-    if searcher.extracts:
-        lines += ["", "Full text fetched:"]
-        lines += [f"- {x.url} ({'ok' if x.error is None else 'failed'})" for x in searcher.extracts]
+    included = [s for s in state.studies if s.included]
+    lines += ["", "Included studies (design, year, title — URL; how it was read; effect):"]
+    lines += [
+        f"- {s.design}, {s.year or 'year?'}, {s.title} — {s.url}; "
+        f"{'full text' if s.full_text else 'snippet only'}"
+        f"{'; news/secondary only' if s.secondary_only else ''}; {s.effect or 'no effect stated'}"
+        for s in included
+    ] or ["- (none)"]
+    excluded = Counter(s.exclusion_reason for s in state.studies if not s.included)
+    if excluded:
+        reasons = ", ".join(f"{reason} {n}" for reason, n in excluded.most_common())
+        lines += ["", f"Excluded sources: {sum(excluded.values())} ({reasons})"]
+    if state.rounds and state.rounds[-1].missing:
+        lines += ["", "Coverage still missing (target these this round):"]
+        lines += [f"- {gap}" for gap in state.rounds[-1].missing]
+    failed = [x.url for x in searcher.extracts if x.error is not None]
+    if failed:
+        lines += ["", "Full text could not be fetched (don't extract again):"]
+        lines += [f"- {url}" for url in failed]
     return "\n".join(lines)

@@ -4,12 +4,14 @@ from typing import cast
 
 import httpx
 import pytest
+from conftest import epmc_result, extraction
 from tavily import TavilyClient
 
 from causal_genie.agent import controller
 from causal_genie.agent.state import RunState
 from causal_genie.llm.client import LLMClient
 from causal_genie.tools import download as dl
+from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
 D1 = "Does licorice gargling reduce post-op sore throat?"
@@ -17,6 +19,9 @@ D1 = "Does licorice gargling reduce post-op sore throat?"
 CSV = (
     b"rownames,treat,pacu30min_throatPain\n1,0,3\n2,0,1\n3,0,0\n4,0,2\n5,1,0\n6,1,4\n7,1,0\n8,1,\n"
 )
+
+
+READ = extraction(quotes=[])  # the fake Tavily's one page, read as the D1 trial
 
 
 def routed(causal: bool) -> str:
@@ -39,21 +44,22 @@ def http(monkeypatch: pytest.MonkeyPatch) -> httpx.Client:
 
 
 @pytest.fixture
-def run_live(make_llm, fake_tavily, http, tmp_path: Path):
+def run_live(make_llm, make_epmc, fake_tavily, http, tmp_path: Path):
     """Run the controller end to end on fakes, given the model outputs in order."""
 
     def run(question: str, outcomes: list) -> RunState:
         llm, _ = make_llm(outcomes)
         searcher = Searcher(cast(TavilyClient, fake_tavily))
+        papers, _ = make_epmc([epmc_result()])
         return controller.run(
-            question, llm, searcher, http, tmp_path / "runs", tmp_path / "cache", ask=None
+            question, llm, searcher, papers, http, tmp_path / "runs", tmp_path / "cache", ask=None
         )
 
     return run
 
 
 def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_path: Path) -> None:
-    state = run_live(D1, [routed(True), framed, round_plan])
+    state = run_live(D1, [routed(True), framed, round_plan, READ])
 
     assert state.verdict == "estimated"
     (result,) = state.results
@@ -68,9 +74,14 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
     assert len(state.searches) == 6  # one per query group
     assert [r.planned_by for r in state.rounds] == ["model"]
     assert state.downloads[0].license == "MIT"
-    assert [c.prompt_name for c in state.llm_calls] == ["route", "frame", "research_plan"]
+    assert [c.prompt_name for c in state.llm_calls] == [
+        "route",
+        "frame",
+        "research_plan",
+        "extract",
+    ]
     assert state.report is not None and "✅" in state.report
-    assert "## Sources found" in state.report
+    assert "## Evidence" in state.report
     run_dir = tmp_path / "runs" / state.run_id
     assert RunState.load(run_dir / "state.json") == state
     assert (run_dir / "report.md").read_text() == state.report
@@ -86,11 +97,35 @@ def test_not_causal_question_stops_after_routing(run_live, fake_tavily) -> None:
 
 def test_question_without_thin_slice_data_is_not_estimated(run_live, framed, round_plan) -> None:
     knuckles = "Does cracking your knuckles cause arthritis?"
-    state = run_live(knuckles, [routed(True), framed, round_plan])
+    state = run_live(knuckles, [routed(True), framed, round_plan, READ])
 
     assert state.verdict == "published_only"
     assert state.downloads == [] and state.results == []
     assert len(state.searches) == 6
+
+
+def test_no_included_study_and_no_data_is_insufficient(run_live, framed, round_plan) -> None:
+    knuckles = "Does cracking your knuckles cause arthritis?"
+    off_topic = extraction(included=False, quotes=[])
+    round_2 = json.dumps(
+        {
+            "queries": [
+                {
+                    "text": "knuckle cracking osteoarthritis",
+                    "tool": "search",
+                    "group": "primary_studies",
+                    "why": "reformulated",
+                }
+            ],
+            "done": True,
+            "done_reason": "test",
+        }
+    )
+
+    state = run_live(knuckles, [routed(True), framed, round_plan, off_topic, round_2])
+
+    assert state.verdict == "insufficient"
+    assert state.report is not None and "No included studies" in state.report
 
 
 def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
@@ -106,12 +141,13 @@ def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
 def test_replay_reproduces_a_run_without_model_or_search(
     run_live, framed, round_plan, http, prompts_dir: Path, tmp_path: Path
 ) -> None:
-    live = run_live(D1, [routed(True), framed, round_plan])
+    live = run_live(D1, [routed(True), framed, round_plan, READ])
 
     replayed = controller.run(
         D1,
         LLMClient.from_replay(live.llm_calls, prompts_dir=prompts_dir),
         Searcher.from_replay(live.searches, live.extracts),
+        EuropePMC.from_replay(live.lookups),
         http,
         tmp_path / "runs",
         tmp_path / "cache",

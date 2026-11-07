@@ -172,18 +172,33 @@ class CausalQuery(BaseModel):
     deviation_strategy: Literal["as_assigned", "as_received", "n/a"]  # ITT vs per-protocol; n/a if observational
     ambiguities: list[str]             # non-empty → one clarifying question
 
-class Study(BaseModel):
-    id: str; url: str; doi: str | None; pmid: str | None; title: str; year: int | None
+class Extraction(BaseModel):           # model output, one call per source
+    source_kind: Literal["paper", "secondary"]   # secondary = news/blog/wiki about someone else's study
+    included: bool
+    exclusion_reason: Literal["off_topic", "wrong_population", "wrong_exposure",
+                              "wrong_outcome", "not_a_study"] | None
+    peco_match: Literal["direct", "indirect"]    # indirect lowers certainty
+    title, first_author, year, design, strategy, population, n, effect, direction,
+    adjusted_for, data_link                      # as in Study
+    quotes: list[Quote]                          # {field, verbatim text} per filled-in key field
+
+class Study(BaseModel):               # built by the harness from an Extraction + Europe PMC
+    id: str; url: str; doi: str | None; pmid: str | None; title: str
+    first_author: str | None; year: int | None     # first_author: used to dedupe
     design: Literal["meta_analysis", "systematic_review", "RCT", "natural_experiment",
                     "cohort", "case_control", "cross_sectional", "case_report", "other"]
     strategy: Literal["randomization", "adjustment", "DiD", "IV", "RDD", "other", "unclear"]  # how the study identified its effect
-    included: bool; exclusion_reason: str | None
+    included: bool; exclusion_reason: ExclusionReason | None   # model's codes + "retracted" (harness)
+    peco_match: Literal["direct", "indirect"]
     population: str; n: int | None; effect: str | None
     direction: Literal["+", "-", "null", "mixed", "unclear"]
     adjusted_for: list[str]            # feeds DAG confounders
     data_link: str | None              # feeds paper → data
     retracted: bool; secondary_only: bool
     quotes: dict[str, str]             # field → verbatim passage
+    publication_types: list[str]       # from Europe PMC
+    full_text: bool                    # read from the full page, not only the search snippet
+    also_at: list[str]                 # other URLs for the same study, merged by dedupe
 
 class Query(BaseModel):
     text: str
@@ -199,11 +214,15 @@ class ResearchPlan(BaseModel):
 
 class Claim(BaseModel):
     id: str; text: str
-    kind: Literal["edge", "confounder", "effect_estimate", "null_result", "mechanism", "data_availability"]
+    kind: Literal["edge", "confounder", "effect_estimate", "null_result", "mechanism",
+                  "data_availability", "study_detail"]   # study_detail = design, population or n
     study_id: str | None; quote: str | None; result_id: str | None
     status: Literal["documented", "assumed", "inferred", "unresolved"]
     grounding: Literal["quote_found", "quote_not_found", "n/a"]
     support: Literal["supports", "partial", "contradicts", "irrelevant", "unchecked"]
+
+class Certainty(BaseModel):            # set by the controller (§5.4), never by a model
+    level: Literal["very_low", "low", "moderate", "high"]; reasons: list[str]
 
 class DagEdge(BaseModel):
     source: str; target: str; claim_ids: list[str]   # empty → "assumed"

@@ -4,6 +4,7 @@ No model writes here, so every number is copied from a `Result`. The model-writt
 lint (T10.2–T10.3) replaces the prose later; the rule that numbers come only from results stays.
 """
 
+from causal_genie.agent.certainty import evidence_flow
 from causal_genie.agent.state import RunState, Verdict
 
 VERDICT_LABELS: dict[Verdict, str] = {
@@ -31,7 +32,7 @@ def write_report(state: RunState) -> str:
         if state.route.causal_rewrite:
             lines += [f"A causal question you might mean: *{state.route.causal_rewrite}*", ""]
     lines += question_section(state) + estimate_section(state) + data_section(state)
-    lines += sources_section(state)
+    lines += evidence_section(state)
     lines += ["---", "", DISCLAIMER, "", f"Run ID: `{state.run_id}`", ""]
     return "\n".join(lines)
 
@@ -110,16 +111,37 @@ def data_section(state: RunState) -> list[str]:
     return [*lines, ""]
 
 
-def sources_section(state: RunState) -> list[str]:
-    """Search hits, de-duplicated by URL and labeled as unchecked."""
-    hits = {h.url: h for call in state.searches for h in call.hits}
-    if not hits:
+def evidence_section(state: RunState) -> list[str]:
+    """Certainty, evidence-flow counts and the included studies. A study's effect is shown
+    only if its claim passed the citation check; otherwise it is marked not verified."""
+    if state.verdict == "not_causal" or not (state.rounds or state.studies):
         return []
-    lines = [
-        "## Sources found",
-        "",
-        "Found by web search; not yet read or checked against any claim.",
+    flow = evidence_flow(state.studies)
+    lines = ["## Evidence", ""]
+    if state.certainty is not None:
+        reasons = "; ".join(state.certainty.reasons)
+        level = state.certainty.level.replace("_", " ")
+        lines += [f"**Certainty:** {level} ({reasons})", ""]
+    excluded = ", ".join(f"{reason} {n}" for reason, n in flow.excluded.items()) or "none"
+    lines += [
+        f"Evidence flow: {flow.found} sources found → {flow.after_dedupe} studies after "
+        f"dedupe → {flow.included} included (excluded: {excluded}).",
         "",
     ]
-    lines += [f"- [{h.title}]({h.url})" for h in hits.values()]
+    included = [s for s in state.studies if s.included]
+    if not included:
+        lines += ["No included studies. Searches run:", ""]
+        lines += [f"- {q.text}" for r in state.rounds for q in r.plan.queries]
+        return [*lines, ""]
+    verified = {
+        c.study_id
+        for c in state.claims
+        if c.kind in ("effect_estimate", "null_result") and c.status == "documented"
+    }
+    for s in included:
+        effect = s.effect if s.id in verified and s.effect else "effect not verified"
+        news = ", known only from secondary sources" if s.secondary_only else ""
+        lines.append(
+            f"- [{s.title}]({s.url}) — {s.design}, {s.year or 'year unknown'}{news}: {effect}"
+        )
     return [*lines, ""]

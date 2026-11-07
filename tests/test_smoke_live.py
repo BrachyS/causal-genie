@@ -11,6 +11,7 @@ from tavily import TavilyClient
 from causal_genie.agent import controller
 from causal_genie.agent.router import route
 from causal_genie.llm.client import LLMClient, load_models
+from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
 pytestmark = pytest.mark.live
@@ -85,6 +86,7 @@ def test_d1_end_to_end_reproduces_the_trial(
             "Does licorice gargling reduce post-op sore throat?",
             llm,
             Searcher(tavily),
+            EuropePMC(http),
             http,
             tmp_path / "runs",
             tmp_path / "cache",

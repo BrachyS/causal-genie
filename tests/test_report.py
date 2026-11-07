@@ -1,6 +1,15 @@
 import pytest
 
-from causal_genie.agent.state import Download, Result, Route, RunState
+from causal_genie.agent.certainty import certainty
+from causal_genie.agent.state import (
+    Download,
+    Query,
+    ResearchPlan,
+    ResearchRound,
+    Result,
+    Route,
+    RunState,
+)
 from causal_genie.agent.steps.report import write_report
 from causal_genie.tools.stats import risk_difference
 
@@ -97,3 +106,48 @@ def test_not_causal_report_offers_rewrite(sample_state: RunState) -> None:
 
     assert "🚫 Not causal" in report
     assert "Does the full moon cause more births?" in report
+
+
+def test_evidence_section_shows_certainty_flow_and_checked_effects(sample_state) -> None:
+    sample_state.verdict = "published_only"
+    sample_state.certainty = certainty(sample_state.studies)
+    sample_state.studies.append(
+        sample_state.studies[0].model_copy(
+            update={"id": "s2", "included": False, "exclusion_reason": "off_topic"}
+        )
+    )
+
+    report = write_report(sample_state)
+
+    assert "**Certainty:** high (starts high" in report
+    assert "2 sources found → 2 studies after dedupe → 1 included" in report
+    assert "excluded: off_topic 1" in report
+    study = sample_state.studies[0]
+    assert f"[{study.title}]({study.url})" in report
+    assert "sore throat 30 min: 24% vs 61%" in report  # backed by documented claim c1
+
+
+def test_unverified_effect_is_not_reported(sample_state) -> None:
+    sample_state.verdict = "published_only"
+    sample_state.claims[0].status = "unresolved"
+
+    report = write_report(sample_state)
+
+    assert "24% vs 61%" not in report
+    assert "effect not verified" in report
+
+
+def test_insufficient_report_lists_what_was_searched(sample_state) -> None:
+    sample_state.verdict = "insufficient"
+    sample_state.studies, sample_state.claims = [], []
+    query = Query(
+        text="licorice gargle sore throat", tool="search", group="primary_studies", why="w"
+    )
+    plan = ResearchPlan(queries=[query], done=True, done_reason="nothing")
+    sample_state.rounds = [ResearchRound(number=1, plan=plan, planned_by="model")]
+
+    report = write_report(sample_state)
+
+    assert "❓" in report
+    assert "No included studies" in report
+    assert "- licorice gargle sore throat" in report

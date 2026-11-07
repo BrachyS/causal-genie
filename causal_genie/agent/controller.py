@@ -33,6 +33,7 @@ from causal_genie.agent.steps.research import research
 from causal_genie.llm.client import LLMClient, load_models, make_openai
 from causal_genie.log import setup_logging
 from causal_genie.tools.download import download
+from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
@@ -78,6 +79,7 @@ def run(
     question: str,
     llm: LLMClient,
     searcher: Searcher,
+    papers: EuropePMC,
     http: httpx.Client,
     runs_dir: Path,
     cache_dir: Path,
@@ -103,9 +105,12 @@ def run(
             state.verdict = "not_causal"
         else:
             state.query = frame(question, llm, ask_and_record if ask else None)
-            research(state, llm, searcher)
+            research(state, llm, searcher, papers)
             data = THIN_SLICE_DATA.get(normalize(question))
-            if data is None:
+            if data is None and not any(s.included for s in state.studies):
+                # PRD §5.9: nothing useful found after one reformulated round → ❓
+                state.verdict = "insufficient"
+            elif data is None:
                 # Thin slice: no data discovery yet (T8); the verdict rules (T10.1) refine this.
                 state.verdict = "published_only"
             else:
@@ -122,10 +127,10 @@ def run(
                     )
                 )
                 state.verdict = "estimated"
-        record_calls(state, llm, searcher)  # the report lists the sources found
+        record_calls(state, llm, searcher, papers)  # the report lists the sources found
         state.report = write_report(state)
     finally:
-        record_calls(state, llm, searcher)
+        record_calls(state, llm, searcher, papers)
         path = state.save(runs_dir)
         if state.report is not None:
             (path.parent / "report.md").write_text(state.report)
@@ -139,11 +144,12 @@ def run(
     return state
 
 
-def record_calls(state: RunState, llm: LLMClient, searcher: Searcher) -> None:
-    """Copy the model calls, searches and extracts made so far into the run state."""
+def record_calls(state: RunState, llm: LLMClient, searcher: Searcher, papers: EuropePMC) -> None:
+    """Copy the model calls, searches, extracts and lookups made so far into the run state."""
     state.llm_calls = list(llm.calls)
     state.searches = list(searcher.calls)
     state.extracts = list(searcher.extracts)
+    state.lookups = list(papers.calls)
 
 
 def find_run(question: str, runs_dir: Path) -> Path | None:
@@ -180,13 +186,15 @@ def main(argv: list[str] | None = None) -> None:
     setup_logging()
 
     ask: Callable[[str], str] | None = None
-    if args.replay or os.getenv("CG_REPLAY") == "1":
+    replaying = args.replay or os.getenv("CG_REPLAY") == "1"
+    if replaying:
         path = find_run(args.question, RUNS_DIR)
         if path is None:
             raise SystemExit(f"no saved run of {args.question!r} in {RUNS_DIR}/ to replay")
         recorded = RunState.load(path)
         llm = LLMClient.from_replay(recorded.llm_calls)
         searcher = Searcher.from_replay(recorded.searches, recorded.extracts)
+        papers = EuropePMC.from_replay(recorded.lookups)
         if recorded.clarifications:
             ask = recorded.clarifications.__getitem__
     else:
@@ -196,7 +204,9 @@ def main(argv: list[str] | None = None) -> None:
             ask = ask_user
 
     with httpx.Client(timeout=60) as http:
-        state = run(args.question, llm, searcher, http, RUNS_DIR, CACHE_DIR, ask)
+        if not replaying:
+            papers = EuropePMC(http)
+        state = run(args.question, llm, searcher, papers, http, RUNS_DIR, CACHE_DIR, ask)
     sys.stdout.write(state.report or "")
 
 

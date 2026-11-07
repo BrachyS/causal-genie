@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import cast, get_args
 
+import httpx
 import pytest
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -26,6 +27,7 @@ from causal_genie.agent.state import (
     Variable,
 )
 from causal_genie.llm.client import PROMPTS_DIR, LLMClient
+from causal_genie.tools.metadata import EuropePMC
 
 
 @pytest.fixture
@@ -170,11 +172,14 @@ def sample_state() -> RunState:
         doi="10.1213/ANE.0b013e318299a650",
         pmid="23921656",
         title="A randomized, double-blind comparison of licorice versus sugar-water gargle",
+        first_author="Ruetzler",
         year=2013,
         design="RCT",
+        pooled="n/a",
         strategy="randomization",
         included=True,
         exclusion_reason=None,
+        peco_match="direct",
         population="236 adults, thoracic surgery",
         n=236,
         effect="sore throat 30 min: 24% vs 61%",
@@ -184,6 +189,9 @@ def sample_state() -> RunState:
         retracted=False,
         secondary_only=False,
         quotes={"effect": "sore throat ... was reduced"},
+        publication_types=["Randomized Controlled Trial"],
+        full_text=True,
+        also_at=[],
     )
     claim = Claim(
         id="c1",
@@ -234,3 +242,76 @@ def round_plan() -> str:
         for g in get_args(QueryGroup)
     ]
     return json.dumps({"queries": queries, "done": True, "done_reason": "test"})
+
+
+D1_TITLE = (
+    "A randomized, double-blind comparison of licorice versus sugar-water gargle for "
+    "prevention of postoperative sore throat and postextubation coughing."
+)
+
+
+def epmc_result(**overrides) -> dict:
+    """One Europe PMC `resultType=core` record, shaped like the real API's (D1 trial)."""
+    record = {
+        "pmid": "23921656",
+        "doi": "10.1213/ane.0b013e318299a650",
+        "title": D1_TITLE,
+        "authorList": {"author": [{"lastName": "Ruetzler", "fullName": "Ruetzler K"}]},
+        "pubYear": "2013",
+        "pubTypeList": {"pubType": ["Randomized Controlled Trial", "Journal Article"]},
+        "commentCorrectionList": None,
+    }
+    return record | overrides
+
+
+@pytest.fixture
+def make_epmc() -> Callable[[list[dict]], tuple[EuropePMC, list[str]]]:
+    """A live EuropePMC client whose fake server returns `results` for every query, with the
+    list of queries it received."""
+
+    def make(results: list[dict]) -> tuple[EuropePMC, list[str]]:
+        served: list[str] = []
+
+        def handle(request: httpx.Request) -> httpx.Response:
+            served.append(request.url.params["query"])
+            body = {"hitCount": len(results), "resultList": {"result": results}}
+            return httpx.Response(200, content=json.dumps(body))
+
+        return EuropePMC(httpx.Client(transport=httpx.MockTransport(handle))), served
+
+    return make
+
+
+SNIPPET = (
+    "Randomized trial of 236 adults. The incidence of sore throat at 30 minutes was 24% in "
+    "the licorice group and 61% in the sugar-water group."
+)
+
+GROUNDED = [
+    {"field": "n", "text": "Randomized trial of 236 adults"},
+    {"field": "effect", "text": "sore throat at 30 minutes was 24% in the licorice group"},
+]
+
+
+def extraction(included: bool = True, quotes: list[dict] | None = None, **changes) -> str:
+    """Extraction model output for the D1 trial as JSON."""
+    out = {
+        "source_kind": "paper",
+        "included": included,
+        "exclusion_reason": None if included else "off_topic",
+        "peco_match": "direct",
+        "pooled": "n/a",
+        "title": "Licorice versus sugar-water gargle",
+        "first_author": "Ruetzler",
+        "year": 2013,
+        "design": "RCT",
+        "strategy": "randomization",
+        "population": "adults having thoracic surgery",
+        "n": 236,
+        "effect": "sore throat at 30 min: 24% vs 61%",
+        "direction": "-",
+        "adjusted_for": [],
+        "data_link": None,
+        "quotes": GROUNDED if quotes is None else quotes,
+    }
+    return json.dumps(out | changes)
