@@ -3,13 +3,16 @@ from typing import cast
 import pytest
 from tavily import TavilyClient
 
-from causal_genie.agent.state import CausalQuery
-from causal_genie.tools.search import Searcher, thin_slice_queries
+from causal_genie.tools.search import Searcher
 
 
-def test_search_returns_hits_and_records_call(fake_tavily) -> None:
-    searcher = Searcher(cast(TavilyClient, fake_tavily))
+@pytest.fixture
+def searcher(fake_tavily) -> Searcher:
+    """A live searcher over the fake Tavily."""
+    return Searcher(cast(TavilyClient, fake_tavily))
 
+
+def test_search_returns_hits_and_records_call(searcher, fake_tavily) -> None:
     hits = searcher.search("licorice gargle sore throat")
 
     assert [h.url for h in hits] == ["https://pubmed.ncbi.nlm.nih.gov/23921656/"]
@@ -19,25 +22,36 @@ def test_search_returns_hits_and_records_call(fake_tavily) -> None:
     assert call.hits == hits
 
 
-def test_replay_returns_recorded_hits_without_tavily(fake_tavily) -> None:
-    live = Searcher(cast(TavilyClient, fake_tavily))
-    hits = live.search("licorice gargle sore throat")
+def test_replay_returns_recorded_hits_without_tavily(searcher) -> None:
+    hits = searcher.search("licorice gargle sore throat")
 
-    replay = Searcher.from_replay(live.calls)
+    replay = Searcher.from_replay(searcher.calls)
 
     assert replay.search("licorice gargle sore throat") == hits
     with pytest.raises(KeyError, match="no recorded search"):
         replay.search("a new query")
 
 
-def test_thin_slice_queries_name_exposure_outcome_and_design(
-    sample_state,
-) -> None:
-    query = cast(CausalQuery, sample_state.query)
+def test_extract_returns_full_text_and_records_call(searcher) -> None:
+    call = searcher.extract("https://example.org/paper")
 
-    queries = thin_slice_queries(query)
+    assert call.content == "Full text of the paper."
+    assert call.error is None
+    assert searcher.extracts == [call]
 
-    assert len(queries) == 3
-    assert all("licorice gargle" in q for q in queries)
-    assert any("randomized" in q for q in queries)
-    assert any("dataset" in q for q in queries)
+
+def test_failed_extract_is_recorded_not_raised(searcher) -> None:
+    call = searcher.extract("https://example.org/fail")
+
+    assert call.content is None
+    assert call.error == "blocked"
+
+
+def test_extract_replays_without_tavily(searcher) -> None:
+    live = searcher.extract("https://example.org/paper")
+
+    replay = Searcher.from_replay([], extracts=searcher.extracts)
+
+    assert replay.extract("https://example.org/paper") == live
+    with pytest.raises(KeyError, match="no recorded extract"):
+        replay.extract("https://example.org/other")

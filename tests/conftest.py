@@ -1,9 +1,10 @@
+import json
 import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import cast, get_args
 
 import pytest
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ from causal_genie.agent.state import (
     Claim,
     DagEdge,
     LLMCall,
+    QueryGroup,
     Route,
     RunState,
     SearchCall,
@@ -104,6 +106,13 @@ class FakeTavily:
                 }
             ]
         }
+
+    def extract(self, urls: list[str], **kwargs) -> dict:
+        """Full text for any URL except ones containing `fail`, which Tavily reports failed."""
+        self.requests.append({"urls": urls, **kwargs})
+        if "fail" in urls[0]:
+            return {"results": [], "failed_results": [{"url": urls[0], "error": "blocked"}]}
+        return {"results": [{"url": urls[0], "raw_content": "Full text of the paper."}]}
 
 
 @pytest.fixture
@@ -215,3 +224,13 @@ def sample_state() -> RunState:
             )
         ],
     )
+
+
+@pytest.fixture
+def round_plan() -> str:
+    """A valid round-1 research plan (one search per group) that proposes stopping."""
+    queries = [
+        {"text": f"licorice gargle {g}", "tool": "search", "group": g, "why": "test"}
+        for g in get_args(QueryGroup)
+    ]
+    return json.dumps({"queries": queries, "done": True, "done_reason": "test"})

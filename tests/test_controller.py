@@ -52,8 +52,8 @@ def run_live(make_llm, fake_tavily, http, tmp_path: Path):
     return run
 
 
-def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, tmp_path: Path) -> None:
-    state = run_live(D1, [routed(True), framed])
+def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_path: Path) -> None:
+    state = run_live(D1, [routed(True), framed, round_plan])
 
     assert state.verdict == "estimated"
     (result,) = state.results
@@ -65,9 +65,10 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, tmp_path: Path) 
         4,
     )
     assert out["rows_excluded_missing"] == 1
-    assert len(state.searches) == 3
+    assert len(state.searches) == 6  # one per query group
+    assert [r.planned_by for r in state.rounds] == ["model"]
     assert state.downloads[0].license == "MIT"
-    assert [c.prompt_name for c in state.llm_calls] == ["route", "frame"]
+    assert [c.prompt_name for c in state.llm_calls] == ["route", "frame", "research_plan"]
     assert state.report is not None and "✅" in state.report
     assert "## Sources found" in state.report
     run_dir = tmp_path / "runs" / state.run_id
@@ -83,12 +84,13 @@ def test_not_causal_question_stops_after_routing(run_live, fake_tavily) -> None:
     assert state.query is None
 
 
-def test_question_without_thin_slice_data_is_not_estimated(run_live, framed) -> None:
-    state = run_live("Does cracking your knuckles cause arthritis?", [routed(True), framed])
+def test_question_without_thin_slice_data_is_not_estimated(run_live, framed, round_plan) -> None:
+    knuckles = "Does cracking your knuckles cause arthritis?"
+    state = run_live(knuckles, [routed(True), framed, round_plan])
 
     assert state.verdict == "published_only"
     assert state.downloads == [] and state.results == []
-    assert len(state.searches) == 3
+    assert len(state.searches) == 6
 
 
 def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
@@ -102,14 +104,14 @@ def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
 
 
 def test_replay_reproduces_a_run_without_model_or_search(
-    run_live, framed, http, prompts_dir: Path, tmp_path: Path
+    run_live, framed, round_plan, http, prompts_dir: Path, tmp_path: Path
 ) -> None:
-    live = run_live(D1, [routed(True), framed])
+    live = run_live(D1, [routed(True), framed, round_plan])
 
     replayed = controller.run(
         D1,
         LLMClient.from_replay(live.llm_calls, prompts_dir=prompts_dir),
-        Searcher.from_replay(live.searches),
+        Searcher.from_replay(live.searches, live.extracts),
         http,
         tmp_path / "runs",
         tmp_path / "cache",
@@ -117,6 +119,7 @@ def test_replay_reproduces_a_run_without_model_or_search(
     )
 
     assert replayed.results == live.results
+    assert replayed.rounds == live.rounds
     assert replayed.report is not None and live.report is not None
     assert replayed.report.replace(replayed.run_id, "") == live.report.replace(live.run_id, "")
 
@@ -125,6 +128,9 @@ def test_find_run_picks_latest_run_of_the_same_question(tmp_path: Path) -> None:
     for run_id in ["20261101-090000-aaaaaa", "20261102-090000-bbbbbb"]:
         RunState(run_id=run_id, question=D1).save(tmp_path)
     RunState(run_id="20261103-090000-cccccc", question="Another question?").save(tmp_path)
+    old = tmp_path / "20261031-090000-dddddd" / "state.json"  # saved under an older schema
+    old.parent.mkdir()
+    old.write_text(json.dumps({"run_id": "x", "question": "Old?", "plans": []}))
 
     assert controller.find_run("does licorice gargling reduce post-op sore throat", tmp_path) == (
         tmp_path / "20261102-090000-bbbbbb" / "state.json"

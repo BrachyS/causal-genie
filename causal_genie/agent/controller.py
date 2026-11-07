@@ -8,6 +8,7 @@ Usage: `uv run python -m causal_genie.agent.controller "Does X cause Y?" [--repl
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -28,10 +29,11 @@ from causal_genie.agent.state import RunState
 from causal_genie.agent.steps.estimate import estimate_rct
 from causal_genie.agent.steps.frame import frame
 from causal_genie.agent.steps.report import write_report
+from causal_genie.agent.steps.research import research
 from causal_genie.llm.client import LLMClient, load_models, make_openai
 from causal_genie.log import setup_logging
 from causal_genie.tools.download import download
-from causal_genie.tools.search import Searcher, thin_slice_queries
+from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +83,7 @@ def run(
     cache_dir: Path,
     ask: Callable[[str], str] | None,
 ) -> RunState:
-    """Route → frame → search → download → estimate → verdict → report, saving the run."""
+    """Route → frame → research → download → estimate → verdict → report, saving the run."""
     state = RunState(
         run_id=new_run_id(),
         question=question,
@@ -101,8 +103,7 @@ def run(
             state.verdict = "not_causal"
         else:
             state.query = frame(question, llm, ask_and_record if ask else None)
-            for query in thin_slice_queries(state.query):
-                searcher.search(query)
+            research(state, llm, searcher)
             data = THIN_SLICE_DATA.get(normalize(question))
             if data is None:
                 # Thin slice: no data discovery yet (T8); the verdict rules (T10.1) refine this.
@@ -139,18 +140,23 @@ def run(
 
 
 def record_calls(state: RunState, llm: LLMClient, searcher: Searcher) -> None:
-    """Copy the model calls and searches made so far into the run state."""
+    """Copy the model calls, searches and extracts made so far into the run state."""
     state.llm_calls = list(llm.calls)
     state.searches = list(searcher.calls)
+    state.extracts = list(searcher.extracts)
 
 
 def find_run(question: str, runs_dir: Path) -> Path | None:
-    """Latest saved run of the same question (ignoring case and punctuation), for replay."""
+    """Latest saved run of the same question (ignoring case and punctuation), for replay.
+
+    Reads only each run's question, so runs saved under an older schema don't block the
+    search; the run that is replayed is still fully validated when loaded.
+    """
     key = normalize(question)
     matches = [
         path
         for path in sorted(runs_dir.glob("*/state.json"))
-        if normalize(RunState.load(path).question) == key
+        if normalize(json.loads(path.read_text())["question"]) == key
     ]
     return matches[-1] if matches else None
 
@@ -180,7 +186,7 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(f"no saved run of {args.question!r} in {RUNS_DIR}/ to replay")
         recorded = RunState.load(path)
         llm = LLMClient.from_replay(recorded.llm_calls)
-        searcher = Searcher.from_replay(recorded.searches)
+        searcher = Searcher.from_replay(recorded.searches, recorded.extracts)
         if recorded.clarifications:
             ask = recorded.clarifications.__getitem__
     else:

@@ -122,7 +122,7 @@ flowchart TD
     W --> OUT[Brief + DAG + sources]
 ```
 
-Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, when a round adds < 2 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim, a source for each DAG edge). If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
+Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, when a round adds < 2 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim). Edges don't exist until the DAG step, so "a source for each DAG edge" is checked there: an uncited edge sends research back for one more round if rounds are left, otherwise the edge is marked "assumed". If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
 
 ### 5.2 Verdicts (picked by the controller, never by the model)
 
@@ -143,7 +143,7 @@ A scaled-down **systematic review**. Each step is a prompt + schema or a simple 
 | Step | Lean MVP |
 |---|---|
 | **Frame** | PECO from `CausalQuery` drives every query and every include/exclude decision |
-| **Plan each round** (model) | Round 1 covers every group: best existing answer (reviews first) · primary studies, incl. natural experiments (policy changes, staggered launches, thresholds) · mechanism · confounders · **evidence against the leading answer** · data availability. Lay + technical terms. ≤ 12 queries in round 1. Later rounds target what's missing, using the state summary (included studies, snippet-only sources, gaps, rounds left). Controller rejects a round-1 plan missing a group |
+| **Plan each round** (model) | Round 1 covers every group: best existing answer (reviews first) · primary studies, incl. natural experiments (policy changes, staggered launches, thresholds) · mechanism · confounders · **evidence against the leading answer** · data availability. Lay + technical terms. ≤ 12 queries in round 1, ≤ 6 in later rounds (Tavily credit budget). Later rounds target what's missing, using the state summary (included studies, snippet-only sources, gaps, rounds left). Controller rejects a round-1 plan missing a group |
 | **Search** | Tavily `search` (advanced) + `extract`, preferring PubMed, Europe PMC, Cochrane, NIH/CDC, NBER, medRxiv. News, blogs and Wikipedia are leads only: follow them to the paper or mark the claim "secondary only" |
 | **Enrich** | Europe PMC: DOI, publication type, **retraction status** |
 | **Dedupe by study** | Group by DOI/PMID, then fuzzy title + first author + year. Ten news stories about one paper = one study |
@@ -188,6 +188,8 @@ class Study(BaseModel):
 class Query(BaseModel):
     text: str
     tool: Literal["search", "extract"]   # search = Tavily search; extract = Tavily extract (text = URL)
+    group: Literal["best_answer", "primary_studies", "mechanism", "confounders",
+                   "evidence_against", "data_availability"]   # lets the controller check round-1 coverage
     why: str                             # logged in the research log; not used for control
 
 class ResearchPlan(BaseModel):

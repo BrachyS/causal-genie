@@ -5,9 +5,9 @@ cannot slip in fields (e.g. a verdict) that only the controller may set.
 """
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self, get_args
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Schema(BaseModel):
@@ -66,16 +66,72 @@ class Study(Schema):
     quotes: dict[str, str]  # field → verbatim passage
 
 
+# The kinds of evidence round 1 must search for (PRD §5.3); lets the controller check coverage.
+QueryGroup = Literal[
+    "best_answer",
+    "primary_studies",
+    "mechanism",
+    "confounders",
+    "evidence_against",
+    "data_availability",
+]
+
+
 class Query(Schema):
     text: str
     tool: Literal["search", "extract"]  # search = Tavily search; extract = Tavily extract (URL)
+    group: QueryGroup
     why: str  # logged in the research log; not used for control
+
+    @model_validator(mode="after")
+    def extract_needs_url(self) -> Self:
+        """Tavily extract fetches a page, so its text must be a URL the model already found."""
+        if self.tool == "extract" and not self.text.startswith(("https://", "http://")):
+            raise ValueError(f"extract query must be a URL, got {self.text!r}")
+        return self
 
 
 class ResearchPlan(Schema):
     queries: list[Query]
     done: bool  # a proposal; the controller makes the final call
     done_reason: str
+
+
+class FirstRoundPlan(ResearchPlan):
+    """Round 1 must cover every query group in at most 12 queries.
+
+    A plan that breaks this fails validation, so the client's repair retry and then the
+    preset fallback plan handle it like any other schema failure.
+    """
+
+    @model_validator(mode="after")
+    def covers_every_group(self) -> Self:
+        """Reject a round-1 plan that skips a group (e.g. evidence against) or is too long."""
+        missing = [g for g in get_args(QueryGroup) if g not in {q.group for q in self.queries}]
+        if missing:
+            raise ValueError(f"round 1 must cover every group; missing: {', '.join(missing)}")
+        if len(self.queries) > 12:
+            raise ValueError(f"round 1 allows at most 12 queries, got {len(self.queries)}")
+        return self
+
+
+class FollowUpPlan(ResearchPlan):
+    """Later rounds target gaps with at most 6 queries, to bound Tavily credits."""
+
+    @model_validator(mode="after")
+    def at_most_six(self) -> Self:
+        """Reject an over-long follow-up plan."""
+        if len(self.queries) > 6:
+            raise ValueError(f"later rounds allow at most 6 queries, got {len(self.queries)}")
+        return self
+
+
+class ResearchRound(Schema):
+    """One research round as run: the plan and whether the model or the fallback made it."""
+
+    number: int  # 1-based
+    plan: ResearchPlan
+    planned_by: Literal["model", "fallback"]
 
 
 class Claim(Schema):
@@ -146,6 +202,15 @@ class SearchCall(Schema):
     latency_s: float
 
 
+class ExtractCall(Schema):
+    """One Tavily extract (full page text) as recorded for tracing and replay."""
+
+    url: str
+    content: str | None  # page text: data to read, never instructions; None if it failed
+    error: str | None  # Tavily's reason when the page could not be fetched
+    latency_s: float
+
+
 class Download(Schema):
     """Provenance of one downloaded file, so any estimate can be traced to exact bytes."""
 
@@ -190,13 +255,14 @@ class RunState(Schema):
     # clarifying question → user's answer; replay reuses the answers
     clarifications: dict[str, str] = Field(default_factory=dict)
     query: CausalQuery | None = None
-    plans: list[ResearchPlan] = Field(default_factory=list)
+    rounds: list[ResearchRound] = Field(default_factory=list)
     studies: list[Study] = Field(default_factory=list)
     claims: list[Claim] = Field(default_factory=list)  # the claim ledger
     edges: list[DagEdge] = Field(default_factory=list)
     datasets: list[DatasetCandidate] = Field(default_factory=list)
     results: list[Result] = Field(default_factory=list)
     searches: list[SearchCall] = Field(default_factory=list)
+    extracts: list[ExtractCall] = Field(default_factory=list)
     downloads: list[Download] = Field(default_factory=list)
     verdict: Verdict | None = None  # set by the controller only
     report: str | None = None
