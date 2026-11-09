@@ -273,6 +273,17 @@ class DagEdge(Schema):
     target: str
     claim_ids: list[str]  # empty → "assumed"
 
+    @property
+    def assumed(self) -> bool:
+        """No ledger claim backs this edge; the report must say it is an assumption."""
+        return not self.claim_ids
+
+
+class DagProposal(Schema):
+    """The model's proposed causal graph; the harness checks every cited claim id."""
+
+    edges: list[DagEdge]
+
 
 class DatasetCandidate(Schema):
     url: str

@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast, get_args
+from typing import Literal, cast, get_args
 
 import httpx
 import pytest
@@ -232,6 +232,26 @@ def sample_state() -> RunState:
             )
         ],
     )
+
+
+@pytest.fixture
+def confounder_claim() -> Callable[..., Claim]:
+    """Build a ledger claim that the D1 trial considered smoking, with a given status."""
+
+    def make(status: Literal["documented", "unresolved"] = "documented") -> Claim:
+        return Claim(
+            id="s1-adjusted_for",
+            text="Licorice trial: adjusted_for = smoking",
+            kind="confounder",
+            study_id="s1",
+            quote="smokers were balanced between groups",
+            result_id=None,
+            status=status,
+            grounding="quote_found",
+            support="supports" if status == "documented" else "irrelevant",
+        )
+
+    return make
 
 
 @pytest.fixture
