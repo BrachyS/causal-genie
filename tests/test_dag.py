@@ -1,14 +1,23 @@
 import json
+from typing import cast
 
-from causal_genie.agent.state import RunState
-from causal_genie.agent.steps.dag import build_dag
+import pytest
+from conftest import proposal
+from tavily import TavilyClient
+
+from causal_genie.agent.state import DagEdge, ResearchPlan, ResearchRound, RunState
+from causal_genie.agent.steps import dag
+from causal_genie.agent.steps.dag import break_cycles, build_dag, run_dag
+from causal_genie.tools.metadata import EuropePMC
+from causal_genie.tools.search import Searcher
+
+QUESTION = ("licorice_gargle", "sore_throat")
+NO_QUERIES = json.dumps({"queries": [], "done": True, "done_reason": "test"})
 
 
-def proposal(*edges: tuple[str, str, list[str]]) -> str:
-    """DAG model output with the given (source, target, claim_ids) edges."""
-    return json.dumps(
-        {"edges": [{"source": s, "target": t, "claim_ids": ids} for s, t, ids in edges]}
-    )
+def edge(source: str, target: str, *claim_ids: str) -> DagEdge:
+    """A DAG edge citing the given claims."""
+    return DagEdge(source=source, target=target, claim_ids=list(claim_ids))
 
 
 def test_edges_cite_ledger_claims_from_the_large_model(
@@ -99,3 +108,124 @@ def test_near_copy_of_exposure_name_is_logged(make_llm, sample_state: RunState, 
 
     renamed = [r.message for r in step_logs.records if "looks like" in r.message]
     assert len(renamed) == 1 and "licorice_gargling" in renamed[0]
+
+
+def test_acyclic_graph_is_unchanged(step_logs) -> None:
+    edges = [edge("age", "licorice_gargle"), edge("age", "sore_throat"), edge(*QUESTION, "c1")]
+
+    assert break_cycles(edges, QUESTION) == edges
+    assert "cycle" not in step_logs.text
+
+
+def test_cycle_drops_its_assumed_edge_and_logs_it(step_logs) -> None:
+    edges = [edge("a", "b", "c1"), edge("b", "c"), edge("c", "a", "c2"), edge(*QUESTION, "c3")]
+
+    kept = break_cycles(edges, QUESTION)
+
+    assert [(e.source, e.target) for e in kept] == [("a", "b"), ("c", "a"), QUESTION]
+    dropped = [r.message for r in step_logs.records if "cycle" in r.message]
+    assert len(dropped) == 1 and "b -> c" in dropped[0]
+
+
+def test_cycle_drops_the_edge_with_fewest_citations() -> None:
+    edges = [edge("a", "b", "c1", "c2"), edge("b", "a", "c3")]
+
+    assert break_cycles(edges, QUESTION) == [edge("a", "b", "c1", "c2")]
+
+
+def test_cycle_tie_is_broken_the_same_way_regardless_of_order() -> None:
+    forward = [edge("a", "b"), edge("b", "a")]
+
+    assert (
+        break_cycles(forward, QUESTION) == break_cycles(forward[::-1], QUESTION) == [edge("b", "a")]
+    )
+
+
+def test_question_edge_survives_even_when_it_is_the_weakest() -> None:
+    edges = [edge(*QUESTION), edge("sore_throat", "licorice_gargle", "c1")]
+
+    assert break_cycles(edges, QUESTION) == [edge(*QUESTION)]
+
+
+def test_every_cycle_is_broken_including_self_loops() -> None:
+    edges = [edge("a", "a"), edge("b", "c"), edge("c", "b", "c1"), edge(*QUESTION, "c2")]
+
+    assert break_cycles(edges, QUESTION) == [edge("c", "b", "c1"), edge(*QUESTION, "c2")]
+
+
+def test_build_dag_returns_an_acyclic_graph(make_llm, sample_state: RunState) -> None:
+    llm, _ = make_llm(
+        [proposal((*QUESTION, ["c1"]), ("sore_throat", "age", []), ("age", "sore_throat", []))]
+    )
+
+    edges = build_dag(sample_state, llm)
+
+    assert [(e.source, e.target) for e in edges] == [QUESTION, ("sore_throat", "age")]
+
+
+@pytest.fixture
+def researched(sample_state: RunState) -> RunState:
+    """The sample run after one research round, before its DAG."""
+    plan = ResearchPlan(queries=[], done=True, done_reason="test")
+    sample_state.rounds.append(ResearchRound(number=1, plan=plan, planned_by="model"))
+    sample_state.edges = []
+    return sample_state
+
+
+@pytest.fixture
+def tools(fake_tavily, make_epmc) -> tuple[Searcher, EuropePMC]:
+    """The search and paper-lookup clients `run_dag` passes on to research."""
+    return Searcher(cast(TavilyClient, fake_tavily)), make_epmc([])[0]
+
+
+def test_fully_cited_graph_needs_no_more_research(make_llm, researched: RunState, tools) -> None:
+    llm, _ = make_llm([proposal((*QUESTION, ["c1"]))])
+
+    run_dag(researched, llm, *tools)
+
+    assert researched.edges == [edge(*QUESTION, "c1")]
+    assert len(researched.rounds) == 1
+
+
+def test_uncited_edge_goes_back_to_research_and_the_graph_is_rebuilt(
+    make_llm, researched: RunState, tools, confounder_claim, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    llm, _ = make_llm(
+        [
+            proposal((*QUESTION, ["c1"]), ("smoking", "sore_throat", [])),
+            proposal((*QUESTION, ["c1"]), ("smoking", "sore_throat", ["s1-adjusted_for"])),
+        ]
+    )
+    asked: list[list[str]] = []
+
+    def finds_a_claim(state: RunState, llm, searcher, papers, gaps: list[str], _) -> None:
+        asked.append(gaps)
+        state.claims.append(confounder_claim())
+
+    monkeypatch.setattr(dag, "research_gaps", finds_a_claim)
+
+    run_dag(researched, llm, *tools)
+
+    assert asked == [["no source yet for DAG edge smoking -> sore_throat"]]
+    assert not any(e.assumed for e in researched.edges)
+
+
+def test_extra_research_finding_nothing_keeps_the_edge_assumed(
+    make_llm, researched: RunState, tools
+) -> None:
+    # No third outcome: a second DAG call or another round would fail the test.
+    llm, _ = make_llm([proposal((*QUESTION, ["c1"]), ("age", "sore_throat", [])), NO_QUERIES])
+
+    run_dag(researched, llm, *tools)
+
+    assert len(researched.rounds) == 2
+    assert [e.assumed for e in researched.edges] == [False, True]
+
+
+def test_no_rounds_left_keeps_the_edge_assumed(make_llm, researched: RunState, tools) -> None:
+    llm, _ = make_llm([proposal((*QUESTION, ["c1"]), ("age", "sore_throat", []))])
+
+    run_dag(researched, llm, *tools, max_rounds=1)
+
+    assert len(researched.rounds) == 1
+    assert [e.assumed for e in researched.edges] == [False, True]

@@ -335,3 +335,10 @@ def extraction(included: bool = True, quotes: list[dict] | None = None, **change
         "quotes": GROUNDED if quotes is None else quotes,
     }
     return json.dumps(out | changes)
+
+
+def proposal(*edges: tuple[str, str, list[str]]) -> str:
+    """DAG model output with the given (source, target, claim_ids) edges."""
+    return json.dumps(
+        {"edges": [{"source": s, "target": t, "claim_ids": ids} for s, t, ids in edges]}
+    )

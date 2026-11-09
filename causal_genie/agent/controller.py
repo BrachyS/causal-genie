@@ -26,6 +26,7 @@ from tavily import TavilyClient
 
 from causal_genie.agent.router import normalize, route
 from causal_genie.agent.state import RunState
+from causal_genie.agent.steps.dag import run_dag
 from causal_genie.agent.steps.estimate import estimate_rct
 from causal_genie.agent.steps.frame import frame
 from causal_genie.agent.steps.report import write_report
@@ -85,7 +86,7 @@ def run(
     cache_dir: Path,
     ask: Callable[[str], str] | None,
 ) -> RunState:
-    """Route → frame → research → download → estimate → verdict → report, saving the run."""
+    """Route → frame → research → DAG → download → estimate → verdict → report, saving the run."""
     state = RunState(
         run_id=new_run_id(),
         question=question,
@@ -106,6 +107,8 @@ def run(
         else:
             state.query = frame(question, llm, ask_and_record if ask else None)
             research(state, llm, searcher, papers)
+            if any(s.included for s in state.studies):
+                run_dag(state, llm, searcher, papers)
             data = THIN_SLICE_DATA.get(normalize(question))
             if data is None and not any(s.included for s in state.studies):
                 # PRD §5.9: nothing useful found after one reformulated round → ❓

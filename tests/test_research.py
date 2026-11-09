@@ -12,10 +12,16 @@ from causal_genie.agent.state import (
     FollowUpPlan,
     Query,
     QueryGroup,
+    ResearchPlan,
     ResearchRound,
     RunState,
 )
-from causal_genie.agent.steps.research import fallback_plan, missing_coverage, research
+from causal_genie.agent.steps.research import (
+    fallback_plan,
+    missing_coverage,
+    research,
+    research_gaps,
+)
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import RESEARCH_DOMAINS, Searcher
 
@@ -230,3 +236,24 @@ def test_secondary_source_is_a_gap_only_without_an_equally_strong_paper(
     state.studies = [news_rct, cohort]
     (gap,) = missing_coverage(state)
     assert "primary source" in gap and "https://news" in gap
+
+
+def test_research_gaps_runs_one_round_aimed_at_the_gaps(
+    state, make_llm, searcher, papers, fake_tavily
+) -> None:
+    earlier = ResearchPlan(
+        queries=[Query(text="already run", tool="search", group="confounders", why="w")],
+        done=True,
+        done_reason="test",
+    )
+    state.rounds.append(ResearchRound(number=1, plan=earlier, planned_by="model"))
+    follow_up = plan([q("confounders", "already run"), q("confounders", "smoking sore throat")])
+    llm, fake = make_llm([follow_up, READ])
+
+    research_gaps(state, llm, searcher, papers, ["no source yet for DAG edge smoking -> y"])
+
+    assert [r.number for r in state.rounds] == [1, 2]
+    assert "Coverage still missing" in fake.requests[0]["messages"][1]["content"]
+    assert "smoking -> y" in fake.requests[0]["messages"][1]["content"]
+    assert [r["query"] for r in fake_tavily.requests] == ["smoking sore throat"]
+    assert state.certainty is not None  # includes what the extra round found

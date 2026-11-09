@@ -4,7 +4,7 @@ from typing import cast
 
 import httpx
 import pytest
-from conftest import epmc_result, extraction
+from conftest import epmc_result, extraction, proposal
 from tavily import TavilyClient
 
 from causal_genie.agent import controller
@@ -22,6 +22,9 @@ CSV = (
 
 
 READ = extraction(quotes=[])  # the fake Tavily's one page, read as the D1 trial
+# READ yields no claims, so the DAG's edge is assumed and research is asked for one more round.
+DAG = proposal(("licorice_gargle", "sore_throat", []))
+NO_QUERIES = json.dumps({"queries": [], "done": True, "done_reason": "test"})
 
 
 def routed(causal: bool) -> str:
@@ -59,7 +62,7 @@ def run_live(make_llm, make_epmc, fake_tavily, http, tmp_path: Path):
 
 
 def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_path: Path) -> None:
-    state = run_live(D1, [routed(True), framed, round_plan, READ])
+    state = run_live(D1, [routed(True), framed, round_plan, READ, DAG, NO_QUERIES])
 
     assert state.verdict == "estimated"
     (result,) = state.results
@@ -72,13 +75,18 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
     )
     assert out["rows_excluded_missing"] == 1
     assert len(state.searches) == 6  # one per query group
-    assert [r.planned_by for r in state.rounds] == ["model"]
+    assert [r.planned_by for r in state.rounds] == ["model", "model"]
+    assert [(e.source, e.target, e.assumed) for e in state.edges] == [
+        ("licorice_gargle", "sore_throat", True)
+    ]
     assert state.downloads[0].license == "MIT"
     assert [c.prompt_name for c in state.llm_calls] == [
         "route",
         "frame",
         "research_plan",
         "extract",
+        "dag",
+        "research_plan",
     ]
     assert state.report is not None and "✅" in state.report
     assert "## Evidence" in state.report
@@ -97,7 +105,7 @@ def test_not_causal_question_stops_after_routing(run_live, fake_tavily) -> None:
 
 def test_question_without_thin_slice_data_is_not_estimated(run_live, framed, round_plan) -> None:
     knuckles = "Does cracking your knuckles cause arthritis?"
-    state = run_live(knuckles, [routed(True), framed, round_plan, READ])
+    state = run_live(knuckles, [routed(True), framed, round_plan, READ, DAG, NO_QUERIES])
 
     assert state.verdict == "published_only"
     assert state.downloads == [] and state.results == []
@@ -125,6 +133,7 @@ def test_no_included_study_and_no_data_is_insufficient(run_live, framed, round_p
     state = run_live(knuckles, [routed(True), framed, round_plan, off_topic, round_2])
 
     assert state.verdict == "insufficient"
+    assert state.edges == []  # no evidence to build a graph from
     assert state.report is not None and "No included studies" in state.report
 
 
@@ -141,7 +150,7 @@ def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
 def test_replay_reproduces_a_run_without_model_or_search(
     run_live, framed, round_plan, http, prompts_dir: Path, tmp_path: Path
 ) -> None:
-    live = run_live(D1, [routed(True), framed, round_plan, READ])
+    live = run_live(D1, [routed(True), framed, round_plan, READ, DAG, NO_QUERIES])
 
     replayed = controller.run(
         D1,
@@ -156,6 +165,7 @@ def test_replay_reproduces_a_run_without_model_or_search(
 
     assert replayed.results == live.results
     assert replayed.rounds == live.rounds
+    assert replayed.edges == live.edges
     assert replayed.report is not None and live.report is not None
     assert replayed.report.replace(replayed.run_id, "") == live.report.replace(live.run_id, "")
 

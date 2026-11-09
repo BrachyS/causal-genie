@@ -49,40 +49,69 @@ def research(
 ) -> None:
     """Run research rounds until the stop rule fires, appending each round to `state.rounds`
     and the studies and claims it finds to `state.studies` and `state.claims`."""
-    ran: set[tuple[str, str]] = set()
     for number in range(1, max_rounds + 1):
-        plan, planned_by = plan_round(state, llm, searcher, number, max_rounds)
-        # Stored as a plain ResearchPlan: the round-specific checks already ran, and the saved
-        # run must load back equal to the live one.
-        stored = ResearchPlan.model_validate(plan.model_dump())
-        current = ResearchRound(number=number, plan=stored, planned_by=planned_by)
-        state.rounds.append(current)
-        new = [query for query in plan.queries if (query.tool, query.text) not in ran]
-        for query in new:
-            run_query(query, number, searcher)
-            ran.add((query.tool, query.text))
-        before = included_ids(state)
-        process_sources(state, llm, searcher, papers)
-        current.new_studies = len(included_ids(state) - before)
-        current.missing = missing_coverage(state)
-        current.stop_reason = stop_reason(current, plan, bool(new), max_rounds)
-        log.info(
-            "round=%d planned_by=%s queries=%d skipped_repeats=%d new_studies=%d done=%s "
-            "done_reason=%r missing=%s stop=%s",
-            number,
-            planned_by,
-            len(new),
-            len(plan.queries) - len(new),
-            current.new_studies,
-            plan.done,
-            plan.done_reason,
-            current.missing,
-            current.stop_reason,
-        )
-        if current.stop_reason:
+        if run_round(state, llm, searcher, papers, number, max_rounds).stop_reason:
             break
     state.certainty = certainty(state.studies)
     log.info("research done: certainty=%s", state.certainty)
+
+
+def research_gaps(
+    state: RunState,
+    llm: LLMClient,
+    searcher: Searcher,
+    papers: EuropePMC,
+    gaps: list[str],
+    max_rounds: int = MAX_ROUNDS,
+) -> None:
+    """One more round, aimed at `gaps` found after research stopped (e.g. uncited DAG edges).
+
+    The planner reads the latest round's `missing` list, so the gaps go there.
+    """
+    state.rounds[-1].missing += gaps
+    run_round(state, llm, searcher, papers, len(state.rounds) + 1, max_rounds)
+    state.certainty = certainty(state.studies)
+    log.info("extra research done: gaps=%s certainty=%s", gaps, state.certainty)
+
+
+def run_round(
+    state: RunState,
+    llm: LLMClient,
+    searcher: Searcher,
+    papers: EuropePMC,
+    number: int,
+    max_rounds: int,
+) -> ResearchRound:
+    """Plan and run one round, skipping queries earlier rounds already ran."""
+    ran = {(query.tool, query.text) for r in state.rounds for query in r.plan.queries}
+    plan, planned_by = plan_round(state, llm, searcher, number, max_rounds)
+    # Stored as a plain ResearchPlan: the round-specific checks already ran, and the saved
+    # run must load back equal to the live one.
+    stored = ResearchPlan.model_validate(plan.model_dump())
+    current = ResearchRound(number=number, plan=stored, planned_by=planned_by)
+    state.rounds.append(current)
+    new = [query for query in plan.queries if (query.tool, query.text) not in ran]
+    for query in new:
+        run_query(query, number, searcher)
+    before = included_ids(state)
+    process_sources(state, llm, searcher, papers)
+    current.new_studies = len(included_ids(state) - before)
+    current.missing = missing_coverage(state)
+    current.stop_reason = stop_reason(current, plan, bool(new), max_rounds)
+    log.info(
+        "round=%d planned_by=%s queries=%d skipped_repeats=%d new_studies=%d done=%s "
+        "done_reason=%r missing=%s stop=%s",
+        number,
+        planned_by,
+        len(new),
+        len(plan.queries) - len(new),
+        current.new_studies,
+        plan.done,
+        plan.done_reason,
+        current.missing,
+        current.stop_reason,
+    )
+    return current
 
 
 def included_ids(state: RunState) -> set[str]:
