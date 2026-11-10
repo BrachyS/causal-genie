@@ -1,8 +1,9 @@
 """Run one question end to end and save everything needed to inspect or replay it.
 
 The controller, never a model, picks the verdict. Each run is saved to `runs/<run_id>/` as
-`state.json` (every model call, search, download and result) plus `report.md`, even when a
-step fails, so failures can be debugged from the saved state.
+`state.json` (every model call, search, download and result) plus `report.md` and the DAG
+(`dag.json`, `dag.png`), even when a step fails, so failures can be debugged from the saved
+state. Rendering the DAG needs Graphviz's `dot` program installed.
 
 Usage: `uv run python -m causal_genie.agent.controller "Does X cause Y?" [--replay]`
 """
@@ -35,6 +36,7 @@ from causal_genie.llm.client import LLMClient, load_models, make_openai
 from causal_genie.log import setup_logging
 from causal_genie.tools.download import download
 from causal_genie.tools.metadata import EuropePMC
+from causal_genie.tools.render import render_dag
 from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
@@ -109,6 +111,7 @@ def run(
             research(state, llm, searcher, papers)
             if any(s.included for s in state.studies):
                 run_dag(state, llm, searcher, papers)
+                render_dag(state.edges, runs_dir / state.run_id)
             data = THIN_SLICE_DATA.get(normalize(question))
             if data is None and not any(s.included for s in state.studies):
                 # PRD §5.9: nothing useful found after one reformulated round → ❓

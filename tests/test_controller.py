@@ -93,6 +93,8 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
     run_dir = tmp_path / "runs" / state.run_id
     assert RunState.load(run_dir / "state.json") == state
     assert (run_dir / "report.md").read_text() == state.report
+    assert json.loads((run_dir / "dag.json").read_text())["edges"][0]["assumed"] is True
+    assert (run_dir / "dag.png").read_bytes().startswith(b"\x89PNG")
 
 
 def test_not_causal_question_stops_after_routing(run_live, fake_tavily) -> None:
