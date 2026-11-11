@@ -89,3 +89,11 @@ def test_runs_saved_before_domains_still_load() -> None:
     call = SearchCall.model_validate({"query": "q", "hits": [], "latency_s": 0.1})
 
     assert call.domains == []
+
+
+def test_data_search_restricts_to_given_domains(searcher, fake_tavily) -> None:
+    searcher.search("daily births dataset", domains=("zenodo.org",), mode="restrict")
+
+    assert fake_tavily.requests[0]["include_domains"] == ["zenodo.org"]
+    assert fake_tavily.requests[0]["include_domains_mode"] == "restrict"
+    assert searcher.calls[0].mode == "restrict"

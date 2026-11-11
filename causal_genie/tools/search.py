@@ -8,6 +8,7 @@ them: news, blogs and critiques still come back as leads and for the disproving 
 """
 
 import time
+from typing import Literal
 
 from tavily import TavilyClient
 
@@ -54,10 +55,15 @@ class Searcher:
         """A searcher that answers only from a saved run's searches and extracts; no keys."""
         return cls(tavily=None, replay=calls, replay_extracts=extracts)
 
-    def search(self, query: str, domains: tuple[str, ...] = ()) -> list[SearchHit]:
-        """Hits for `query`, preferring `domains` if given; live or from the recording (matched
-        on query and domains), and a replay miss is an error."""
-        with log_step("search", query=query, domains=domains) as rec:
+    def search(
+        self,
+        query: str,
+        domains: tuple[str, ...] = (),
+        mode: Literal["prefer", "restrict"] = "prefer",
+    ) -> list[SearchHit]:
+        """Hits for `query`, preferring (research) or restricted to (data) `domains` if given;
+        live or from the recording (matched on query and domains), a replay miss is an error."""
+        with log_step("search", query=query, domains=domains, mode=mode) as rec:
             if self.tavily is None:
                 if (query, domains) not in self.replay:
                     raise KeyError(f"no recorded search for {query!r} with domains {domains}")
@@ -70,7 +76,7 @@ class Searcher:
                         search_depth="advanced",
                         max_results=self.max_results,
                         include_domains=list(domains),
-                        include_domains_mode="prefer",
+                        include_domains_mode=mode,
                     )
                 else:
                     found = self.tavily.search(
@@ -87,6 +93,7 @@ class Searcher:
                     hits=hits,
                     latency_s=time.perf_counter() - start,
                     domains=list(domains),
+                    mode=mode,
                 )
             self.calls.append(call)
             rec["urls"] = [h.url for h in call.hits]

@@ -4,6 +4,7 @@ Downloads are data: nothing in them is ever executed, and they live under cache/
 committed). Each file is recorded with its checksum so estimates trace to exact bytes.
 """
 
+import csv
 import hashlib
 import ipaddress
 import socket
@@ -34,6 +35,7 @@ ALLOWLIST: dict[str, tuple[str, ...]] = {
 FORMATS = {".csv", ".tsv", ".xlsx", ".parquet", ".zip"}
 MAX_BYTES = 50 * 1024 * 1024
 MAX_REDIRECTS = 5
+PEEK_BYTES = 64 * 1024  # a header line longer than this is not a table we can use
 
 
 class DownloadRejected(ValueError):
@@ -45,14 +47,21 @@ def resolve_ips(host: str) -> list[str]:
     return [str(info[4][0]) for info in socket.getaddrinfo(host, 443)]
 
 
+def allowlisted(url: str) -> bool:
+    """https on an allowlisted host and path; no network, so the rule filter can use it."""
+    parts = urlsplit(url)
+    prefixes = ALLOWLIST.get(parts.hostname or "", ())
+    return parts.scheme == "https" and any(parts.path.startswith(p) for p in prefixes)
+
+
 def check_url(url: str) -> None:
     """Raise `DownloadRejected` unless `url` is https, allowlisted and resolves to public IPs."""
     parts = urlsplit(url)
     if parts.scheme != "https":
         raise DownloadRejected(f"https only: {url}")
-    host = parts.hostname or ""
-    if not any(parts.path.startswith(p) for p in ALLOWLIST.get(host, ())):
+    if not allowlisted(url):
         raise DownloadRejected(f"not on the allowlist: {url}")
+    host = parts.hostname or ""
     private = [ip for ip in resolve_ips(host) if not ipaddress.ip_address(ip).is_global]
     if private:
         raise DownloadRejected(f"{host} resolves to private network address {private}")
@@ -114,3 +123,28 @@ def read_capped(response: httpx.Response, max_bytes: int) -> bytes:
         if len(body) > max_bytes:
             raise DownloadRejected(f"size exceeds cap {max_bytes} bytes")
     return bytes(body)
+
+
+def peek_columns(url: str, http: httpx.Client, max_bytes: int = PEEK_BYTES) -> list[str]:
+    """Column names from a CSV or TSV header line, so candidates can be scored before download.
+
+    Reads at most `max_bytes` and keeps only the first line; rows are never kept. Other formats
+    return []. Redirects are not followed (the full download re-checks them).
+    """
+    suffix = PurePosixPath(urlsplit(url).path).suffix.lower()
+    if suffix not in {".csv", ".tsv"}:
+        return []
+    check_url(url)
+    with log_step("peek", url=url) as rec, http.stream("GET", url) as response:
+        response.raise_for_status()
+        head = bytearray()
+        for chunk in response.iter_bytes():
+            head += chunk
+            if b"\n" in head or len(head) > max_bytes:
+                break
+        if b"\n" not in head[:max_bytes]:
+            raise DownloadRejected(f"no header line within {max_bytes} bytes: {url}")
+        line = head[: head.index(b"\n")].decode("utf-8", errors="replace").rstrip("\r")
+        columns = next(csv.reader([line], delimiter="\t" if suffix == ".tsv" else ","))
+        rec["columns"] = columns
+        return columns

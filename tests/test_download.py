@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from causal_genie.tools import download as dl
-from causal_genie.tools.download import DownloadRejected, download
+from causal_genie.tools.download import DownloadRejected, allowlisted, download, peek_columns
 
 CSV_URL = "https://vincentarelbundock.github.io/Rdatasets/csv/medicaldata/licorice_gargle.csv"
 BODY = b"treat,pain\n1,0\n0,3\n"
@@ -128,3 +128,51 @@ def test_http_error_is_raised(make_http, tmp_path: Path) -> None:
 
     with pytest.raises(httpx.HTTPStatusError):
         download(CSV_URL, http, tmp_path, doi=None, license=None)
+
+
+@pytest.mark.parametrize(
+    ("url", "ok"),
+    [
+        (CSV_URL, True),
+        ("https://github.com/fivethirtyeight/data/tree/master/births", True),
+        ("https://github.com/someone/repo/blob/main/x.csv", False),
+        ("http://zenodo.org/records/1", False),
+        ("https://www.vivli.org/study/1", False),
+    ],
+)
+def test_allowlisted_checks_scheme_host_and_path_without_dns(
+    monkeypatch: pytest.MonkeyPatch, url: str, ok: bool
+) -> None:
+    monkeypatch.setattr(dl, "resolve_ips", lambda host: pytest.fail("no DNS lookup"))
+
+    assert allowlisted(url) is ok
+
+
+def test_peek_reads_only_the_header_line(make_http) -> None:
+    body = iter([b'"rownames","treat","pacu30min_', b'throatPain"\n1,0,3\n', b"2,1,0\n" * 1000])
+    http, _ = make_http(lambda r: httpx.Response(200, content=body))
+
+    assert peek_columns(CSV_URL, http) == ["rownames", "treat", "pacu30min_throatPain"]
+
+
+def test_peek_splits_tsv_on_tabs(make_http) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content=b"a\tb\n1\t2\n"))
+    url = "https://zenodo.org/records/1/files/t.tsv"
+
+    assert peek_columns(url, http) == ["a", "b"]
+
+
+def test_peek_of_other_formats_or_off_allowlist(make_http) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, content=BODY))
+
+    assert peek_columns("https://zenodo.org/records/1/files/t.xlsx", http) == []
+    with pytest.raises(DownloadRejected, match="allowlist"):
+        peek_columns("https://example.com/t.csv", http)
+    assert seen == []
+
+
+def test_peek_without_header_line_within_cap_is_rejected(make_http) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content=b"x" * 500))
+
+    with pytest.raises(DownloadRejected, match="header"):
+        peek_columns(CSV_URL, http, max_bytes=100)
