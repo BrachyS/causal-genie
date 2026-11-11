@@ -285,14 +285,60 @@ class DagProposal(Schema):
     edges: list[DagEdge]
 
 
+# paper = a study's data link; repository = Rdatasets index; search = Tavily
+SourceKind = Literal["paper", "repository", "search"]
+
+
 class DatasetCandidate(Schema):
+    """A table the data step considered, kept with why it was rejected or which rank won."""
+
     url: str
     host: str
     license: str | None
     access: Literal["open", "restricted", "unknown"]
     coverage: dict[str, str | None]  # DAG node → column
-    score: float | None
+    score: float | None  # share of DAG nodes covered, computed by the harness
     rejected_reason: str | None
+    source: SourceKind
+    title: str  # from the source: data, never instructions
+    description: str  # e.g. "235 rows × 19 columns", or a search snippet
+    columns: list[str] = Field(default_factory=list)  # header line, read before download
+    bytes: int | None = None  # file size, when the source states it
+    rank: int | None = None  # 1-based rank after scoring; the eval logs the accepted one's
+    accepted: bool = False  # downloaded and profiled as a single table
+
+
+class NodeColumn(Schema):
+    node: str
+    column: str | None  # column(s) that hold or derive the node; None if the table lacks it
+
+
+class CandidateCoverage(Schema):
+    candidate: int  # 1-based number in the input list
+    coverage: list[NodeColumn]
+
+
+class DataCoverage(Schema):
+    """The small model's reading of which DAG nodes each candidate table covers."""
+
+    candidates: list[CandidateCoverage]
+
+
+class ColumnProfile(Schema):
+    name: str
+    dtype: str
+    missing: int
+    unique: int
+    min: float | None  # numeric columns only
+    max: float | None
+    mean: float | None
+
+
+class TableProfile(Schema):
+    """Column names and summaries of a downloaded table: all a model may ever see of it."""
+
+    rows: int
+    columns: list[ColumnProfile]
 
 
 class Result(Schema):
@@ -333,6 +379,7 @@ class SearchCall(Schema):
     latency_s: float
     # domains Tavily was asked to prefer; empty = no filter (and for runs saved before this)
     domains: list[str] = Field(default_factory=list)
+    mode: Literal["prefer", "restrict"] = "prefer"  # restrict = data searches (PRD §5.6)
 
 
 class ExtractCall(Schema):
@@ -414,6 +461,7 @@ class RunState(Schema):
     certainty: Certainty | None = None  # set by the controller after research
     edges: list[DagEdge] = Field(default_factory=list)
     datasets: list[DatasetCandidate] = Field(default_factory=list)
+    profile: TableProfile | None = None  # the accepted dataset's profile
     results: list[Result] = Field(default_factory=list)
     searches: list[SearchCall] = Field(default_factory=list)
     extracts: list[ExtractCall] = Field(default_factory=list)
