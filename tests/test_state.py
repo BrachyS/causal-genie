@@ -1,9 +1,10 @@
+import json
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from causal_genie.agent.state import ResearchPlan, RunState
+from causal_genie.agent.state import DagEdge, DagProposal, ResearchPlan, RunState
 
 
 def test_run_state_round_trips_through_json(tmp_path: Path, sample_state: RunState) -> None:
@@ -25,3 +26,20 @@ def test_model_output_schemas_reject_unknown_fields() -> None:
         ResearchPlan.model_validate(
             {"queries": [], "done": True, "done_reason": "enough", "verdict": "✅"}
         )
+
+
+def test_question_edge_is_not_assumed_without_claims() -> None:
+    question = DagEdge(source="full_moon", target="births", claim_ids=[], question=True)
+
+    assert not question.assumed
+    assert DagEdge(source="weekend", target="births", claim_ids=[]).assumed
+
+
+def test_old_saved_edges_load_as_non_question_edges() -> None:
+    edge = DagEdge.model_validate({"source": "a", "target": "b", "claim_ids": []})
+
+    assert edge.question is False
+
+
+def test_model_is_not_shown_the_question_flag() -> None:
+    assert "question" not in json.dumps(DagProposal.model_json_schema())

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal, Self, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 
 class Schema(BaseModel):
@@ -271,12 +272,15 @@ class SupportCheck(Schema):
 class DagEdge(Schema):
     source: str
     target: str
-    claim_ids: list[str]  # empty → "assumed"
+    claim_ids: list[str]  # empty → "assumed", unless this is the question edge
+    # The exposure → outcome edge: the hypothesis being tested, so it cites no claims; its
+    # evidence is the report's Evidence section. Set by the harness, hidden from the model.
+    question: SkipJsonSchema[bool] = False
 
     @property
     def assumed(self) -> bool:
         """No ledger claim backs this edge; the report must say it is an assumption."""
-        return not self.claim_ids
+        return not self.claim_ids and not self.question
 
 
 class DagProposal(Schema):

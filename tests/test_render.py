@@ -50,11 +50,18 @@ def test_render_writes_json_and_png(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
     assert json.loads(json_path.read_text()) == {
         "edges": [
-            {"source": "age", "target": "sore_throat", "claim_ids": ["c1"], "assumed": False},
+            {
+                "source": "age",
+                "target": "sore_throat",
+                "claim_ids": ["c1"],
+                "question": False,
+                "assumed": False,
+            },
             {
                 "source": "licorice_gargle",
                 "target": "sore_throat",
                 "claim_ids": [],
+                "question": False,
                 "assumed": True,
             },
         ]
