@@ -341,6 +341,51 @@ class TableProfile(Schema):
     columns: list[ColumnProfile]
 
 
+# How the harness computes a node from its columns; a fixed menu, so no model-written code runs.
+DeriveRule = Literal["day_of_week", "weekend", "holiday", "season", "full_moon", "cutoff"]
+
+
+class NodeMapping(Schema):
+    node: str
+    # empty: the table lacks the node; a date rule takes one date column or year, month, day
+    columns: list[str]
+    derive: DeriveRule | None  # None: use the one column as it is
+    cutoff: float | None  # derive="cutoff" only: node = column > cutoff
+    categorical: bool  # numeric codes that name categories (e.g. 1 = Monday), not amounts
+
+
+class Mapping(Schema):
+    """The small model's column ↔ node proposal; the harness checks it, the user confirms it."""
+
+    nodes: list[NodeMapping]
+    unit: str | None  # column naming a unit seen in several rows (a panel); else None
+    time: str | None  # column giving each row's period in a panel; else None
+
+
+class Adjustment(Schema):
+    """What to adjust for, picked from the DAG by `identify` (DoWhy backdoor criterion)."""
+
+    adjust_for: list[str] | None  # None: no valid set among the nodes the table has
+    missing: list[str]  # nodes a valid set needs that the table lacks
+    randomized: bool  # edges into the exposure were cut before picking the set
+
+
+DataDesign = Literal[
+    "randomized", "observational", "selection_after_assignment", "DiD", "IV", "RDD"
+]
+
+
+class DesignCheck(Schema):
+    """What the data's design lets us estimate, set by `detect_design`, never by a model."""
+
+    design: DataDesign
+    estimable: bool  # the MVP estimates randomized and backdoor-adjusted data only
+    key_assumption: str
+    estimand: str  # what the design identifies, e.g. ATE, ATT, LATE, effect at the cutoff
+    check: str  # the check to run or the data to ask for next
+    reasons: list[str]  # the evidence for this label, in words
+
+
 class Result(Schema):
     id: str
     tool: str
@@ -462,6 +507,10 @@ class RunState(Schema):
     edges: list[DagEdge] = Field(default_factory=list)
     datasets: list[DatasetCandidate] = Field(default_factory=list)
     profile: TableProfile | None = None  # the accepted dataset's profile
+    mapping: Mapping | None = None  # column ↔ node mapping after the harness's checks
+    mapping_confirmed: bool = False  # the user said yes; False when nobody was asked
+    design: DesignCheck | None = None
+    adjustment: Adjustment | None = None
     results: list[Result] = Field(default_factory=list)
     searches: list[SearchCall] = Field(default_factory=list)
     extracts: list[ExtractCall] = Field(default_factory=list)
