@@ -7,7 +7,7 @@ Propose the edges of a DAG that a careful analyst would use to estimate the effe
 Nodes:
 - Use the exposure and outcome names exactly as given.
 - Name every other node with a short snake_case id (e.g. `age`, `smoking`, `surgery_length`).
-- Include the exposure → outcome edge.
+- Include the exposure → outcome edge with `claim_ids: []`. It is the question being tested, not a fact to cite: the evidence for and against it is reported separately.
 - Add a node only if it matters for this question: a common cause of exposure and outcome (confounder), a step between them (mediator), or a common effect that someone might wrongly adjust for (collider). Prefer variables the claims name, e.g. ones studies adjusted for. Keep the graph small: at most about 10 nodes.
 
 Citations:

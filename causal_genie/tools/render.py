@@ -16,14 +16,15 @@ log = logging.getLogger(__name__)
 
 
 def dag_dot(edges: list[DagEdge]) -> graphviz.Digraph:
-    """The Graphviz drawing of `edges`; an assumed edge is dashed, a cited one solid."""
+    """The Graphviz drawing of `edges`: the question edge bold, assumed dashed, cited solid."""
     names = list(dict.fromkeys(name for e in edges for name in (e.source, e.target)))
     ids = {name: f"n{i}" for i, name in enumerate(names)}
     dot = graphviz.Digraph()
     for name in names:
         dot.node(ids[name], label=graphviz.escape(name))
     for e in edges:
-        dot.edge(ids[e.source], ids[e.target], style="dashed" if e.assumed else None)
+        style = "bold" if e.question else "dashed" if e.assumed else None
+        dot.edge(ids[e.source], ids[e.target], style=style)
     return dot
 
 

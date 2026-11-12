@@ -3,7 +3,10 @@
 The model may only cite claims the harness shows it, and it is only shown `documented` claims
 (quote found in the source and judged to support the claim). Any other id it cites is dropped
 and logged; an edge left with no citation is "assumed". The question's own exposure → outcome
-edge is always in the graph, so identification has both nodes to work with. A node whose name
+edge is always in the graph, so identification has both nodes to work with. It is the
+hypothesis being tested, not a fact to cite: it is marked `question`, never cites claims (any
+the model gives are dropped and logged) and never counts as assumed. Its evidence, supporting
+and null, is the report's Evidence section. A node whose name
 is a near copy of the exposure's or outcome's (e.g. `licorice_gargling`) is logged: it usually
 means the model renamed a question node, which would leave a stray node in the graph.
 
@@ -97,8 +100,10 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
     proposed = llm.complete("large", "dag", user, DagProposal)
 
     known = {c.id for c in citable}
+    question = (exposure.name, outcome.name)
     edges: list[DagEdge] = []
     for edge in proposed.edges:
+        is_question = (edge.source, edge.target) == question
         dropped = [i for i in edge.claim_ids if i not in known]
         if dropped:
             log.warning(
@@ -108,7 +113,16 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
                 dropped,
             )
         cited = [i for i in edge.claim_ids if i in known]
-        edges.append(edge.model_copy(update={"claim_ids": cited}))
+        if is_question and cited:
+            log.info(
+                "question edge %s -> %s is the hypothesis, not a cited fact; dropped claims %s "
+                "(they stay in the Evidence section)",
+                edge.source,
+                edge.target,
+                cited,
+            )
+            cited = []
+        edges.append(edge.model_copy(update={"claim_ids": cited, "question": is_question}))
 
     nodes = {n for e in edges for n in (e.source, e.target)}
     for node in sorted(nodes - {exposure.name, outcome.name}):
@@ -116,9 +130,9 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
             if fuzz.ratio(node, name) >= NEAR_COPY:
                 log.warning("node %s looks like a renamed %s", node, name)
 
-    if not any((e.source, e.target) == (exposure.name, outcome.name) for e in edges):
-        log.warning("model left out %s -> %s; added as assumed", exposure.name, outcome.name)
-        edges.append(DagEdge(source=exposure.name, target=outcome.name, claim_ids=[]))
-    edges = break_cycles(edges, (exposure.name, outcome.name))
+    if not any(e.question for e in edges):
+        log.warning("model left out %s -> %s; added as the question edge", *question)
+        edges.append(DagEdge(source=question[0], target=question[1], claim_ids=[], question=True))
+    edges = break_cycles(edges, question)
     log.info("dag: %d edges, %d assumed", len(edges), sum(e.assumed for e in edges))
     return edges

@@ -20,6 +20,9 @@ def edge(source: str, target: str, *claim_ids: str) -> DagEdge:
     return DagEdge(source=source, target=target, claim_ids=list(claim_ids))
 
 
+QUESTION_EDGE = DagEdge(source=QUESTION[0], target=QUESTION[1], claim_ids=[], question=True)
+
+
 def test_edges_cite_ledger_claims_from_the_large_model(
     make_llm, sample_state: RunState, confounder_claim
 ) -> None:
@@ -36,7 +39,7 @@ def test_edges_cite_ledger_claims_from_the_large_model(
     edges = build_dag(sample_state, llm)
 
     assert [(e.source, e.target, e.claim_ids) for e in edges] == [
-        ("licorice_gargle", "sore_throat", ["c1"]),
+        ("licorice_gargle", "sore_throat", []),  # the question edge cites nothing
         ("smoking", "sore_throat", ["s1-adjusted_for"]),
     ]
     assert fake.requests[0]["model"] == "test/large"
@@ -51,8 +54,8 @@ def test_edge_citing_an_unknown_claim_is_marked_assumed(
     llm, _ = make_llm(
         [
             proposal(
-                ("licorice_gargle", "sore_throat", ["c1", "c99"]),
-                ("age", "sore_throat", ["c42"]),
+                ("age", "sore_throat", ["c1", "c99"]),
+                ("smoking", "sore_throat", ["c42"]),
             )
         ]
     )
@@ -83,15 +86,42 @@ def test_unresolved_claims_are_not_shown_and_cannot_be_cited(
     assert edges[1].assumed
 
 
-def test_missing_exposure_outcome_edge_is_added_as_assumed(
+def test_missing_exposure_outcome_edge_is_added_as_the_question_edge(
     make_llm, sample_state: RunState
 ) -> None:
     llm, _ = make_llm([proposal(("age", "sore_throat", []))])
 
     edges = build_dag(sample_state, llm)
 
-    question_edge = [e for e in edges if (e.source, e.target) == ("licorice_gargle", "sore_throat")]
-    assert len(question_edge) == 1 and question_edge[0].assumed
+    assert [e for e in edges if (e.source, e.target) == QUESTION] == [QUESTION_EDGE]
+    assert not QUESTION_EDGE.assumed
+
+
+def test_claims_cited_on_the_question_edge_are_dropped_and_logged(
+    make_llm, sample_state: RunState, step_logs
+) -> None:
+    llm, _ = make_llm([proposal((*QUESTION, ["c1"]))])
+
+    edges = build_dag(sample_state, llm)
+
+    assert edges == [QUESTION_EDGE]
+    dropped = [r for r in step_logs.records if "hypothesis" in r.message]
+    assert len(dropped) == 1 and "c1" in dropped[0].message
+
+
+def test_model_cannot_mark_another_edge_as_the_question(make_llm, sample_state: RunState) -> None:
+    edges = [
+        {"source": "age", "target": "sore_throat", "claim_ids": [], "question": True},
+        {"source": QUESTION[0], "target": QUESTION[1], "claim_ids": []},
+    ]
+    llm, _ = make_llm([json.dumps({"edges": edges})])
+
+    built = build_dag(sample_state, llm)
+
+    assert [(e.source, e.question, e.assumed) for e in built] == [
+        ("age", False, True),
+        ("licorice_gargle", True, False),
+    ]
 
 
 def test_near_copy_of_exposure_name_is_logged(make_llm, sample_state: RunState, step_logs) -> None:
@@ -183,7 +213,19 @@ def test_fully_cited_graph_needs_no_more_research(make_llm, researched: RunState
 
     run_dag(researched, llm, *tools)
 
-    assert researched.edges == [edge(*QUESTION, "c1")]
+    assert researched.edges == [QUESTION_EDGE]
+    assert len(researched.rounds) == 1
+
+
+def test_uncited_question_edge_alone_runs_no_extra_round(
+    make_llm, researched: RunState, tools
+) -> None:
+    # One outcome only: an extra research round would ask the model for a plan and fail.
+    llm, _ = make_llm([proposal((*QUESTION, []))])
+
+    run_dag(researched, llm, *tools)
+
+    assert researched.edges == [QUESTION_EDGE]
     assert len(researched.rounds) == 1
 
 

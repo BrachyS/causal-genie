@@ -28,7 +28,7 @@ def test_d1_dag_follows_the_prompt(
 
     by_pair = {(e.source, e.target): e for e in edges}
     question = by_pair[("licorice_gargle", "sore_throat")]
-    assert "c1" in question.claim_ids, "the trial's effect claim should back the question edge"
+    assert question.question and not question.claim_ids, "the question edge is the hypothesis"
     assert ("smoking", "sore_throat") in by_pair, "the adjusted-for variable should be a node"
     assert all(SNAKE.match(n) for e in edges for n in (e.source, e.target))
     assert len({n for e in edges for n in (e.source, e.target)}) <= 12

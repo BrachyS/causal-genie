@@ -10,6 +10,7 @@ from causal_genie.tools.render import dag_dot, render_dag
 
 CITED = DagEdge(source="age", target="sore_throat", claim_ids=["c1"])
 ASSUMED = DagEdge(source="licorice_gargle", target="sore_throat", claim_ids=[])
+QUESTION = DagEdge(source="smoking", target="sore_throat", claim_ids=[], question=True)
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -24,6 +25,12 @@ def test_assumed_edges_are_dashed_and_cited_edges_solid() -> None:
     assert len(lines) == 2
     assert "dashed" not in lines[0]
     assert "style=dashed" in lines[1]
+
+
+def test_question_edge_is_bold_not_dashed() -> None:
+    (line,) = edge_lines(dag_dot([QUESTION]).source)
+
+    assert "style=bold" in line and "dashed" not in line
 
 
 def test_each_node_is_drawn_once_with_its_name() -> None:

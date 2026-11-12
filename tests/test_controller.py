@@ -22,9 +22,8 @@ CSV = (
 
 
 READ = extraction(quotes=[])  # the fake Tavily's one page, read as the D1 trial
-# READ yields no claims, so the DAG's edge is assumed and research is asked for one more round.
+# The DAG's only edge is the question edge, which needs no citation, so no extra research round.
 DAG = proposal(("licorice_gargle", "sore_throat", []))
-NO_QUERIES = json.dumps({"queries": [], "done": True, "done_reason": "test"})
 
 
 def routed(causal: bool) -> str:
@@ -62,7 +61,7 @@ def run_live(make_llm, make_epmc, fake_tavily, http, tmp_path: Path):
 
 
 def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_path: Path) -> None:
-    state = run_live(D1, [routed(True), framed, round_plan, READ, DAG, NO_QUERIES])
+    state = run_live(D1, [routed(True), framed, round_plan, READ, DAG])
 
     assert state.verdict == "estimated"
     (result,) = state.results
@@ -75,9 +74,9 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
     )
     assert out["rows_excluded_missing"] == 1
     assert len(state.searches) == 6  # one per query group
-    assert [r.planned_by for r in state.rounds] == ["model", "model"]
-    assert [(e.source, e.target, e.assumed) for e in state.edges] == [
-        ("licorice_gargle", "sore_throat", True)
+    assert [r.planned_by for r in state.rounds] == ["model"]
+    assert [(e.source, e.target, e.question, e.assumed) for e in state.edges] == [
+        ("licorice_gargle", "sore_throat", True, False)
     ]
     assert state.downloads[0].license == "MIT"
     assert [c.prompt_name for c in state.llm_calls] == [
@@ -86,14 +85,14 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
         "research_plan",
         "extract",
         "dag",
-        "research_plan",
     ]
     assert state.report is not None and "✅" in state.report
     assert "## Evidence" in state.report
     run_dir = tmp_path / "runs" / state.run_id
     assert RunState.load(run_dir / "state.json") == state
     assert (run_dir / "report.md").read_text() == state.report
-    assert json.loads((run_dir / "dag.json").read_text())["edges"][0]["assumed"] is True
+    (saved,) = json.loads((run_dir / "dag.json").read_text())["edges"]
+    assert saved["question"] is True and saved["assumed"] is False
     assert (run_dir / "dag.png").read_bytes().startswith(b"\x89PNG")
 
 
@@ -107,7 +106,7 @@ def test_not_causal_question_stops_after_routing(run_live, fake_tavily) -> None:
 
 def test_question_without_thin_slice_data_is_not_estimated(run_live, framed, round_plan) -> None:
     knuckles = "Does cracking your knuckles cause arthritis?"
-    state = run_live(knuckles, [routed(True), framed, round_plan, READ, DAG, NO_QUERIES])
+    state = run_live(knuckles, [routed(True), framed, round_plan, READ, DAG])
 
     assert state.verdict == "published_only"
     assert state.downloads == [] and state.results == []
@@ -152,7 +151,7 @@ def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
 def test_replay_reproduces_a_run_without_model_or_search(
     run_live, framed, round_plan, http, prompts_dir: Path, tmp_path: Path
 ) -> None:
-    live = run_live(D1, [routed(True), framed, round_plan, READ, DAG, NO_QUERIES])
+    live = run_live(D1, [routed(True), framed, round_plan, READ, DAG])
 
     replayed = controller.run(
         D1,
