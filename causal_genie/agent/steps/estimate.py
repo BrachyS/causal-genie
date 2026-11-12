@@ -1,7 +1,7 @@
 """Turn a downloaded table into a recorded `Result`, so every reported number has an id.
 
-The `Result` id is a hash of the inputs (data checksum, columns, cutoff, scale): the same data
-and choices always give the same id, and any change gives a new one.
+The `Result` id is a hash of the inputs (data checksum, columns, cutoff or adjustment set,
+scale): the same data and choices always give the same id, and any change gives a new one.
 """
 
 import hashlib
@@ -14,7 +14,7 @@ import pandas as pd
 
 from causal_genie.agent.state import Result
 from causal_genie.log import log_step
-from causal_genie.tools.stats import rct_effect
+from causal_genie.tools.stats import backdoor_effect, rct_effect
 
 
 def estimate_rct(
@@ -49,12 +49,47 @@ def estimate_rct(
             "outcome_column": outcome,
             "cutoff": cutoff,
         }
-        inputs_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
         rec["output"] = outputs
-        return Result(
-            id=f"res-{inputs_hash[:8]}",
-            tool="rct_effect",
-            tool_version=version("causal-genie"),
-            inputs_hash=inputs_hash,
-            outputs=outputs,
-        )
+        return result("rct_effect", inputs, outputs)
+
+
+def result(tool: str, inputs: dict, outputs: dict) -> Result:
+    """A `Result` whose id is a hash of the inputs, so the same choices give the same id."""
+    inputs_hash = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    return Result(
+        id=f"res-{inputs_hash[:8]}",
+        tool=tool,
+        tool_version=version("causal-genie"),
+        inputs_hash=inputs_hash,
+        outputs=outputs,
+    )
+
+
+def estimate_backdoor(
+    table: pd.DataFrame,
+    data_sha256: str,
+    exposure: str,
+    outcome: str,
+    adjust_for: list[str],
+    scale: Literal["risk_difference", "mean_difference", "odds_ratio"],
+) -> Result:
+    """Estimate an observational effect from the analysis table (one column per node),
+    adjusting for the backdoor set from `identify`.
+
+    Rows missing any used column are excluded and counted, never silently dropped.
+    """
+    inputs = {
+        "data_sha256": data_sha256,
+        "exposure": exposure,
+        "outcome": outcome,
+        "adjust_for": adjust_for,
+        "scale": scale,
+    }
+    with log_step("estimate", **inputs) as rec:
+        data = table[[exposure, outcome, *adjust_for]].dropna()
+        outputs = backdoor_effect(data, exposure, outcome, adjust_for, scale) | {
+            "rows": len(table),
+            "rows_excluded_missing": len(table) - len(data),
+        }
+        rec["output"] = outputs
+        return result("backdoor_effect", inputs, outputs)

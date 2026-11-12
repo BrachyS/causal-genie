@@ -10,6 +10,7 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from scipy import stats
 
 
@@ -101,3 +102,64 @@ def rct_effect(
             int(treated.sum()), len(treated), int(control.sum()), len(control), level
         )
     return mean_difference(treated.to_numpy(), control.to_numpy(), level)
+
+
+def backdoor_effect(
+    df: pd.DataFrame,
+    treatment: str,
+    outcome: str,
+    adjust_for: list[str],
+    scale: Literal["risk_difference", "mean_difference", "odds_ratio"],
+    level: float = 0.95,
+) -> dict:
+    """Effect of a 0/1 `treatment` on `outcome` adjusting for the backdoor set `adjust_for`,
+    with the unadjusted (naive) estimate alongside so the report can show what adjustment did.
+
+    Risk and mean differences come from OLS (a linear probability model for a 0/1 outcome),
+    odds ratios from logistic regression; both use HC1 robust standard errors. Text columns
+    become one dummy per category. Missing values are an error, as in `rct_effect`.
+    """
+    data = df[[treatment, outcome, *adjust_for]]
+    if data.isna().any().any():
+        raise ValueError(f"missing values in {list(data.columns)}; drop them explicitly")
+    if not set(data[treatment].unique()) <= {0, 1}:
+        raise ValueError(f"treatment column {treatment!r} must be 0/1")
+    if scale != "mean_difference" and not set(data[outcome].unique()) <= {0, 1}:
+        raise ValueError(f"outcome column {outcome!r} must be 0/1 for {scale}")
+    covariates = (
+        pd.get_dummies(data[adjust_for], drop_first=True, dtype=float)
+        if adjust_for
+        else pd.DataFrame(index=data.index)
+    )
+    z = float(stats.norm.ppf(1 - (1 - level) / 2))
+
+    def fit(columns: pd.DataFrame) -> tuple[float, float, float]:
+        """Treatment coefficient and its CI on the reported scale."""
+        X = sm.add_constant(pd.concat([data[[treatment]].astype(float), columns], axis=1))
+        y = data[outcome].astype(float)
+        if scale == "odds_ratio":
+            model = sm.Logit(y, X).fit(disp=0, cov_type="HC1")
+        else:
+            model = sm.OLS(y, X).fit(cov_type="HC1")
+        b, se = float(model.params[treatment]), float(model.bse[treatment])
+        low, high = b - z * se, b + z * se
+        if scale == "odds_ratio":
+            return float(np.exp(b)), float(np.exp(low)), float(np.exp(high))
+        return b, low, high
+
+    estimate, ci_low, ci_high = fit(covariates)
+    naive, naive_low, naive_high = fit(covariates.iloc[:, :0])
+    return {
+        "scale": scale,
+        "estimate": estimate,
+        "ci_low": ci_low,
+        "ci_high": ci_high,
+        "level": level,
+        "method": ("logistic" if scale == "odds_ratio" else "OLS") + ", HC1 robust SEs",
+        "n": len(data),
+        "n_treated": int(data[treatment].sum()),
+        "adjusted_for": list(adjust_for),
+        "naive_estimate": naive,
+        "naive_ci_low": naive_low,
+        "naive_ci_high": naive_high,
+    }

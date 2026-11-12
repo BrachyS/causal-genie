@@ -169,7 +169,17 @@ def test_replay_reproduces_a_run_without_model_or_search(
     assert replayed.rounds == live.rounds
     assert replayed.edges == live.edges
     assert replayed.report is not None and live.report is not None
-    assert replayed.report.replace(replayed.run_id, "") == live.report.replace(live.run_id, "")
+
+    def stable(state: RunState) -> str:
+        """The report minus what legitimately differs: run id and download time (replay still
+        downloads the data again until T11.4, so a second can tick between the two runs)."""
+        assert state.report is not None
+        text = state.report.replace(state.run_id, "")
+        for d in state.downloads:
+            text = text.replace(d.retrieved_at, "")
+        return text
+
+    assert stable(replayed) == stable(live)
 
 
 def test_find_run_picks_latest_run_of_the_same_question(tmp_path: Path) -> None:

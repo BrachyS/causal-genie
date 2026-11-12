@@ -29,6 +29,9 @@ from causal_genie.agent.state import (
 from causal_genie.llm.client import PROMPTS_DIR, LLMClient
 from causal_genie.tools.metadata import EuropePMC
 
+# Synthetic CSVs with known effects and designs, built by `tests/fixtures/make_fixtures.py`.
+FIXTURES = Path(__file__).parent / "fixtures"
+
 
 @pytest.fixture
 def step_logs(caplog: pytest.LogCaptureFixture) -> pytest.LogCaptureFixture:

@@ -1,8 +1,9 @@
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
-from causal_genie.agent.steps.estimate import estimate_rct
+from causal_genie.agent.steps.estimate import estimate_backdoor, estimate_rct
 
 
 @pytest.fixture
@@ -32,3 +33,20 @@ def test_same_inputs_give_same_result_id(trial_csv: Path) -> None:
 
     assert run(0) == run(0)
     assert run(0) != run(1)
+
+
+def test_backdoor_result_counts_excluded_rows_and_records_the_set() -> None:
+    table = pd.DataFrame(
+        {
+            "x": [1, 1, 0, 0, 1, 0, 1, 0],
+            "y": [3.0, 4, 1, 2, 5, 1, None, 2],
+            "c": [1, 2, 1, 2, 3, 0, 1, 1],
+        }  # fmt: skip
+    )
+
+    r = estimate_backdoor(table, "sha", "x", "y", adjust_for=["c"], scale="mean_difference")
+
+    assert r.tool == "backdoor_effect"
+    assert (r.outputs["rows"], r.outputs["rows_excluded_missing"], r.outputs["n"]) == (8, 1, 7)
+    assert r.outputs["adjusted_for"] == ["c"]
+    assert r.id != estimate_backdoor(table, "sha", "x", "y", [], "mean_difference").id
