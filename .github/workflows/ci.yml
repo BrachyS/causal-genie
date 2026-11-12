@@ -13,7 +13,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: sudo apt-get update && sudo apt-get install -y graphviz
+      - run: sudo apt-get update && sudo apt-get install -y -o Acquire::Retries=3 graphviz
+        timeout-minutes: 5
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
