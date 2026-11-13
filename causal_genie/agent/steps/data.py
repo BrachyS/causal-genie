@@ -9,16 +9,24 @@ each covers. The harness computes the scores, then downloads the best (next on f
 missing. Every candidate is kept on the run with why it was rejected or which rank won.
 """
 
+import hashlib
 import io
 import logging
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
 import pandas as pd
 
-from causal_genie.agent.state import DataCoverage, DatasetCandidate, RunState, SourceKind
+from causal_genie.agent.state import (
+    DataCoverage,
+    DatasetCandidate,
+    Download,
+    RunState,
+    SourceKind,
+)
 from causal_genie.llm.client import LLMClient
 from causal_genie.tools.download import (
     ALLOWLIST,
@@ -384,3 +392,28 @@ def pick(
         return c
     log.info("no usable dataset among %d candidates", len(state.datasets))
     return None
+
+
+def use_table(state: RunState, path: Path) -> DatasetCandidate:
+    """Accept the user's own table (`--data`) without searching: profile it, record its
+    checksum, and make it the run's only candidate. Rows still never reach a model."""
+    body = path.read_bytes()
+    state.profile = profile(path)
+    state.downloads.append(
+        Download(
+            url=str(path),
+            path=str(path),
+            sha256=hashlib.sha256(body).hexdigest(),
+            bytes=len(body),
+            retrieved_at=datetime.now(UTC).isoformat(timespec="seconds"),
+            doi=None,
+            license=None,
+        )
+    )
+    accepted = candidate(str(path), "user", path.name, "table given by the user", len(body))
+    accepted.access, accepted.accepted, accepted.rank = "open", True, 1
+    accepted.columns = [c.name for c in state.profile.columns]
+    accepted.description = f"{state.profile.rows} rows × {len(accepted.columns)} columns"
+    state.datasets = [accepted]
+    log.info("using the user's table %s (%s)", path, accepted.description)
+    return accepted

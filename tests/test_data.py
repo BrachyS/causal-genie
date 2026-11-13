@@ -1,3 +1,4 @@
+import hashlib
 import json
 import zipfile
 from collections.abc import Mapping
@@ -6,6 +7,7 @@ from typing import cast
 
 import httpx
 import pytest
+from conftest import FIXTURES
 from tavily import TavilyClient
 
 from causal_genie.agent.state import DatasetCandidate, RunState
@@ -17,6 +19,7 @@ from causal_genie.agent.steps.data import (
     keywords,
     resolve_link,
     rule_filter,
+    use_table,
 )
 from causal_genie.tools import download as dl
 from causal_genie.tools.search import Searcher
@@ -383,3 +386,16 @@ def test_keywords_match_at_word_starts_only() -> None:
     c = candidate(f"{RD}/csv/x/a.csv", "search", "Cutthroat trout; US_births", "")
 
     assert keyword_hits(c, ["throat", "birth"]) == 1
+
+
+def test_user_table_is_profiled_as_the_accepted_candidate(sample_state: RunState) -> None:
+    path = FIXTURES / "d3_onboarding_ab.csv"
+
+    accepted = use_table(sample_state, path)
+
+    assert accepted.accepted and accepted.source == "user" and accepted.rank == 1
+    assert sample_state.datasets == [accepted]
+    assert sample_state.profile is not None and sample_state.profile.rows == 6000
+    (d,) = sample_state.downloads
+    assert d.path == str(path) and d.sha256 == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert "new_flow" in accepted.columns

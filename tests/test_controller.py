@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import cast
 
 import httpx
+import httpx2
+import openai
 import pytest
 from conftest import FIXTURES, FakeTavily, epmc_result, extraction, proposal
 from tavily import TavilyClient
@@ -72,7 +74,15 @@ MAPPED = mapping(
     {"columns": ["treat"]},
     {"columns": ["pacu30min_throatPain"], "derive": "cutoff", "cutoff": 0},
 )
-D1_CALLS = [READ, SUPPORTED, DAG, COVERED, MAPPED]  # after route, frame and the round-1 plan
+# report model output: one summary sentence citing the verdict
+PROSE = json.dumps(
+    {
+        "summary": [{"text": "The controller reached a verdict.", "cites": ["F-verdict"]}],
+        "comparison": [],
+        "limitations": [],
+    }
+)
+D1_CALLS = [READ, SUPPORTED, DAG, COVERED, MAPPED, PROSE]  # after route, frame and the round-1 plan
 
 
 def routed(causal: bool) -> str:
@@ -123,12 +133,20 @@ def tavily() -> TrialTavily:
 def run_live(make_llm, make_epmc, tavily, http, tmp_path: Path):
     """Run the controller end to end on fakes, given the model outputs in order."""
 
-    def run(question: str, outcomes: list, ask=None) -> RunState:
+    def run(question: str, outcomes: list, ask=None, **options) -> RunState:
         llm, _ = make_llm(outcomes)
         searcher = Searcher(cast(TavilyClient, tavily))
         papers, _ = make_epmc([epmc_result()])
         return controller.run(
-            question, llm, searcher, papers, http, tmp_path / "runs", tmp_path / "cache", ask=ask
+            question,
+            llm,
+            searcher,
+            papers,
+            http,
+            tmp_path / "runs",
+            tmp_path / "cache",
+            ask=ask,
+            **options,
         )
 
     return run
@@ -166,9 +184,11 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
         "dag",
         "data_coverage",
         "map",
+        "report",
     ]
     assert state.report is not None and "✅" in state.report
     assert "## Evidence" in state.report and "Risk difference" in state.report
+    assert "The controller reached a verdict." in state.report
     run_dir = tmp_path / "runs" / state.run_id
     assert RunState.load(run_dir / "state.json") == state
     assert (run_dir / "report.md").read_text() == state.report
@@ -182,7 +202,9 @@ def test_trial_data_without_a_documented_design_is_analyzed_as_observational(
 ) -> None:
     undocumented = extraction(quotes=[], data_link=LICORICE_DOCS)  # no design quote, no check
 
-    state = run_live(D1, [routed(True), framed, round_plan, undocumented, DAG, COVERED, MAPPED])
+    state = run_live(
+        D1, [routed(True), framed, round_plan, undocumented, DAG, COVERED, MAPPED, PROSE]
+    )
 
     assert state.verdict == "estimated"
     assert state.design is not None and state.design.design == "observational"
@@ -200,7 +222,7 @@ def test_user_can_say_assignment_was_random(run_live, framed, round_plan) -> Non
         return "yes"
 
     state = run_live(
-        D1, [routed(True), framed, round_plan, undocumented, DAG, COVERED, MAPPED], ask=ask
+        D1, [routed(True), framed, round_plan, undocumented, DAG, COVERED, MAPPED, PROSE], ask=ask
     )
 
     assert state.design is not None and state.design.design == "randomized"
@@ -232,7 +254,7 @@ def test_selection_after_assignment_gives_a_study_plan(
     d4_mapping = mapping({"columns": ["new_flow"]}, {"columns": ["activated_7d"]})
 
     state = run_live(
-        D1, [routed(True), framed, round_plan, READ, SUPPORTED, DAG, covered, d4_mapping]
+        D1, [routed(True), framed, round_plan, READ, SUPPORTED, DAG, covered, d4_mapping, PROSE]
     )
 
     assert state.verdict == "study_plan"
@@ -245,7 +267,7 @@ def test_restricted_data_only_gives_restricted(run_live, framed, round_plan, ser
     served[RDATASETS_INDEX] = INDEX_HEADER.encode() + b"\n"
     vivli = extraction(quotes=[], data_link="https://vivli.org/study/123.csv")
 
-    state = run_live(D1, [routed(True), framed, round_plan, vivli, DAG])
+    state = run_live(D1, [routed(True), framed, round_plan, vivli, DAG, PROSE])
 
     assert state.verdict == "restricted"
     assert any(c.access == "restricted" for c in state.datasets)
@@ -254,7 +276,9 @@ def test_restricted_data_only_gives_restricted(run_live, framed, round_plan, ser
 def test_studies_but_no_usable_data_is_published_only(run_live, framed, round_plan, served) -> None:
     served[RDATASETS_INDEX] = INDEX_HEADER.encode() + b"\n"
 
-    state = run_live(KNUCKLES, [routed(True), framed, round_plan, extraction(quotes=[]), DAG])
+    state = run_live(
+        KNUCKLES, [routed(True), framed, round_plan, extraction(quotes=[]), DAG, PROSE]
+    )
 
     assert state.verdict == "published_only"
     assert state.downloads[1:] == [] and state.results == []  # only the Rdatasets index
@@ -289,7 +313,7 @@ def test_no_included_study_and_no_data_is_insufficient(
         }
     )
 
-    state = run_live(KNUCKLES, [routed(True), framed, round_plan, off_topic, round_2])
+    state = run_live(KNUCKLES, [routed(True), framed, round_plan, off_topic, round_2, PROSE])
 
     assert state.verdict == "insufficient"
     assert state.edges == []  # no evidence to build a graph from
@@ -382,3 +406,82 @@ def test_find_run_picks_latest_run_of_the_same_question(tmp_path: Path) -> None:
         tmp_path / "20261102-090000-bbbbbb" / "state.json"
     )
     assert controller.find_run("Never asked?", tmp_path) is None
+
+
+def test_genie_mode_adds_a_gated_aside(run_live, framed, round_plan, served) -> None:
+    served[RDATASETS_INDEX] = INDEX_HEADER.encode() + b"\n"
+    gate = json.dumps(
+        {
+            "sensitive": False,
+            "whimsical": True,
+            "aside": "Knuckles pop, joints stay calm.",
+            "next_step": "Next: read the studies above.",
+        }
+    )
+    outcomes = [routed(True), framed, round_plan, extraction(quotes=[]), DAG, PROSE, gate]
+
+    state = run_live(KNUCKLES, outcomes, genie=True)
+
+    assert state.verdict == "published_only"
+    assert [c.prompt_name for c in state.llm_calls][-2:] == ["report", "genie_gate"]
+    assert state.report is not None and "🧞 Genie's aside" in state.report
+
+
+def test_api_failure_saves_a_partial_report_naming_the_step(
+    run_live, framed, tmp_path: Path
+) -> None:
+    timeout = openai.APITimeoutError(request=httpx2.Request("POST", "https://api.test"))
+
+    state = run_live(D1, [routed(True), framed, timeout, timeout])  # failed after one retry
+
+    assert state.verdict is None and state.step == "research"
+    assert state.failure is not None and "APITimeoutError" in state.failure
+    assert state.report is not None and "Partial report" in state.report
+    assert "`research` step failed" in state.report
+    assert "no evidence exists" in state.report
+    run_dir = tmp_path / "runs" / state.run_id
+    assert RunState.load(run_dir / "state.json").failure == state.failure
+    assert (run_dir / "report.md").read_text() == state.report
+
+
+def user_data_run(run_live, framed, round_plan, fixture: str) -> RunState:
+    """Run D1's framing on a user's table (D3/D4 fixtures); the user says yes to both the
+    mapping and random assignment. No study is included, so no DAG and no data search."""
+    off_topic = extraction(included=False, quotes=[])
+    round_2 = json.dumps(
+        {
+            "queries": [
+                {"text": "onboarding", "tool": "search", "group": "primary_studies", "why": "w"}
+            ],
+            "done": True,
+            "done_reason": "test",
+        }
+    )
+    ab_mapping = mapping({"columns": ["new_flow"]}, {"columns": ["activated_7d"]})
+    return run_live(
+        D1,
+        [routed(True), framed, round_plan, off_topic, round_2, ab_mapping, PROSE],
+        ask=lambda q: "yes",
+        data=FIXTURES / fixture,
+    )
+
+
+def test_user_data_randomized_ab_test_is_estimated(run_live, framed, round_plan) -> None:
+    state = user_data_run(run_live, framed, round_plan, "d3_onboarding_ab.csv")
+
+    assert state.verdict == "estimated"
+    assert "data_coverage" not in [c.prompt_name for c in state.llm_calls]
+    (accepted,) = state.datasets
+    assert accepted.source == "user"
+    (result,) = state.results
+    assert result.tool == "rct_effect"
+    assert result.outputs["estimate"] == pytest.approx(0.055, abs=1e-9)
+    assert result.outputs["ci_low"] < 0.05 < result.outputs["ci_high"]  # true effect inside
+
+
+def test_user_data_completers_only_gives_a_study_plan(run_live, framed, round_plan) -> None:
+    state = user_data_run(run_live, framed, round_plan, "d4_onboarding_completers.csv")
+
+    assert state.verdict == "study_plan"
+    assert state.design is not None and state.design.design == "selection_after_assignment"
+    assert state.results == []

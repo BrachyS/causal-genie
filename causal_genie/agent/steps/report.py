@@ -1,11 +1,25 @@
-"""Plain Markdown report built only from run state: the verdict, tool results and sources.
+"""The run's Markdown report (PRD §5.8): harness-rendered sections plus model-written prose.
 
-No model writes here, so every number is copied from a `Result`. The model-written report with
-lint (T10.2–T10.3) replaces the prose later; the rule that numbers come only from results stays.
+Sections with facts (verdict, PECO, DAG, confounders, evidence, data, estimate) are rendered
+here from run state, so their numbers are copied from `Result`s. The large model writes only
+the plain summary, the comparison with published results and the limitations, from a list of
+ledger entries: documented claims, tool results and run facts. The harness lints each
+sentence (it cites an entry; each number in it appears in a cited entry or in the question),
+asks once for a rewrite naming the problems, then drops the sentences that still fail.
 """
 
-from causal_genie.agent.certainty import evidence_flow
-from causal_genie.agent.state import RunState, Verdict
+import logging
+import re
+
+from causal_genie.agent.certainty import design_tier, evidence_flow
+from causal_genie.agent.state import ReportDraft, RunState, Sentence, Verdict
+from causal_genie.agent.verdict import unmeasured_confounders
+from causal_genie.llm.client import LLMClient
+
+log = logging.getLogger(__name__)
+
+SUMMARY_WORDS = 120
+NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 VERDICT_LABELS: dict[Verdict, str] = {
     "estimated": "✅ Estimated from data",
@@ -24,17 +38,114 @@ DISCLAIMER = (
 
 
 def write_report(state: RunState) -> str:
-    """Render the run as Markdown; the controller must have set the verdict first."""
-    assert state.verdict is not None, "the controller sets the verdict before the report"
-    lines = [f"# {state.question}", "", f"**Verdict:** {VERDICT_LABELS[state.verdict]}", ""]
+    """Render the run as Markdown. The controller sets the verdict first, unless an API
+    failure stopped the run: then the report is partial and names the failed step."""
+    lines = [f"# {state.question}", ""]
+    if state.failure is not None:
+        lines += [
+            f"**Partial report:** the `{state.step}` step failed ({state.failure}), so no "
+            "verdict was reached. What follows is what ran before it. This is not a finding "
+            "that no evidence exists.",
+            "",
+        ]
+    else:
+        assert state.verdict is not None, "the controller sets the verdict before the report"
+        lines += [f"**Verdict:** {VERDICT_LABELS[state.verdict]}", ""]
     if state.verdict == "not_causal" and state.route is not None:
         lines += [state.route.reason, ""]
         if state.route.causal_rewrite:
             lines += [f"A causal question you might mean: *{state.route.causal_rewrite}*", ""]
-    lines += question_section(state) + estimate_section(state) + data_section(state)
-    lines += evidence_section(state)
+    prose = state.prose or ReportDraft(summary=[], comparison=[], limitations=[])
+    lines += paragraph("Plain summary", prose.summary)
+    lines += question_section(state) + dag_section(state) + confounders_section(state)
+    lines += evidence_section(state) + data_section(state)
+    if state.failure is None or state.results or state.design is not None:
+        lines += estimate_section(state)
+    lines += paragraph("Comparison with published", prose.comparison)
+    if prose.limitations:
+        cited = [f"- {s.text}{refs(s)}" for s in prose.limitations]
+        lines += ["## Limitations", "", *cited, ""]
+    if state.genie:
+        lines += ["## 🧞 Genie's aside", "", state.genie, ""]
+    lines += sources_section(state)
     lines += ["---", "", DISCLAIMER, "", f"Run ID: `{state.run_id}`", ""]
     return "\n".join(lines)
+
+
+def refs(s: Sentence) -> str:
+    """The sentence's claim and result citations, e.g. ` [c1, res-1a2b]`; run facts are
+    shown in their own sections, so they are not listed."""
+    shown = [c for c in s.cites if not c.startswith("F-")]
+    return f" [{', '.join(shown)}]" if shown else ""
+
+
+def paragraph(title: str, sentences: list[Sentence]) -> list[str]:
+    """A prose section, each sentence followed by its citations; nothing if empty."""
+    if not sentences:
+        return []
+    return [f"## {title}", "", " ".join(f"{s.text}{refs(s)}" for s in sentences), ""]
+
+
+def dag_section(state: RunState) -> list[str]:
+    """Each DAG edge with what backs it: cited claims, the question itself, or nothing."""
+    if not state.edges:
+        return []
+    lines = ["## Causal graph (DAG)", ""]
+    for e in state.edges:
+        if e.question:
+            backing = "the question being tested"
+        elif e.assumed:
+            backing = "assumed (no source)"
+        else:
+            backing = f"cites {', '.join(e.claim_ids)}"
+        lines.append(f"- {e.source} → {e.target}: {backing}")
+    return [*lines, ""]
+
+
+def confounders_section(state: RunState) -> list[str]:
+    """DAG confounders (edges into both exposure and outcome), how the analysis handled them,
+    and confounders the literature names that the data lacks."""
+    if state.query is None or not state.edges:
+        return []
+    exposure, outcome = state.query.exposure.name, state.query.outcome.name
+    pairs = {(e.source, e.target) for e in state.edges}
+    found = sorted({s for s, t in pairs if t == exposure and (s, outcome) in pairs})
+    lines = ["## Key confounders", ""]
+    lines += [f"- {c}" for c in found] or ["No confounder in the DAG."]
+    a = state.adjustment
+    if a is not None and a.randomized:
+        lines += [
+            "",
+            "Data are randomized: assignment balances confounders, so none is adjusted for.",
+        ]
+    elif a is not None and a.adjust_for is not None:
+        lines += ["", f"Adjusted for: {', '.join(a.adjust_for) or 'nothing'}."]
+    if lacking := unmeasured_confounders(state):
+        lines += ["", f"Named in the literature but not in the data: {', '.join(lacking)}."]
+    return [*lines, ""]
+
+
+def sources_section(state: RunState) -> list[str]:
+    """Every claim and result the prose cites: the verbatim quote and its URL, or the tool."""
+    cited = (
+        [
+            c
+            for s in (state.prose.summary + state.prose.comparison + state.prose.limitations)
+            for c in s.cites
+        ]
+        if state.prose
+        else []
+    )
+    claims = {c.id: c for c in state.claims}
+    studies = {s.id: s for s in state.studies}
+    results = {r.id: r for r in state.results}
+    lines = []
+    for ref in dict.fromkeys(cited):
+        if ref in results:
+            lines.append(f"- [{ref}] tool `{results[ref].tool}` {results[ref].tool_version}")
+        elif ref in claims and (study := studies.get(claims[ref].study_id or "")):
+            lines.append(f'- [{ref}] {byline(study)}: "{claims[ref].quote}" — {study.url}')
+    return ["## Sources", "", *lines, ""] if lines else []
 
 
 def question_section(state: RunState) -> list[str]:
@@ -172,7 +283,7 @@ def evidence_section(state: RunState) -> list[str]:
         f"dedupe → {flow.included} included (excluded: {excluded}).",
         "",
     ]
-    included = [s for s in state.studies if s.included]
+    included = sorted((s for s in state.studies if s.included), key=lambda s: -design_tier(s))
     if not included:
         lines += ["No included studies. Searches run:", ""]
         lines += [f"- {q.text}" for r in state.rounds for q in r.plan.queries]
@@ -189,3 +300,155 @@ def evidence_section(state: RunState) -> list[str]:
             f"- [{s.title}]({s.url}) — {s.design}, {s.year or 'year unknown'}{news}: {effect}"
         )
     return [*lines, ""]
+
+
+def byline(study) -> str:
+    """`Ruetzler 2013`, or the title when author and year are unknown."""
+    parts = [p for p in (study.first_author, study.year and str(study.year)) if p]
+    return " ".join(parts) if parts else study.title
+
+
+def ledger_entries(state: RunState) -> dict[str, str]:
+    """What the report model may cite, by id: run facts (`F-…`), tool results and the
+    documented claims (quote found and judged to support). Nothing else reaches the prose."""
+    entries: dict[str, str] = {}
+    if state.verdict is not None:
+        entries["F-verdict"] = f"Verdict picked by the controller: {VERDICT_LABELS[state.verdict]}"
+    if state.certainty is not None:
+        level = state.certainty.level.replace("_", " ")
+        entries["F-certainty"] = f"Certainty: {level} ({'; '.join(state.certainty.reasons)})"
+    if state.rounds or state.studies:
+        flow = evidence_flow(state.studies)
+        entries["F-flow"] = (
+            f"Evidence flow: {flow.found} sources found, {flow.after_dedupe} studies after "
+            f"dedupe, {flow.included} included"
+        )
+    if state.downloads:
+        accepted = next((c for c in state.datasets if c.accepted), None)
+        confirmed = "confirmed" if state.mapping_confirmed else "not confirmed by the user"
+        title = accepted.title if accepted else state.downloads[-1].url
+        rows = f", {state.profile.rows} rows" if state.profile else ""
+        entries["F-data"] = f"Data used: {title}{rows}; column mapping {confirmed}"
+    elif state.datasets:
+        restricted = sum(c.access == "restricted" for c in state.datasets)
+        entries["F-data"] = (
+            f"No usable dataset: {len(state.datasets)} candidates considered, "
+            f"{restricted} in restricted repositories"
+        )
+    if (d := state.design) is not None:
+        entries["F-design"] = (
+            f"Data design: {d.design.replace('_', ' ')}; estimable: {d.estimable}; "
+            f"key assumption: {d.key_assumption}; estimand: {d.estimand}; next check: "
+            f"{d.check}; because: {'; '.join(d.reasons)}"
+        )
+    if lacking := unmeasured_confounders(state):
+        entries["F-unmeasured"] = (
+            f"Confounders named in the literature but not in the data: {', '.join(lacking)}"
+        )
+    for r in state.results:
+        lines = (
+            backdoor_lines(r.outputs)
+            if r.tool == "backdoor_effect"
+            else rct_lines(state, r.outputs)
+        )
+        entries[r.id] = " ".join(line for line in lines if line)
+    studies = {s.id: s for s in state.studies}
+    for c in state.claims:
+        study = studies.get(c.study_id or "")
+        if c.status != "documented" or study is None or not study.included:
+            continue
+        entries[c.id] = f'{byline(study)}, {study.design} ({c.kind}): {c.text}. Quote: "{c.quote}"'
+    return entries
+
+
+def numbers(text: str) -> set[float]:
+    """Every number written in `text`, ignoring sign and thousands commas."""
+    return {float(n.replace(",", "")) for n in NUMBER.findall(text)}
+
+
+def free_numbers(state: RunState) -> set[float]:
+    """Numbers any sentence may use without a citation: those in the question and its PECO."""
+    text = state.question + (state.query.model_dump_json() if state.query else "")
+    return numbers(text)
+
+
+def sentence_problem(s: Sentence, entries: dict[str, str], free: set[float]) -> str | None:
+    """Why the sentence fails the lint, or None if it passes."""
+    if not s.cites:
+        return "cites nothing; every sentence must cite a ledger entry"
+    if unknown := [c for c in s.cites if c not in entries]:
+        return f"cites ids not in the ledger: {', '.join(unknown)}"
+    text = s.text
+    for c in s.cites:
+        text = text.replace(c, "")
+    allowed = free.union(*(numbers(entries[c]) for c in s.cites))
+    if untraced := sorted(numbers(text) - allowed):
+        shown = ", ".join(f"{n:g}" for n in untraced)
+        return f"numbers {shown} appear in none of its cited entries"
+    return None
+
+
+def lint(draft: ReportDraft, entries: dict[str, str], free: set[float]) -> list[str]:
+    """Every problem in the draft, one line each, naming the section and sentence number."""
+    problems = []
+    for section in ("summary", "comparison", "limitations"):
+        for i, s in enumerate(getattr(draft, section), 1):
+            if problem := sentence_problem(s, entries, free):
+                problems.append(f"{section}[{i}] {s.text!r}: {problem}")
+    if (n := sum(len(s.text.split()) for s in draft.summary)) > SUMMARY_WORDS:
+        problems.append(f"summary has {n} words; at most {SUMMARY_WORDS}")
+    return problems
+
+
+def keep_passing(draft: ReportDraft, entries: dict[str, str], free: set[float]) -> ReportDraft:
+    """The draft minus failing sentences (logged), with the summary cut to its word limit."""
+
+    def passing(sentences: list[Sentence]) -> list[Sentence]:
+        kept = []
+        for s in sentences:
+            if problem := sentence_problem(s, entries, free):
+                log.warning("report: dropped sentence %r: %s", s.text, problem)
+            else:
+                kept.append(s)
+        return kept
+
+    summary, words = [], 0
+    for s in passing(draft.summary):
+        words += len(s.text.split())
+        if words > SUMMARY_WORDS:
+            log.warning("report: dropped summary sentence over %d words: %r", SUMMARY_WORDS, s.text)
+            continue
+        summary.append(s)
+    return ReportDraft(
+        summary=summary,
+        comparison=passing(draft.comparison),
+        limitations=passing(draft.limitations),
+    )
+
+
+def draft_report(state: RunState, llm: LLMClient) -> ReportDraft:
+    """Ask the large model for the prose sections, lint them, allow one rewrite, then drop
+    whatever still fails."""
+    entries = ledger_entries(state)
+    free = free_numbers(state)
+    q = state.query
+    peco = (
+        f"Population: {q.population}\nExposure: {q.exposure.definition}\n"
+        f"Comparator: {q.comparator}\nOutcome: {q.outcome.definition}\n"
+        f"Time window: {q.time_window or 'not specified'}\n"
+        if q
+        else ""
+    )
+    listing = "\n".join(f"[{i}] {text}" for i, text in entries.items())
+    user = f"Question: {state.question}\n{peco}\nLedger entries:\n{listing}"
+    draft = llm.complete("large", "report", user, ReportDraft)
+    if problems := lint(draft, entries, free):
+        log.info("report: lint found %d problems; asking for one rewrite", len(problems))
+        listed = "\n".join(f"- {p}" for p in problems)
+        retry = (
+            f"{user}\n\nYour previous draft:\n{draft.model_dump_json()}\n\n"
+            f"It failed these checks:\n{listed}\n\nReturn the whole draft again with these "
+            "sentences fixed or removed."
+        )
+        draft = llm.complete("large", "report", retry, ReportDraft)
+    return keep_passing(draft, entries, free)

@@ -1,17 +1,29 @@
+import json
+
 import pytest
 
 from causal_genie.agent.certainty import certainty
 from causal_genie.agent.state import (
+    Adjustment,
+    DagEdge,
     DesignCheck,
     Download,
     Query,
+    ReportDraft,
     ResearchPlan,
     ResearchRound,
     Result,
     Route,
     RunState,
+    Sentence,
 )
-from causal_genie.agent.steps.report import write_report
+from causal_genie.agent.steps.report import (
+    draft_report,
+    free_numbers,
+    ledger_entries,
+    sentence_problem,
+    write_report,
+)
 from causal_genie.tools.stats import risk_difference
 
 
@@ -212,3 +224,156 @@ def test_study_plan_report_names_the_design_and_the_check(sample_state: RunState
     assert "arm sizes 2130 treated vs 1646 control" in report
     assert "ask for the full randomized roster" in report
     assert "No estimate" not in report
+
+
+def sentence(text: str, *cites: str) -> dict:
+    return {"text": text, "cites": list(cites)}
+
+
+def draft(summary: list[dict], comparison=(), limitations=()) -> str:
+    """Report model output as JSON."""
+    return json.dumps(
+        {"summary": summary, "comparison": list(comparison), "limitations": list(limitations)}
+    )
+
+
+def test_entries_hold_facts_results_and_only_documented_claims(estimated_state) -> None:
+    estimated_state.claims.append(
+        estimated_state.claims[0].model_copy(update={"id": "c2", "status": "unresolved"})
+    )
+
+    entries = ledger_entries(estimated_state)
+
+    assert "F-verdict" in entries and "✅" in entries["F-verdict"]
+    assert "-17.4 percentage points" in entries["res1"]
+    assert "c1" in entries and '"sore throat ... was reduced"' in entries["c1"]
+    assert "Ruetzler 2013" in entries["c1"]
+    assert "c2" not in entries  # not documented: the report may not use it
+
+
+def test_lint_traces_numbers_to_cited_entries(estimated_state) -> None:
+    entries = ledger_entries(estimated_state)
+    free = free_numbers(estimated_state)
+
+    def check(text: str, *cites: str) -> str | None:
+        return sentence_problem(Sentence(text=text, cites=list(cites)), entries, free)
+
+    assert check("Licorice cut sore throat by 17.4 percentage points.", "res1") is None
+    assert check("Licorice gargle reduces post-op sore throat.", "c1") is None
+    assert check("The trial ran in 2013.", "c1") is None  # year in the entry header
+    assert "17.4" in (check("Licorice cut sore throat by 17.4 points.", "c1") or "")
+    assert "cites nothing" in (check("Licorice works.") or "")
+    assert "c9" in (check("Licorice works.", "c9") or "")
+    assert check("Sore throat was checked in the first 24 h.", "F-verdict") is None  # PECO
+
+
+def test_draft_that_passes_lint_is_kept_after_one_call(estimated_state, make_llm) -> None:
+    llm, _ = make_llm([draft([sentence("Licorice gargle cut sore throat.", "c1", "res1")])])
+
+    prose = draft_report(estimated_state, llm)
+
+    assert [s.text for s in prose.summary] == ["Licorice gargle cut sore throat."]
+    assert [c.prompt_name for c in llm.calls] == ["report"]
+    assert llm.calls[0].tier == "large"
+
+
+def test_failing_draft_gets_one_rewrite_naming_the_problems(estimated_state, make_llm) -> None:
+    bad = draft([sentence("Licorice halves sore throat, a 50% cut.", "c1")])
+    good = draft([sentence("Licorice gargle reduces post-op sore throat.", "c1")])
+    llm, _ = make_llm([bad, good])
+
+    prose = draft_report(estimated_state, llm)
+
+    assert [s.text for s in prose.summary] == ["Licorice gargle reduces post-op sore throat."]
+    rewrite = llm.calls[1].user_content
+    assert "summary[1]" in rewrite and "50" in rewrite and "Licorice halves" in rewrite
+
+
+def test_sentences_still_failing_after_the_rewrite_are_dropped(estimated_state, make_llm) -> None:
+    bad = draft(
+        [sentence("Licorice gargle reduces post-op sore throat.", "c1")],
+        limitations=[sentence("Only 12 patients smoked.", "c1")],
+    )
+    llm, _ = make_llm([bad, bad])
+
+    prose = draft_report(estimated_state, llm)
+
+    assert len(llm.calls) == 2  # one rewrite, no more
+    assert len(prose.summary) == 1 and prose.limitations == []
+
+
+def test_summary_is_cut_to_120_words(estimated_state, make_llm) -> None:
+    long = "Licorice gargle reduces post-op sore throat " + "and more " * 30 + "."
+    llm, _ = make_llm([draft([sentence(long, "c1")] * 3)] * 2)
+
+    prose = draft_report(estimated_state, llm)
+
+    assert len(prose.summary) == 1  # 66 words each: two would pass 120
+
+
+def test_report_renders_prose_with_citations_and_sources(estimated_state) -> None:
+    estimated_state.prose = ReportDraft(
+        summary=[Sentence(text="Licorice gargle cut sore throat.", cites=["c1", "res1"])],
+        comparison=[Sentence(text="Our estimate matches the trial.", cites=["res1", "c1"])],
+        limitations=[Sentence(text="The mapping was not confirmed.", cites=["F-data"])],
+    )
+
+    report = write_report(estimated_state)
+
+    assert "## Plain summary\n\nLicorice gargle cut sore throat. [c1, res1]" in report
+    assert "## Comparison with published\n\nOur estimate matches the trial." in report
+    assert "## Limitations\n\n- The mapping was not confirmed." in report
+    assert "[F-data]" not in report  # run facts are shown in their own sections
+    assert '- [c1] Ruetzler 2013: "sore throat ... was reduced" — https://pubmed' in report
+    sections = [line for line in report.splitlines() if line.startswith("## ")]
+    assert sections == [
+        "## Plain summary",
+        "## Question (PECO)",
+        "## Causal graph (DAG)",
+        "## Key confounders",
+        "## Evidence",
+        "## Data used",
+        "## Estimate",
+        "## Comparison with published",
+        "## Limitations",
+        "## Sources",
+    ]
+
+
+def test_dag_and_confounder_sections(estimated_state, confounder_claim) -> None:
+    estimated_state.claims.append(confounder_claim())
+    estimated_state.edges = [
+        DagEdge(source="licorice_gargle", target="sore_throat", claim_ids=[], question=True),
+        DagEdge(source="smoking", target="licorice_gargle", claim_ids=["s1-adjusted_for"]),
+        DagEdge(source="smoking", target="sore_throat", claim_ids=[]),
+    ]
+    estimated_state.adjustment = Adjustment(adjust_for=[], missing=[], randomized=True)
+
+    report = write_report(estimated_state)
+
+    assert "- licorice_gargle → sore_throat: the question being tested" in report
+    assert "- smoking → licorice_gargle: cites s1-adjusted_for" in report
+    assert "- smoking → sore_throat: assumed (no source)" in report
+    assert "- smoking" in report.split("## Key confounders")[1]
+    assert "randomized: assignment balances confounders" in report
+
+
+def test_partial_report_names_the_failed_step(sample_state: RunState) -> None:
+    sample_state.step = "research"
+    sample_state.failure = "APIConnectionError: Connection error."
+
+    report = write_report(sample_state)
+
+    assert "Partial report" in report
+    assert "`research` step failed" in report and "APIConnectionError" in report
+    assert "not a finding that no evidence exists" in report
+    assert "## Question (PECO)" in report  # what ran before the failure is still shown
+
+
+def test_genie_aside_is_shown_when_set(sample_state: RunState) -> None:
+    sample_state.verdict = "published_only"
+    sample_state.genie = "The moon keeps its secrets. Next: read the studies above."
+
+    report = write_report(sample_state)
+
+    assert "## 🧞 Genie's aside\n\nThe moon keeps its secrets." in report

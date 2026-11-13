@@ -289,8 +289,9 @@ class DagProposal(Schema):
     edges: list[DagEdge]
 
 
-# paper = a study's data link; repository = Rdatasets index; search = Tavily
-SourceKind = Literal["paper", "repository", "search"]
+# paper = a study's data link; repository = Rdatasets index; search = Tavily; user = a table
+# the user gave the run (`--data`), used as is without searching
+SourceKind = Literal["paper", "repository", "search", "user"]
 
 
 class DatasetCandidate(Schema):
@@ -475,6 +476,32 @@ class Download(Schema):
     license: str | None
 
 
+class Sentence(Schema):
+    text: str
+    cites: list[str]  # ledger entry ids (claims, results, run facts) that back the sentence
+
+
+class ReportDraft(Schema):
+    """The report's prose sections, written by the large model from ledger entries only.
+
+    The harness lints every sentence (each cites an entry; each number appears in a cited
+    entry), asks for one rewrite, then drops sentences that still fail.
+    """
+
+    summary: list[Sentence]  # plain summary, at most 120 words
+    comparison: list[Sentence]  # our estimate vs published results; empty if no estimate
+    limitations: list[Sentence]
+
+
+class GenieJudgment(Schema):
+    """The small model's read of the question and its draft aside; the harness decides."""
+
+    sensitive: bool  # health risks people act on, vaccines, mental health, harm, etc.
+    whimsical: bool  # a playful or folk-wisdom question (e.g. the full moon)
+    aside: str  # one or two playful sentences, no numbers and no new facts
+    next_step: str  # the useful next step the aside must end with
+
+
 Verdict = Literal[
     "estimated",
     "estimated_strong_assumptions",
@@ -524,6 +551,10 @@ class RunState(Schema):
     lookups: list[LookupCall] = Field(default_factory=list)
     downloads: list[Download] = Field(default_factory=list)
     verdict: Verdict | None = None  # set by the controller only
+    step: str | None = None  # the step running now, or the one that failed
+    failure: str | None = None  # API error that stopped the run; the report is partial
+    prose: ReportDraft | None = None  # model-written report sections, after lint
+    genie: str | None = None  # the Genie's aside, if the gate allowed one
     report: str | None = None
     llm_calls: list[LLMCall] = Field(default_factory=list)
     versions: dict[str, str] = Field(default_factory=dict)  # models, tools, package
