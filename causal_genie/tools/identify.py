@@ -45,6 +45,41 @@ def backdoor_set(
     return sorted(estimand.get_backdoor_variables())
 
 
+def valid_adjustment(graph: nx.DiGraph, exposure: str, outcome: str, adjust_for: list[str]) -> bool:
+    """The backdoor criterion: nothing in the set is caused by the exposure, and the set blocks
+    every path from exposure to outcome that starts with an arrow into the exposure."""
+    if set(adjust_for) & nx.descendants(graph, exposure):
+        return False
+    backdoor = graph.copy()
+    backdoor.remove_edges_from(list(graph.out_edges(exposure)))
+    return nx.is_d_separator(backdoor, {exposure}, {outcome}, set(adjust_for))
+
+
+def precision_set(
+    edges: list[DagEdge], exposure: str, outcome: str, adjust_for: list[str], observed: list[str]
+) -> list[str]:
+    """Observed direct causes of the outcome that the exposure does not affect, to adjust for
+    on top of `adjust_for`: they explain outcome variation, so the CI narrows without bias.
+
+    Each is kept only if the enlarged set still passes the backdoor criterion (one that would
+    open a path is logged and left out). Returns the added names, in name order.
+    """
+    graph = nx.DiGraph([(e.source, e.target) for e in edges])
+    graph.add_nodes_from([exposure, outcome])
+    after = nx.descendants(graph, exposure)
+    chosen = list(adjust_for)
+    for node in sorted(graph.predecessors(outcome)):
+        if node == exposure or node in after or node in chosen or node not in observed:
+            continue
+        if valid_adjustment(graph, exposure, outcome, [*chosen, node]):
+            chosen.append(node)
+        else:
+            log.info("precision: %s left out; adjusting for it would open a backdoor path", node)
+    added = chosen[len(adjust_for) :]
+    log.info("precision: adding %s to %s", added, adjust_for)
+    return added
+
+
 def identify(
     edges: list[DagEdge], exposure: str, outcome: str, observed: list[str], randomized: bool
 ) -> Adjustment:
