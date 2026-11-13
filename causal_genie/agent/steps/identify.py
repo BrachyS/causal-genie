@@ -55,15 +55,20 @@ def check_mapping(proposed: Mapping, nodes: list[str], columns: list[str]) -> Ma
     return Mapping(nodes=checked, unit=panel["unit"], time=panel["time"])
 
 
+def source(m: NodeMapping) -> str:
+    """Where a node's values come from, e.g. `pain > 0` or `full_moon(date)`."""
+    if not m.columns:
+        return "(not in the table)"
+    if m.derive == "cutoff":
+        return f"{m.columns[0]} > {m.cutoff:g}"
+    if m.derive is not None:
+        return f"{m.derive}({', '.join(m.columns)})"
+    return m.columns[0] + (" (categories)" if m.categorical else "")
+
+
 def describe(m: NodeMapping) -> str:
     """One mapping line for the user, e.g. `sore_throat ← pain > 0`."""
-    if not m.columns:
-        return f"{m.node} ← (not in the table)"
-    if m.derive == "cutoff":
-        return f"{m.node} ← {m.columns[0]} > {m.cutoff:g}"
-    if m.derive is not None:
-        return f"{m.node} ← {m.derive}({', '.join(m.columns)})"
-    return f"{m.node} ← {m.columns[0]}" + (" (categories)" if m.categorical else "")
+    return f"{m.node} ← {source(m)}"
 
 
 def map_columns(

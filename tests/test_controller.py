@@ -1,29 +1,78 @@
+import hashlib
 import json
 from pathlib import Path
 from typing import cast
 
 import httpx
 import pytest
-from conftest import epmc_result, extraction, proposal
+from conftest import FIXTURES, FakeTavily, epmc_result, extraction, proposal
 from tavily import TavilyClient
 
 from causal_genie.agent import controller
 from causal_genie.agent.state import RunState
+from causal_genie.agent.steps.data import RDATASETS, RDATASETS_INDEX
 from causal_genie.llm.client import LLMClient
 from causal_genie.tools import download as dl
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
 D1 = "Does licorice gargling reduce post-op sore throat?"
+KNUCKLES = "Does cracking your knuckles cause arthritis?"
+PUBMED = "https://pubmed.ncbi.nlm.nih.gov/23921656/"
+STUDY = "s" + hashlib.sha256(PUBMED.encode()).hexdigest()[:8]  # the study id research gives it
+LICORICE = f"{RDATASETS}/csv/medicaldata/licorice_gargle.csv"
+LICORICE_DOCS = "https://higgi13425.github.io/medicaldata/reference/licorice_gargle.html"
+INDEX_HEADER = '"Package","Item","Title","Rows","Cols","CSV","Doc"'
+INDEX = (
+    f'{INDEX_HEADER}\n"medicaldata","licorice_gargle","Licorice Gargle before Intubation",'
+    f'8,3,"{LICORICE}","{RDATASETS}/doc/medicaldata/licorice_gargle.html"\n'
+).encode()
 # 3/4 vs 1/3 with sore throat (pain > 0); one row has no outcome
 CSV = (
     b"rownames,treat,pacu30min_throatPain\n1,0,3\n2,0,1\n3,0,0\n4,0,2\n5,1,0\n6,1,4\n7,1,0\n8,1,\n"
 )
+PAPER = "A randomized, double-blind trial. Sore throat at 30 minutes was 24% with licorice."
+DESIGN_QUOTE = [{"field": "design", "text": "A randomized, double-blind trial"}]
+
+READ = extraction(quotes=DESIGN_QUOTE, data_link=LICORICE_DOCS)  # the D1 trial, with data link
+SUPPORTED = json.dumps({"judgments": [{"claim_id": f"{STUDY}-design", "support": "supports"}]})
+DAG = proposal(("licorice_gargle", "sore_throat", []))  # only the question edge: no extra round
+COVERED = json.dumps(
+    {
+        "candidates": [
+            {
+                "candidate": 1,
+                "coverage": [
+                    {"node": "licorice_gargle", "column": "treat"},
+                    {"node": "sore_throat", "column": "pacu30min_throatPain"},
+                ],
+            }
+        ]
+    }
+)
 
 
-READ = extraction(quotes=[])  # the fake Tavily's one page, read as the D1 trial
-# The DAG's only edge is the question edge, which needs no citation, so no extra research round.
-DAG = proposal(("licorice_gargle", "sore_throat", []))
+def mapping(exposure: dict, outcome: dict) -> str:
+    """Map-columns model output for the D1 nodes."""
+    return json.dumps(
+        {
+            "nodes": [
+                {"node": "licorice_gargle", "derive": None, "cutoff": None, "categorical": False}
+                | exposure,
+                {"node": "sore_throat", "derive": None, "cutoff": None, "categorical": False}
+                | outcome,
+            ],
+            "unit": None,
+            "time": None,
+        }
+    )
+
+
+MAPPED = mapping(
+    {"columns": ["treat"]},
+    {"columns": ["pacu30min_throatPain"], "derive": "cutoff", "cutoff": 0},
+)
+D1_CALLS = [READ, SUPPORTED, DAG, COVERED, MAPPED]  # after route, frame and the round-1 plan
 
 
 def routed(causal: bool) -> str:
@@ -38,56 +87,88 @@ def framed(sample_state: RunState) -> str:
     return sample_state.query.model_dump_json()
 
 
+class TrialTavily(FakeTavily):
+    """Fake Tavily whose one hit carries the trial's text, so quotes from it are grounded."""
+
+    def search(self, query: str, **kwargs) -> dict:
+        found = super().search(query, **kwargs)
+        found["results"][0]["content"] = PAPER
+        return found
+
+
 @pytest.fixture
-def http(monkeypatch: pytest.MonkeyPatch) -> httpx.Client:
-    """HTTP client that serves `CSV` for any URL, with DNS faked to a public IP."""
+def served() -> dict[str, bytes]:
+    """URL → body served by the fake web; tests change entries."""
+    return {RDATASETS_INDEX: INDEX, LICORICE: CSV}
+
+
+@pytest.fixture
+def http(monkeypatch: pytest.MonkeyPatch, served: dict[str, bytes]) -> httpx.Client:
+    """HTTP client serving `served` (404 otherwise), with DNS faked to a public IP."""
     monkeypatch.setattr(dl, "resolve_ips", lambda host: ["185.199.108.153"])
-    return httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=CSV)))
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = served.get(str(request.url))
+        return httpx.Response(404) if body is None else httpx.Response(200, content=body)
+
+    return httpx.Client(transport=httpx.MockTransport(handle))
 
 
 @pytest.fixture
-def run_live(make_llm, make_epmc, fake_tavily, http, tmp_path: Path):
+def tavily() -> TrialTavily:
+    return TrialTavily()
+
+
+@pytest.fixture
+def run_live(make_llm, make_epmc, tavily, http, tmp_path: Path):
     """Run the controller end to end on fakes, given the model outputs in order."""
 
-    def run(question: str, outcomes: list) -> RunState:
+    def run(question: str, outcomes: list, ask=None) -> RunState:
         llm, _ = make_llm(outcomes)
-        searcher = Searcher(cast(TavilyClient, fake_tavily))
+        searcher = Searcher(cast(TavilyClient, tavily))
         papers, _ = make_epmc([epmc_result()])
         return controller.run(
-            question, llm, searcher, papers, http, tmp_path / "runs", tmp_path / "cache", ask=None
+            question, llm, searcher, papers, http, tmp_path / "runs", tmp_path / "cache", ask=ask
         )
 
     return run
 
 
 def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_path: Path) -> None:
-    state = run_live(D1, [routed(True), framed, round_plan, READ, DAG])
+    state = run_live(D1, [routed(True), framed, round_plan, *D1_CALLS])
 
     assert state.verdict == "estimated"
+    assert state.design is not None and state.design.design == "randomized"
     (result,) = state.results
+    assert result.tool == "rct_effect"
     out = result.outputs
-    assert (out["events_treated"], out["n_treated"], out["events_control"], out["n_control"]) == (
-        1,
-        3,
-        3,
-        4,
-    )
+    assert (out["events_treated"], out["n_treated"]) == (1, 3)
+    assert (out["events_control"], out["n_control"]) == (3, 4)
     assert out["rows_excluded_missing"] == 1
-    assert len(state.searches) == 6  # one per query group
+    assert out["mapped_from"] == {
+        "licorice_gargle": "treat",
+        "sore_throat": "pacu30min_throatPain > 0",
+    }
+    accepted = next(c for c in state.datasets if c.accepted)
+    assert (accepted.url, accepted.source, accepted.study_id) == (LICORICE, "paper", STUDY)
+    assert state.mapping_confirmed is False  # nobody to ask
     assert [r.planned_by for r in state.rounds] == ["model"]
     assert [(e.source, e.target, e.question, e.assumed) for e in state.edges] == [
         ("licorice_gargle", "sore_throat", True, False)
     ]
-    assert state.downloads[0].license == "MIT"
+    assert state.downloads[-1].license == "MIT"
     assert [c.prompt_name for c in state.llm_calls] == [
         "route",
         "frame",
         "research_plan",
         "extract",
+        "check_support",
         "dag",
+        "data_coverage",
+        "map",
     ]
     assert state.report is not None and "✅" in state.report
-    assert "## Evidence" in state.report
+    assert "## Evidence" in state.report and "Risk difference" in state.report
     run_dir = tmp_path / "runs" / state.run_id
     assert RunState.load(run_dir / "state.json") == state
     assert (run_dir / "report.md").read_text() == state.report
@@ -96,25 +177,102 @@ def test_d1_runs_end_to_end_and_saves_the_run(run_live, framed, round_plan, tmp_
     assert (run_dir / "dag.png").read_bytes().startswith(b"\x89PNG")
 
 
-def test_not_causal_question_stops_after_routing(run_live, fake_tavily) -> None:
+def test_trial_data_without_a_documented_design_is_analyzed_as_observational(
+    run_live, framed, round_plan
+) -> None:
+    undocumented = extraction(quotes=[], data_link=LICORICE_DOCS)  # no design quote, no check
+
+    state = run_live(D1, [routed(True), framed, round_plan, undocumented, DAG, COVERED, MAPPED])
+
+    assert state.verdict == "estimated"
+    assert state.design is not None and state.design.design == "observational"
+    (result,) = state.results
+    assert result.tool == "backdoor_effect"
+    assert state.adjustment is not None and state.adjustment.adjust_for == []
+
+
+def test_user_can_say_assignment_was_random(run_live, framed, round_plan) -> None:
+    undocumented = extraction(quotes=[], data_link=LICORICE_DOCS)
+    asked: list[str] = []
+
+    def ask(question: str) -> str:
+        asked.append(question)
+        return "yes"
+
+    state = run_live(
+        D1, [routed(True), framed, round_plan, undocumented, DAG, COVERED, MAPPED], ask=ask
+    )
+
+    assert state.design is not None and state.design.design == "randomized"
+    assert state.results[0].tool == "rct_effect"
+    assert len(asked) == 2  # the mapping, then whether assignment was random
+    assert "randomly assigned" in asked[1]
+    assert state.clarifications == {q: "yes" for q in asked}  # recorded for replay
+
+
+def test_user_is_not_asked_about_randomization_when_the_paper_documents_it(
+    run_live, framed, round_plan
+) -> None:
+    asked: list[str] = []
+
+    def ask(question: str) -> str:
+        asked.append(question)
+        return "yes"
+
+    run_live(D1, [routed(True), framed, round_plan, *D1_CALLS], ask=ask)
+
+    assert len(asked) == 1 and "mapping" in asked[0].lower()
+
+
+def test_selection_after_assignment_gives_a_study_plan(
+    run_live, framed, round_plan, served
+) -> None:
+    served[LICORICE] = (FIXTURES / "d4_onboarding_completers.csv").read_bytes()
+    covered = COVERED.replace("pacu30min_throatPain", "activated_7d").replace("treat", "new_flow")
+    d4_mapping = mapping({"columns": ["new_flow"]}, {"columns": ["activated_7d"]})
+
+    state = run_live(
+        D1, [routed(True), framed, round_plan, READ, SUPPORTED, DAG, covered, d4_mapping]
+    )
+
+    assert state.verdict == "study_plan"
+    assert state.design is not None and state.design.design == "selection_after_assignment"
+    assert state.results == []
+    assert state.report is not None and "## Study plan" in state.report
+
+
+def test_restricted_data_only_gives_restricted(run_live, framed, round_plan, served) -> None:
+    served[RDATASETS_INDEX] = INDEX_HEADER.encode() + b"\n"
+    vivli = extraction(quotes=[], data_link="https://vivli.org/study/123.csv")
+
+    state = run_live(D1, [routed(True), framed, round_plan, vivli, DAG])
+
+    assert state.verdict == "restricted"
+    assert any(c.access == "restricted" for c in state.datasets)
+
+
+def test_studies_but_no_usable_data_is_published_only(run_live, framed, round_plan, served) -> None:
+    served[RDATASETS_INDEX] = INDEX_HEADER.encode() + b"\n"
+
+    state = run_live(KNUCKLES, [routed(True), framed, round_plan, extraction(quotes=[]), DAG])
+
+    assert state.verdict == "published_only"
+    assert state.downloads[1:] == [] and state.results == []  # only the Rdatasets index
+    assert state.datasets and all(c.rejected_reason for c in state.datasets)
+
+
+def test_not_causal_question_stops_after_routing(run_live, tavily) -> None:
     state = run_live("How many babies are born each day?", [routed(False)])
 
     assert state.verdict == "not_causal"
-    assert fake_tavily.requests == []
+    assert tavily.requests == []
     assert state.query is None
 
 
-def test_question_without_thin_slice_data_is_not_estimated(run_live, framed, round_plan) -> None:
-    knuckles = "Does cracking your knuckles cause arthritis?"
-    state = run_live(knuckles, [routed(True), framed, round_plan, READ, DAG])
-
-    assert state.verdict == "published_only"
-    assert state.downloads == [] and state.results == []
-    assert len(state.searches) == 6
-
-
-def test_no_included_study_and_no_data_is_insufficient(run_live, framed, round_plan) -> None:
-    knuckles = "Does cracking your knuckles cause arthritis?"
+def test_no_included_study_and_no_data_is_insufficient(
+    run_live, framed, round_plan, served
+) -> None:
+    served[RDATASETS_INDEX] = INDEX_HEADER.encode() + b"\n"
     off_topic = extraction(included=False, quotes=[])
     round_2 = json.dumps(
         {
@@ -131,7 +289,7 @@ def test_no_included_study_and_no_data_is_insufficient(run_live, framed, round_p
         }
     )
 
-    state = run_live(knuckles, [routed(True), framed, round_plan, off_topic, round_2])
+    state = run_live(KNUCKLES, [routed(True), framed, round_plan, off_topic, round_2])
 
     assert state.verdict == "insufficient"
     assert state.edges == []  # no evidence to build a graph from
@@ -151,7 +309,7 @@ def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
 def test_replay_reproduces_a_run_without_model_or_search(
     run_live, framed, round_plan, http, prompts_dir: Path, tmp_path: Path
 ) -> None:
-    live = run_live(D1, [routed(True), framed, round_plan, READ, DAG])
+    live = run_live(D1, [routed(True), framed, round_plan, *D1_CALLS])
 
     replayed = controller.run(
         D1,
@@ -167,6 +325,7 @@ def test_replay_reproduces_a_run_without_model_or_search(
     assert replayed.results == live.results
     assert replayed.rounds == live.rounds
     assert replayed.edges == live.edges
+    assert replayed.design == live.design
     assert replayed.report is not None and live.report is not None
 
     def stable(state: RunState) -> str:
@@ -179,6 +338,36 @@ def test_replay_reproduces_a_run_without_model_or_search(
         return text
 
     assert stable(replayed) == stable(live)
+
+
+def test_replay_answers_clarifying_questions_from_the_run(
+    run_live, sample_state: RunState, round_plan, http, prompts_dir: Path, tmp_path: Path
+) -> None:
+    assert sample_state.query is not None
+    which = "Sore throat at which time after surgery?"
+    ambiguous = sample_state.query.model_copy(update={"ambiguities": [which]})
+    outcomes = [routed(True), ambiguous.model_dump_json(), sample_state.query.model_dump_json()]
+    live = run_live(
+        D1,
+        [*outcomes, round_plan, *D1_CALLS],
+        ask=lambda q: "30 minutes" if q == which else "yes",  # yes to the mapping
+    )
+
+    assert live.clarifications[which] == "30 minutes"
+    assert live.mapping_confirmed and live.verdict == "estimated"
+    replayed = controller.run(
+        D1,
+        LLMClient.from_replay(live.llm_calls, prompts_dir=prompts_dir),
+        Searcher.from_replay(live.searches, live.extracts),
+        EuropePMC.from_replay(live.lookups),
+        http,
+        tmp_path / "runs",
+        tmp_path / "cache",
+        ask=live.clarifications.__getitem__,
+    )
+
+    assert replayed.query == live.query and replayed.clarifications == live.clarifications
+    assert replayed.results == live.results
 
 
 def test_find_run_picks_latest_run_of_the_same_question(tmp_path: Path) -> None:

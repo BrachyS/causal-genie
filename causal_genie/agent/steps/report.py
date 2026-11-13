@@ -59,17 +59,32 @@ def question_section(state: RunState) -> list[str]:
 
 
 def estimate_section(state: RunState) -> list[str]:
-    """The effect estimate, copied from the first tool result, never computed here."""
+    """The effect estimate, copied from the first tool result, never computed here; or, when
+    the design rules an estimate out, the study plan that would settle the question."""
     if state.verdict == "not_causal":
         return []
     if not state.results:
+        if state.design is not None and not state.design.estimable:
+            return study_plan_section(state)
         return ["## Estimate", "", "No estimate was computed for this question.", ""]
-    q, r = state.query, state.results[0].outputs
+    result = state.results[0]
+    r = result.outputs
+    lines = backdoor_lines(r) if result.tool == "backdoor_effect" else rct_lines(state, r)
+    mapped = "; ".join(f"`{node}` ← `{source}`" for node, source in r["mapped_from"].items())
+    lines += ["", f"In the data: {mapped}"]
+    if r.get("rows_excluded_missing"):
+        lines += ["", f"{r['rows_excluded_missing']} rows with missing values were excluded."]
+    return ["## Estimate", "", *lines, "", f"Tool result: `{result.id}`", ""]
+
+
+def rct_lines(state: RunState, r: dict) -> list[str]:
+    """Each arm's risk or mean, then the difference with its CI."""
+    q = state.query
     exposure = q.exposure.definition if q else "treatment"
     comparator = q.comparator if q else "control"
     level = f"{r['level']:.0%} CI"
     if r["scale"] == "risk_difference":
-        lines = [
+        return [
             f"Risk with {exposure}: {r['risk_treated']:.1%} "
             f"({r['events_treated']}/{r['n_treated']}). "
             f"Risk with {comparator}: {r['risk_control']:.1%} "
@@ -79,23 +94,52 @@ def estimate_section(state: RunState) -> list[str]:
             f"({level} {r['ci_low'] * 100:.1f} to {r['ci_high'] * 100:.1f}), "
             f"{r['method']} interval.",
         ]
-    else:
-        lines = [
-            f"With {exposure}: mean {r['mean_treated']:.2f} (n={r['n_treated']}). "
-            f"With {comparator}: mean {r['mean_control']:.2f} (n={r['n_control']}).",
-            "",
-            f"Mean difference: {r['estimate']:.2f} ({level} {r['ci_low']:.2f} to "
-            f"{r['ci_high']:.2f}), {r['method']} interval.",
-        ]
-    cutoff = "" if r["cutoff"] is None else f" > {r['cutoff']:g}"
-    lines += [
+    return [
+        f"With {exposure}: mean {r['mean_treated']:.2f} (n={r['n_treated']}). "
+        f"With {comparator}: mean {r['mean_control']:.2f} (n={r['n_control']}).",
         "",
-        f"Treatment in the data: `{r['treatment_column']}`. "
-        f"Outcome in the data: `{r['outcome_column']}`{cutoff}",
+        f"Mean difference: {r['estimate']:.2f} ({level} {r['ci_low']:.2f} to "
+        f"{r['ci_high']:.2f}), {r['method']} interval.",
     ]
-    if r.get("rows_excluded_missing"):
-        lines += ["", f"{r['rows_excluded_missing']} rows with missing values were excluded."]
-    return ["## Estimate", "", *lines, "", f"Tool result: `{state.results[0].id}`", ""]
+
+
+def backdoor_lines(r: dict) -> list[str]:
+    """Adjusted and unadjusted effect side by side, then what was adjusted for and why."""
+
+    def effect(value: float) -> str:
+        return f"{value * 100:.1f}" if r["scale"] == "risk_difference" else f"{value:.2f}"
+
+    unit = " percentage points" if r["scale"] == "risk_difference" else ""
+    level = f"{r['level']:.0%} CI"
+    confounders = ", ".join(r["adjusted_for"]) or "none (no backdoor path in the DAG)"
+    lines = [
+        f"Adjusted {r['scale'].replace('_', ' ')}: {effect(r['estimate'])}{unit} "
+        f"({level} {effect(r['ci_low'])} to {effect(r['ci_high'])}), {r['method']}.",
+        "",
+        f"Unadjusted: {effect(r['naive_estimate'])}{unit} "
+        f"({level} {effect(r['naive_ci_low'])} to {effect(r['naive_ci_high'])}).",
+        "",
+        f"Confounders adjusted for: {confounders}.",
+    ]
+    if r.get("precision"):
+        lines.append(f"Also adjusted for, to narrow the CI: {', '.join(r['precision'])}.")
+    return [*lines, "", f"{r['n']} rows used ({r['n_treated']} exposed)."]
+
+
+def study_plan_section(state: RunState) -> list[str]:
+    """Why the data cannot give an estimate, and what would settle the question."""
+    d = state.design
+    assert d is not None
+    return [
+        "## Study plan",
+        "",
+        f"**Design found:** {d.design.replace('_', ' ')}. Not estimated: {'; '.join(d.reasons)}.",
+        "",
+        f"- **Key assumption:** {d.key_assumption}",
+        f"- **What it would estimate:** {d.estimand}",
+        f"- **Next step:** {d.check}",
+        "",
+    ]
 
 
 def data_section(state: RunState) -> list[str]:

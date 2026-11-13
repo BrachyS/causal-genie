@@ -14,11 +14,9 @@ import logging
 import os
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from importlib.metadata import version
 from pathlib import Path
-from typing import Literal
 from uuid import uuid4
 
 import httpx
@@ -26,16 +24,27 @@ from dotenv import load_dotenv
 from tavily import TavilyClient
 
 from causal_genie.agent.router import normalize, route
-from causal_genie.agent.state import RunState
+from causal_genie.agent.state import (
+    Adjustment,
+    DatasetCandidate,
+    NodeMapping,
+    RunState,
+    Study,
+    Verdict,
+)
 from causal_genie.agent.steps.dag import run_dag
-from causal_genie.agent.steps.estimate import estimate_rct
+from causal_genie.agent.steps.data import find_data
+from causal_genie.agent.steps.estimate import estimate_backdoor, estimate_rct
 from causal_genie.agent.steps.frame import frame
+from causal_genie.agent.steps.identify import map_columns, source
 from causal_genie.agent.steps.report import write_report
 from causal_genie.agent.steps.research import research
 from causal_genie.llm.client import LLMClient, load_models, make_openai
 from causal_genie.log import setup_logging
-from causal_genie.tools.download import download
+from causal_genie.tools.derive import node_table
+from causal_genie.tools.identify import detect_design, identify, precision_set
 from causal_genie.tools.metadata import EuropePMC
+from causal_genie.tools.profile import read_table
 from causal_genie.tools.render import render_dag
 from causal_genie.tools.search import Searcher
 
@@ -43,34 +52,6 @@ log = logging.getLogger(__name__)
 
 RUNS_DIR = Path("runs")
 CACHE_DIR = Path("cache") / "downloads"
-
-
-@dataclass(frozen=True)
-class TrialData:
-    """Where a randomized trial's table lives and which columns hold the PECO variables."""
-
-    url: str
-    license: str
-    doi: str | None
-    treatment: str  # 0/1, 1 = exposure
-    outcome: str
-    cutoff: float | None  # binary outcome = outcome > cutoff; None keeps the outcome as is
-    scale: Literal["risk_difference", "mean_difference"]
-
-
-# T5 thin slice: D1's data and column mapping are fixed here until data discovery (T8) and
-# mapping (T9.1) find them. Keyed by the exact question, so no other question can use this data.
-THIN_SLICE_DATA = {
-    normalize("Does licorice gargling reduce post-op sore throat?"): TrialData(
-        url="https://vincentarelbundock.github.io/Rdatasets/csv/medicaldata/licorice_gargle.csv",
-        license="MIT",
-        doi=None,
-        treatment="treat",
-        outcome="pacu30min_throatPain",  # 0–10 pain score, 30 min after surgery
-        cutoff=0,  # any sore throat
-        scale="risk_difference",
-    )
-}
 
 
 def new_run_id() -> str:
@@ -88,7 +69,8 @@ def run(
     cache_dir: Path,
     ask: Callable[[str], str] | None,
 ) -> RunState:
-    """Route → frame → research → DAG → download → estimate → verdict → report, saving the run."""
+    """Route → frame → research → DAG → data → map → design → estimate → verdict → report,
+    saving the run."""
     state = RunState(
         run_id=new_run_id(),
         question=question,
@@ -112,27 +94,9 @@ def run(
             if any(s.included for s in state.studies):
                 run_dag(state, llm, searcher, papers)
                 render_dag(state.edges, runs_dir / state.run_id)
-            data = THIN_SLICE_DATA.get(normalize(question))
-            if data is None and not any(s.included for s in state.studies):
-                # PRD §5.9: nothing useful found after one reformulated round → ❓
-                state.verdict = "insufficient"
-            elif data is None:
-                # Thin slice: no data discovery yet (T8); the verdict rules (T10.1) refine this.
-                state.verdict = "published_only"
-            else:
-                d = download(data.url, http, cache_dir, doi=data.doi, license=data.license)
-                state.downloads.append(d)
-                state.results.append(
-                    estimate_rct(
-                        Path(d.path),
-                        d.sha256,
-                        data.treatment,
-                        data.outcome,
-                        data.cutoff,
-                        data.scale,
-                    )
-                )
-                state.verdict = "estimated"
+            state.verdict = analyze(
+                state, llm, searcher, http, cache_dir, ask_and_record if ask else None
+            )
         record_calls(state, llm, searcher, papers)  # the report lists the sources found
         state.report = write_report(state)
     finally:
@@ -148,6 +112,110 @@ def run(
             state.tokens,
         )
     return state
+
+
+def analyze(
+    state: RunState,
+    llm: LLMClient,
+    searcher: Searcher,
+    http: httpx.Client,
+    cache_dir: Path,
+    ask: Callable[[str], str] | None,
+) -> Verdict:
+    """Find data, map it to the DAG, label its design and estimate if the design allows;
+    returns the verdict (PRD §5.2). Every decision here is a rule, never a model's call."""
+    assert state.query is not None
+    exposure, outcome = state.query.exposure.name, state.query.outcome.name
+    no_estimate: Verdict = (
+        "published_only" if any(s.included for s in state.studies) else "insufficient"
+    )
+    accepted = find_data(state, llm, searcher, http, cache_dir)
+    if accepted is None:
+        restricted = any(c.access == "restricted" for c in state.datasets)
+        return "restricted" if restricted else no_estimate
+    mapping = map_columns(state, llm, ask)
+    by_node = {m.node: m for m in mapping.nodes if m.columns} if mapping else {}
+    if exposure not in by_node or outcome not in by_node:
+        log.info("no estimate: exposure or outcome not mapped (mapping=%s)", mapping)
+        return no_estimate
+    assert mapping is not None
+    data = state.downloads[-1]
+    table = node_table(read_table(Path(data.path)), mapping)
+    trial = source_trial(state, accepted)
+    randomized = trial is not None or user_says_randomized(by_node[exposure], accepted, ask)
+    roster = trial.n if trial is not None and documented(state, f"{trial.id}-n") else None
+    state.design = detect_design(
+        table,
+        exposure,
+        outcome,
+        state.edges,
+        randomized,
+        roster=roster,
+        unit=mapping.unit,
+        time=mapping.time,
+    )
+    if not state.design.estimable:
+        return "study_plan"
+    binary = set(table[outcome].dropna().unique()) <= {0, 1}
+    scale = "risk_difference" if binary else "mean_difference"
+    if state.design.design == "randomized":
+        state.adjustment = Adjustment(adjust_for=[], missing=[], randomized=True)
+        mapped_from = {n: source(by_node[n]) for n in (exposure, outcome)}
+        state.results.append(
+            estimate_rct(table, data.sha256, exposure, outcome, scale, mapped_from)
+        )
+        return "estimated"
+    observed = [c for c in table.columns if c not in (mapping.unit, mapping.time)]
+    adjustment = identify(state.edges, exposure, outcome, observed, randomized=False)
+    assert adjustment.adjust_for is not None, "detect_design said estimable"
+    precision = precision_set(state.edges, exposure, outcome, adjustment.adjust_for, observed)
+    state.adjustment = adjustment.model_copy(update={"precision": precision})
+    if binary and state.query.effect_scale == "odds_ratio":
+        scale = "odds_ratio"
+    used = [exposure, outcome, *adjustment.adjust_for, *precision]
+    state.results.append(
+        estimate_backdoor(
+            table,
+            data.sha256,
+            exposure,
+            outcome,
+            adjustment.adjust_for,
+            scale,
+            precision,
+            {n: source(by_node[n]) for n in used},
+        )
+    )
+    return "estimated"
+
+
+def documented(state: RunState, claim_id: str) -> bool:
+    """The ledger claim exists and passed both citation checks."""
+    return any(c.id == claim_id and c.status == "documented" for c in state.claims)
+
+
+def source_trial(state: RunState, accepted: DatasetCandidate) -> Study | None:
+    """The included RCT whose own data link gave the accepted table, if its design is
+    documented (quote found and supported): then assignment is documented by the paper."""
+    for s in state.studies:
+        if s.id == accepted.study_id and s.included and s.design == "RCT":
+            if documented(state, f"{s.id}-design"):
+                return s
+            log.info("study %s is an RCT, but its design claim is not documented", s.id)
+    return None
+
+
+def user_says_randomized(
+    exposure: NodeMapping, accepted: DatasetCandidate, ask: Callable[[str], str] | None
+) -> bool:
+    """Ask the user whether assignment was random; only for an exposure that is a column as
+    is (a derived one, like moon phase, is never assigned). No user → not randomized."""
+    if ask is None or exposure.derive is not None:
+        return False
+    reply = ask(
+        f"Was {exposure.node} (column {exposure.columns[0]}) randomly assigned in "
+        f"{accepted.title}, as in a trial or A/B test? (yes/no)"
+    )
+    return reply.strip().lower().startswith("y")
 
 
 def record_calls(state: RunState, llm: LLMClient, searcher: Searcher, papers: EuropePMC) -> None:

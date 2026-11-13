@@ -212,7 +212,8 @@ def paper_candidates(state: RunState, index: pd.DataFrame, http: httpx.Client) -
     for s in state.studies:
         if s.included and s.data_link and s.data_link.startswith("https://"):
             title = f"data link from {s.first_author or s.title} {s.year or ''}".strip()
-            found += resolve_link(s.data_link, "paper", title, s.title, index, http)
+            for c in resolve_link(s.data_link, "paper", title, s.title, index, http):
+                found.append(c.model_copy(update={"study_id": s.id}))
     return found
 
 

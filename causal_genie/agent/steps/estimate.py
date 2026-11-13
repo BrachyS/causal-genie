@@ -7,7 +7,6 @@ scale): the same data and choices always give the same id, and any change gives 
 import hashlib
 import json
 from importlib.metadata import version
-from pathlib import Path
 from typing import Literal
 
 import pandas as pd
@@ -18,36 +17,32 @@ from causal_genie.tools.stats import backdoor_effect, rct_effect
 
 
 def estimate_rct(
-    path: Path,
+    table: pd.DataFrame,
     data_sha256: str,
-    treatment: str,
+    exposure: str,
     outcome: str,
-    cutoff: float | None,
     scale: Literal["risk_difference", "mean_difference"],
+    mapped_from: dict[str, str],
 ) -> Result:
-    """Estimate a randomized effect from a CSV, analyzed as assigned.
+    """Estimate a randomized effect from the analysis table (one column per node, cutoffs
+    already applied), analyzed as assigned.
 
-    `cutoff` makes a binary outcome (`outcome > cutoff`) from a score; rows missing treatment or
-    outcome are excluded and counted, never silently dropped.
+    `mapped_from` says which columns each node came from, for the report. Rows missing the
+    exposure or outcome are excluded and counted, never silently dropped.
     """
     inputs = {
         "data_sha256": data_sha256,
-        "treatment": treatment,
+        "exposure": exposure,
         "outcome": outcome,
-        "cutoff": cutoff,
         "scale": scale,
+        "mapped_from": mapped_from,
     }
     with log_step("estimate", **inputs) as rec:
-        table = pd.read_csv(path)
-        data = table[[treatment, outcome]].dropna()
-        if cutoff is not None:
-            data[outcome] = (data[outcome] > cutoff).astype(int)
-        outputs = rct_effect(data, treatment, outcome, scale) | {
+        data = table[[exposure, outcome]].dropna()
+        outputs = rct_effect(data, exposure, outcome, scale) | {
             "rows": len(table),
             "rows_excluded_missing": len(table) - len(data),
-            "treatment_column": treatment,
-            "outcome_column": outcome,
-            "cutoff": cutoff,
+            "mapped_from": mapped_from,
         }
         rec["output"] = outputs
         return result("rct_effect", inputs, outputs)
@@ -72,9 +67,12 @@ def estimate_backdoor(
     outcome: str,
     adjust_for: list[str],
     scale: Literal["risk_difference", "mean_difference", "odds_ratio"],
+    precision: list[str],
+    mapped_from: dict[str, str],
 ) -> Result:
     """Estimate an observational effect from the analysis table (one column per node),
-    adjusting for the backdoor set from `identify`.
+    adjusting for the backdoor set from `identify` plus the `precision` variables (causes of
+    the outcome only), which are recorded apart so the report does not call them confounders.
 
     Rows missing any used column are excluded and counted, never silently dropped.
     """
@@ -83,13 +81,19 @@ def estimate_backdoor(
         "exposure": exposure,
         "outcome": outcome,
         "adjust_for": adjust_for,
+        "precision": precision,
         "scale": scale,
+        "mapped_from": mapped_from,
     }
     with log_step("estimate", **inputs) as rec:
-        data = table[[exposure, outcome, *adjust_for]].dropna()
-        outputs = backdoor_effect(data, exposure, outcome, adjust_for, scale) | {
+        covariates = [*adjust_for, *precision]
+        data = table[[exposure, outcome, *covariates]].dropna()
+        outputs = backdoor_effect(data, exposure, outcome, covariates, scale) | {
+            "adjusted_for": adjust_for,
+            "precision": precision,
             "rows": len(table),
             "rows_excluded_missing": len(table) - len(data),
+            "mapped_from": mapped_from,
         }
         rec["output"] = outputs
         return result("backdoor_effect", inputs, outputs)

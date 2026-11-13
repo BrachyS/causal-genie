@@ -72,7 +72,7 @@ Not medical, legal or financial advice; every report says so.
 
 | # | Capability | Lean version (what we build) |
 |---|---|---|
-| M1 | Frame | Question → `CausalQuery` as **PECO** (Population, Exposure, Comparator, Outcome) + estimand; one clarifying question if ambiguous |
+| M1 | Frame | Question → `CausalQuery` as **PECO** (Population, Exposure, Comparator, Outcome) + estimand; up to 3 clarifying questions in one turn if ambiguous, then one reframe |
 | M2 | Route | cache / gallery replay / not causal / causal |
 | M3 | Research | Query groups → Tavily → Europe PMC metadata → dedupe by study → one model call per source → citation checks → certainty label → evidence-flow counts (§5.3) |
 | M4 | DAG | Built from claims; each edge cites a claim or is marked "assumed"; cycle check; rendered PNG + JSON |
@@ -170,7 +170,7 @@ class CausalQuery(BaseModel):
     target: Literal["ATE", "ATT"]                    # average effect in everyone vs in the treated
     effect_scale: Literal["risk_difference", "risk_ratio", "odds_ratio", "mean_difference"]
     deviation_strategy: Literal["as_assigned", "as_received", "n/a"]  # ITT vs per-protocol; n/a if observational
-    ambiguities: list[str]             # non-empty → one clarifying question
+    ambiguities: list[str]             # non-empty → up to 3 clarifying questions in one turn
 
 class Extraction(BaseModel):           # model output, one call per source
     source_kind: Literal["paper", "secondary"]   # secondary = news/blog/wiki about someone else's study

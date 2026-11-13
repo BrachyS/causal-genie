@@ -254,6 +254,7 @@ def test_d1_data_found_scored_downloaded_and_profiled(run_find, fake_tavily) -> 
     assert (found.accepted, found.rank, found.score) == (True, 1, 1.0)
     assert found.columns == ["rownames", "treat", "pacu30min_throatPain", "preOp_smoking"]
     assert found.coverage == FULL
+    assert (found.source, found.study_id) == ("paper", "s1")  # the trial's own data link
     (d,) = state.downloads
     assert (d.url, d.license) == (LICORICE, "MIT")
     assert state.profile is not None and state.profile.rows == 2
