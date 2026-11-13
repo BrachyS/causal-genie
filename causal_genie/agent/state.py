@@ -31,7 +31,7 @@ class CausalQuery(Schema):
     effect_scale: Literal["risk_difference", "risk_ratio", "odds_ratio", "mean_difference"]
     # ITT vs per-protocol; n/a if observational
     deviation_strategy: Literal["as_assigned", "as_received", "n/a"]
-    ambiguities: list[str]  # non-empty → one clarifying question
+    ambiguities: list[str]  # non-empty → up to 3 clarifying questions in one turn
 
 
 Design = Literal[
@@ -310,6 +310,7 @@ class DatasetCandidate(Schema):
     bytes: int | None = None  # file size, when the source states it
     rank: int | None = None  # 1-based rank after scoring; the eval logs the accepted one's
     accepted: bool = False  # downloaded and profiled as a single table
+    study_id: str | None = None  # the included study whose data link gave this table
 
 
 class NodeColumn(Schema):
@@ -372,6 +373,8 @@ class Adjustment(Schema):
     adjust_for: list[str] | None  # None: no valid set among the nodes the table has
     missing: list[str]  # nodes a valid set needs that the table lacks
     randomized: bool  # edges into the exposure were cut before picking the set
+    # causes of the outcome only (not confounders), added to narrow the CI; reported apart
+    precision: list[str] = Field(default_factory=list)
 
 
 DataDesign = Literal[

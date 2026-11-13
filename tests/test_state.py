@@ -4,7 +4,14 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from causal_genie.agent.state import DagEdge, DagProposal, ResearchPlan, RunState
+from causal_genie.agent.state import (
+    Adjustment,
+    DagEdge,
+    DagProposal,
+    DatasetCandidate,
+    ResearchPlan,
+    RunState,
+)
 
 
 def test_run_state_round_trips_through_json(tmp_path: Path, sample_state: RunState) -> None:
@@ -43,3 +50,24 @@ def test_old_saved_edges_load_as_non_question_edges() -> None:
 
 def test_model_is_not_shown_the_question_flag() -> None:
     assert "question" not in json.dumps(DagProposal.model_json_schema())
+
+
+def test_runs_saved_before_t10_load_with_empty_new_fields() -> None:
+    adjustment = Adjustment.model_validate({"adjust_for": [], "missing": [], "randomized": False})
+    candidate = DatasetCandidate.model_validate(
+        {
+            "url": "https://x/y.csv",
+            "host": "x",
+            "license": None,
+            "access": "open",
+            "coverage": {},
+            "score": None,
+            "rejected_reason": None,
+            "source": "search",
+            "title": "t",
+            "description": "d",
+        }
+    )
+
+    assert adjustment.precision == []
+    assert candidate.study_id is None
