@@ -9,7 +9,7 @@ from causal_genie.agent.state import (
     RunState,
     TableProfile,
 )
-from causal_genie.agent.steps.identify import map_columns
+from causal_genie.agent.steps.identify import map_columns, source
 
 
 def column(name: str, dtype: str = "int64") -> ColumnProfile:
@@ -45,7 +45,10 @@ def mapped_state(sample_state: RunState) -> RunState:
     ]
     state.profile = TableProfile(
         rows=235,
-        columns=[column("treat"), column("pacu30min_throatPain"), column("preOp_smoking")],
+        columns=[
+            column(c)
+            for c in ("treat", "pacu30min_throatPain", "pacu90min_throatPain", "preOp_smoking")
+        ],
     )
     return state
 
@@ -141,3 +144,17 @@ def test_node_the_model_skipped_is_unmapped(make_llm, mapped_state) -> None:
         "sore_throat": [],
         "smoking": [],
     }
+
+
+def test_cutoff_may_span_several_columns(make_llm, mapped_state) -> None:
+    columns = ["pacu30min_throatPain", "pacu90min_throatPain"]
+    llm, _ = make_llm(
+        [answer(node("licorice_gargle", ["treat"]), node("sore_throat", columns, "cutoff", 0))]
+    )
+
+    mapping = map_columns(mapped_state, llm, ask=None)
+
+    assert mapping is not None
+    sore = next(m for m in mapping.nodes if m.node == "sore_throat")
+    assert sore.columns == columns
+    assert source(sore) == "any of pacu30min_throatPain, pacu90min_throatPain > 0"

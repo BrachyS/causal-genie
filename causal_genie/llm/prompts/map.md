@@ -8,7 +8,7 @@ Return JSON with `nodes`, `unit` and `time`:
   - `columns`: the column name(s), copied exactly, that hold the node or that it is computed from. Use `[]` if the table does not have the node; never stretch a column to fit.
   - `derive`: `null` to use one column as it is. Otherwise one rule from this list, and nothing else:
     - `"day_of_week"`, `"weekend"`, `"holiday"` (US federal holidays), `"season"`, `"full_moon"`: computed from a date. `columns` is one date column, or the year, month and day columns in that order.
-    - `"cutoff"`: a yes/no node from one numeric column, yes when the value is above `cutoff` (e.g. any pain: a 0–10 pain score with cutoff 0).
+    - `"cutoff"`: a yes/no node from one or more numeric columns, yes when any value is above `cutoff` (e.g. any pain: a 0–10 pain score with cutoff 0; any pain within 24 h: the pain scores at each time point in that window, cutoff 0).
   - `cutoff`: a number for `"cutoff"`, else `null`.
   - `categorical`: `true` if the column holds numeric codes for categories (e.g. day of week 1–7, a region code), so each value is its own group; else `false`.
 - The exposure must end up yes/no (0/1): a 0/1 column, a `"cutoff"`, or a date rule like `"full_moon"`.

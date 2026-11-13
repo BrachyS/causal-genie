@@ -29,8 +29,8 @@ def check_node(m: NodeMapping, columns: set[str]) -> NodeMapping:
         problem = f"unknown columns {unknown}"
     elif m.derive in DATE_RULES and len(m.columns) not in (0, 1, 3):
         problem = f"rule {m.derive} needs one date column or year, month, day"
-    elif m.derive == "cutoff" and (m.cutoff is None or len(m.columns) != 1):
-        problem = "rule cutoff needs one column and a cutoff value"
+    elif m.derive == "cutoff" and (m.cutoff is None or not m.columns):
+        problem = "rule cutoff needs columns and a cutoff value"
     elif m.derive is None and len(m.columns) > 1:
         problem = f"several columns {m.columns} but no rule to combine them"
     else:
@@ -60,7 +60,9 @@ def source(m: NodeMapping) -> str:
     if not m.columns:
         return "(not in the table)"
     if m.derive == "cutoff":
-        return f"{m.columns[0]} > {m.cutoff:g}"
+        if len(m.columns) == 1:
+            return f"{m.columns[0]} > {m.cutoff:g}"
+        return f"any of {', '.join(m.columns)} > {m.cutoff:g}"
     if m.derive is not None:
         return f"{m.derive}({', '.join(m.columns)})"
     return m.columns[0] + (" (categories)" if m.categorical else "")

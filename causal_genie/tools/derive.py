@@ -79,13 +79,17 @@ DATE_RULES = {
 
 
 def node_values(df: pd.DataFrame, m: NodeMapping) -> pd.Series:
-    """One node's values: the column as is, a date rule, or a 0/1 cutoff on a score."""
+    """One node's values: the column as is, a date rule, or a 0/1 cutoff on one or more
+    scores (yes if any is above it, e.g. sore throat at any of several time points)."""
     if m.derive in DATE_RULES:
         return DATE_RULES[m.derive](to_dates(df, m.columns))
-    column = df[m.columns[0]]
     if m.derive == "cutoff":
         assert m.cutoff is not None
-        return (column > m.cutoff).astype(int).where(column.notna())
+        scores = df[m.columns]
+        above = (scores > m.cutoff).any(axis=1)
+        # yes if any score is above; no only if every score is there; else missing
+        return above.astype(int).where(above | scores.notna().all(axis=1))
+    column = df[m.columns[0]]
     return column.astype(str).where(column.notna()) if m.categorical else column
 
 

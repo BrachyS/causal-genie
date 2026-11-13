@@ -355,7 +355,7 @@ class NodeMapping(Schema):
     # empty: the table lacks the node; a date rule takes one date column or year, month, day
     columns: list[str]
     derive: DeriveRule | None  # None: use the one column as it is
-    cutoff: float | None  # derive="cutoff" only: node = column > cutoff
+    cutoff: float | None  # derive="cutoff" only: node = any column > cutoff
     categorical: bool  # numeric codes that name categories (e.g. 1 = Monday), not amounts
 
 

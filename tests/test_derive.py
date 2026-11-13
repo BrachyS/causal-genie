@@ -110,3 +110,22 @@ def test_cutoff_keeps_missing_values_missing() -> None:
 
     assert node_table(raw, mapping)["sore"].tolist()[:2] == [0, 1]
     assert pd.isna(node_table(raw, mapping)["sore"].iloc[2])
+
+
+def test_cutoff_over_several_columns_is_yes_if_any_is_above() -> None:
+    """E.g. any sore throat in 24 h from pain scores at 4 time points."""
+    raw = pd.DataFrame(
+        {
+            "pain_30m": [0, 0, 2, None, 0, None],
+            "pain_4h": [0, 1, None, 0, None, None],
+        }
+    )
+    mapping = Mapping(
+        nodes=[node("sore", ["pain_30m", "pain_4h"], "cutoff", 0)], unit=None, time=None
+    )
+
+    sore = node_table(raw, mapping)["sore"]
+
+    # yes if any score is above; no only if every score is there and none is above
+    assert sore.iloc[:3].tolist() == [0, 1, 1]
+    assert sore.iloc[3:].isna().all()
