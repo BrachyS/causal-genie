@@ -10,3 +10,14 @@ tiers:
     # Reasons before answering: 4000 ran out on the DAG prompt with no JSON written (live D4,
     # Nov 13; finish_reason=length, all reasoning_tokens). A one-line question used ~2000.
     max_tokens: 16000
+
+# Prompts whose calls turn reasoning off (chat_template_kwargs thinking=false). report: live D0
+# (run 20261114-154259-6bb1d2) spent all 16,000 tokens reasoning and wrote nothing; its prose
+# is linted and the verdict is the controller's, so it needs no deep reasoning.
+no_thinking: [report]
+
+# Per-prompt caps overriding the tier's max_tokens. extract: live D0 outputs were 263 tokens
+# (median), 651 at most, but one runaway (likely a repetition loop; the small tier does not reason)
+# hit 4,000 on a 3,048-character snippet; its schema repair then succeeded.
+prompt_max_tokens:
+  extract: 1500

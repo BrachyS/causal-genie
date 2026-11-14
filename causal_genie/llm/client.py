@@ -52,6 +52,21 @@ def load_max_tokens(path: Path = MODELS_YAML) -> dict[str, int]:
     return {tier: spec["max_tokens"] for tier, spec in tiers.items()}
 
 
+def load_prompt_max_tokens(path: Path = MODELS_YAML) -> dict[str, int]:
+    """Prompt name → completion token cap overriding its tier's, from `models.yaml`."""
+    return yaml.safe_load(path.read_text()).get("prompt_max_tokens", {})
+
+
+def load_no_thinking(path: Path = MODELS_YAML) -> set[str]:
+    """Prompt names whose calls turn the model's reasoning off, from `models.yaml`."""
+    return set(yaml.safe_load(path.read_text()).get("no_thinking", []))
+
+
+# The only setting that stops DeepSeek-V4-Pro-0813 reasoning on Token Factory (probe, Nov 14);
+# `reasoning_effort` and `thinking: {type: disabled}` are accepted but ignored.
+NO_THINKING = {"chat_template_kwargs": {"thinking": False}}
+
+
 def make_openai() -> OpenAI:
     """Token Factory client from env; SDK retries off so ours is the only one."""
     return OpenAI(
@@ -75,10 +90,13 @@ class LLMClient:
         retry_wait_s: float = 2.0,
         replay: list[LLMCall] | None = None,
         max_tokens: dict[str, int] | None = None,
+        no_thinking: set[str] | None = None,
     ) -> None:
         self.openai = openai
         self.models = models
         self.max_tokens = max_tokens or load_max_tokens()
+        self.no_thinking = load_no_thinking() if no_thinking is None else no_thinking
+        self.prompt_max_tokens = load_prompt_max_tokens()
         self.prompts_dir = prompts_dir
         self.retry_wait_s = retry_wait_s
         self.replay = {(c.prompt_name, c.user_content): c for c in replay or []}
@@ -145,7 +163,9 @@ class LLMClient:
         }
         start = time.perf_counter()
 
-        text, tokens_in, tokens_out, finish = self._ask(tier, messages, response_format)
+        text, tokens_in, tokens_out, finish = self._ask(
+            tier, prompt_name, messages, response_format
+        )
         finish_reasons = [finish]
         error = None
         try:
@@ -160,7 +180,9 @@ class LLMClient:
                     "Return corrected JSON only, matching the schema.",
                 },
             ]
-            text, more_in, more_out, finish = self._ask(tier, messages, response_format)
+            text, more_in, more_out, finish = self._ask(
+                tier, prompt_name, messages, response_format
+            )
             tokens_in, tokens_out = tokens_in + more_in, tokens_out + more_out
             finish_reasons.append(finish)
             try:
@@ -183,17 +205,21 @@ class LLMClient:
         return call
 
     def _ask(
-        self, tier: Tier, messages: list, response_format: ResponseFormatJSONSchema
+        self,
+        tier: Tier,
+        prompt_name: str,
+        messages: list,
+        response_format: ResponseFormatJSONSchema,
     ) -> tuple[str, int, int, str]:
         """One completion → (text, tokens in, tokens out, finish reason); one retry on
         transient API errors. A cut-off output (`length`) is logged as a warning."""
         assert self.openai is not None
         try:
-            response = self._create(tier, messages, response_format)
+            response = self._create(tier, prompt_name, messages, response_format)
         except TRANSIENT_ERRORS as e:
             log.warning("tier=%s transient API error, retrying: %r", tier, e)
             time.sleep(self.retry_wait_s)
-            response = self._create(tier, messages, response_format)
+            response = self._create(tier, prompt_name, messages, response_format)
         usage = response.usage
         tokens = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, 0)
         choice = response.choices[0]
@@ -204,17 +230,29 @@ class LLMClient:
             self.models[tier],
             choice.finish_reason,
             tokens[1],
-            self.max_tokens[tier],
+            self.cap(tier, prompt_name),
         )
         return choice.message.content or "", *tokens, choice.finish_reason
 
-    def _create(self, tier: Tier, messages: list, response_format: ResponseFormatJSONSchema):
-        """The raw API request; deterministic (temperature 0) and capped per tier."""
+    def cap(self, tier: Tier, prompt_name: str) -> int:
+        """The prompt's own token cap if `models.yaml` sets one, else its tier's."""
+        return self.prompt_max_tokens.get(prompt_name, self.max_tokens[tier])
+
+    def _create(
+        self,
+        tier: Tier,
+        prompt_name: str,
+        messages: list,
+        response_format: ResponseFormatJSONSchema,
+    ):
+        """The raw API request; deterministic (temperature 0), capped per tier or prompt, and with
+        reasoning off for the prompts `models.yaml` names under `no_thinking`."""
         assert self.openai is not None
         return self.openai.chat.completions.create(
             model=self.models[tier],
             messages=messages,
             response_format=response_format,
             temperature=0,
-            max_tokens=self.max_tokens[tier],
+            max_tokens=self.cap(tier, prompt_name),
+            extra_body=NO_THINKING if prompt_name in self.no_thinking else None,
         )
