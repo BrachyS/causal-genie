@@ -287,6 +287,9 @@ class DagProposal(Schema):
     """The model's proposed causal graph; the harness checks every cited claim id."""
 
     edges: list[DagEdge]
+    # Nodes nothing in the graph can cause (moon phase, weather, calendar date, a coin flip);
+    # the harness drops every edge into them. Empty for runs recorded before T7.6.
+    exogenous: list[str] = Field(default_factory=list)
 
 
 # paper = a study's data link; repository = Rdatasets index; search = Tavily; user = a table
@@ -541,6 +544,10 @@ class RunState(Schema):
     claims: list[Claim] = Field(default_factory=list)  # the claim ledger
     certainty: Certainty | None = None  # set by the controller after research
     edges: list[DagEdge] = Field(default_factory=list)
+    # Nodes the model judged nothing can cause (no source backs this), and the edges into them
+    # the harness dropped; the report shows both as assumptions
+    exogenous: list[str] = Field(default_factory=list)
+    exogenous_dropped: list[DagEdge] = Field(default_factory=list)
     datasets: list[DatasetCandidate] = Field(default_factory=list)
     profile: TableProfile | None = None  # the accepted dataset's profile
     mapping: Mapping | None = None  # column ↔ node mapping after the harness's checks

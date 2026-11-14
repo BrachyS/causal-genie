@@ -71,3 +71,18 @@ def test_runs_saved_before_t10_load_with_empty_new_fields() -> None:
 
     assert adjustment.precision == []
     assert candidate.study_id is None
+
+
+def test_dag_proposal_lists_exogenous_nodes_and_defaults_to_none() -> None:
+    proposed = DagProposal.model_validate(
+        {"edges": [], "exogenous": ["full_moon"]}  # nothing in the graph causes moon phase
+    )
+    assert proposed.exogenous == ["full_moon"]
+    assert DagProposal.model_validate({"edges": []}).exogenous == []  # older recorded runs
+    assert "exogenous" in DagProposal.model_json_schema()["properties"]
+
+
+def test_runs_saved_before_t7_6_load_with_no_exogenous_nodes(sample_state: RunState) -> None:
+    saved = sample_state.model_dump(exclude={"exogenous", "exogenous_dropped"})
+    loaded = RunState.model_validate(saved)
+    assert loaded.exogenous == [] and loaded.exogenous_dropped == []
