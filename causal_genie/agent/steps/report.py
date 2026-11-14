@@ -317,6 +317,12 @@ def evidence_section(state: RunState) -> list[str]:
         f"dedupe → {flow.included} included (excluded: {excluded}).",
         "",
     ]
+    if failed := sum(call.error is not None for call in state.lookups):
+        lines += [
+            f"Europe PMC lookups failed for {failed} queries (after one retry): the studies "
+            "they were for may lack a DOI or PMID and were not checked for retraction.",
+            "",
+        ]
     included = sorted((s for s in state.studies if s.included), key=lambda s: -design_tier(s))
     if not included:
         lines += ["No included studies. Searches run:", ""]

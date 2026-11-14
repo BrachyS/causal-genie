@@ -8,6 +8,7 @@ from causal_genie.agent.state import (
     DagEdge,
     DesignCheck,
     Download,
+    LookupCall,
     Query,
     ReportDraft,
     ResearchPlan,
@@ -486,3 +487,23 @@ def test_entries_leave_out_study_details_the_report_already_shows(estimated_stat
 
     assert "c-design" not in entries
     assert {"c1", "c-null", "c-conf"} <= set(entries)
+
+
+def test_evidence_section_notes_failed_europe_pmc_lookups(sample_state) -> None:
+    sample_state.verdict = "published_only"
+    ok = LookupCall(query="EXT_ID:1 AND SRC:MED", record=None, latency_s=0.1)
+    failed = ok.model_copy(update={"query": 'DOI:"10.1/x"', "error": "HTTP 500"})
+    sample_state.lookups = [ok, failed, failed.model_copy(update={"query": 'TITLE:"y"'})]
+
+    report = write_report(sample_state)
+
+    assert (
+        "Europe PMC lookups failed for 2 queries (after one retry): the studies they were for "
+        "may lack a DOI or PMID and were not checked for retraction." in report
+    )
+
+
+def test_evidence_section_has_no_lookup_note_when_none_failed(sample_state) -> None:
+    sample_state.verdict = "published_only"
+
+    assert "Europe PMC lookups failed" not in write_report(sample_state)

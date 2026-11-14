@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 import pytest
 from conftest import D1_TITLE, epmc_result
@@ -162,25 +164,46 @@ def test_timeout_or_rate_limit_gets_one_retry(failure) -> None:
     assert len(served) == 2
 
 
-def test_second_rate_limit_raises() -> None:
+def test_second_rate_limit_gives_no_record_and_records_the_error(caplog) -> None:
+    # Live D0 (run 20261114-193249-8d8976): a Europe PMC outage failed 4 of 42 lookups and the
+    # first one ended the whole run. A study without Europe PMC data is kept instead (user's
+    # choice, Nov 14): it misses its ids and retraction check, and the error is logged.
     epmc, served = flaky_epmc(429, 429)
 
-    with pytest.raises(httpx.HTTPStatusError):
-        epmc.find(pmid="23921656")
+    with caplog.at_level(logging.ERROR):
+        assert epmc.find(pmid="23921656") is None
     assert len(served) == 2
+    (call,) = epmc.calls
+    assert call.record is None and call.error is not None and "429" in call.error
+    assert "Europe PMC lookup failed" in caplog.text
 
 
 def test_other_http_errors_are_not_retried() -> None:
     epmc, served = flaky_epmc(500)
 
-    with pytest.raises(httpx.HTTPStatusError):
-        epmc.find(pmid="23921656")
+    assert epmc.find(pmid="23921656") is None
     assert len(served) == 1
+    assert epmc.calls[0].error is not None and "500" in epmc.calls[0].error
 
 
 def test_rate_limit_then_timeout_is_not_retried_twice() -> None:
     epmc, served = flaky_epmc(429, httpx.ReadTimeout("slow"))
 
-    with pytest.raises(httpx.ReadTimeout):
-        epmc.find(pmid="23921656")
+    assert epmc.find(pmid="23921656") is None
     assert len(served) == 2
+
+
+def test_failed_lookup_falls_back_to_the_title() -> None:
+    epmc, served = flaky_epmc(500)
+
+    assert epmc.find(pmid="23921656", title=D1_TITLE) is not None
+    assert len(served) == 2
+
+
+def test_failed_lookup_replays_as_no_record() -> None:
+    live, _ = flaky_epmc(500)
+    live.find(pmid="23921656")
+
+    replayed = EuropePMC.from_replay(live.calls)
+
+    assert replayed.find(pmid="23921656") is None

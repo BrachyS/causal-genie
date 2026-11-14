@@ -110,7 +110,13 @@ class EuropePMC:
         return None
 
     def _search(self, query: str) -> PaperRecord | None:
-        """Top Europe PMC hit for `query`, live or from the recording; a replay miss raises."""
+        """Top Europe PMC hit for `query`, live or from the recording; a replay miss raises.
+
+        A lookup that still fails after `_get`'s retry (timeout, 429, 5xx) is logged as an
+        error, recorded with its error and returns no record: the study is kept without
+        Europe PMC's ids and retraction check rather than ending the run (user's choice after
+        an outage ended live D0 run 20261114-193249-8d8976).
+        """
         with log_step("europepmc", query=query) as rec:
             if self.http is None:
                 if query not in self.replay:
@@ -118,10 +124,24 @@ class EuropePMC:
                 call = self.replay[query]
             else:
                 start = time.perf_counter()
-                response = self._get(query)
-                results = response.json()["resultList"]["result"]
-                record = parse_record(results[0]) if results else None
-                call = LookupCall(query=query, record=record, latency_s=time.perf_counter() - start)
+                try:
+                    response = self._get(query)
+                except (httpx.TimeoutException, httpx.HTTPStatusError) as e:
+                    log.error(
+                        "Europe PMC lookup failed; study kept without its data: %s: %r", query, e
+                    )
+                    call = LookupCall(
+                        query=query,
+                        record=None,
+                        latency_s=time.perf_counter() - start,
+                        error=repr(e),
+                    )
+                else:
+                    results = response.json()["resultList"]["result"]
+                    record = parse_record(results[0]) if results else None
+                    call = LookupCall(
+                        query=query, record=record, latency_s=time.perf_counter() - start
+                    )
             self.calls.append(call)
             rec["record"] = call.record.model_dump() if call.record else None
             return call.record
