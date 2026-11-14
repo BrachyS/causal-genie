@@ -235,8 +235,16 @@ def test_uncited_edge_goes_back_to_research_and_the_graph_is_rebuilt(
 ) -> None:
     llm, _ = make_llm(
         [
-            proposal((*QUESTION, ["c1"]), ("smoking", "sore_throat", [])),
-            proposal((*QUESTION, ["c1"]), ("smoking", "sore_throat", ["s1-adjusted_for"])),
+            proposal(
+                (*QUESTION, ["c1"]),
+                ("smoking", "licorice_gargle", ["c1"]),
+                ("smoking", "sore_throat", []),
+            ),
+            proposal(
+                (*QUESTION, ["c1"]),
+                ("smoking", "licorice_gargle", ["c1"]),
+                ("smoking", "sore_throat", ["s1-adjusted_for"]),
+            ),
         ]
     )
     asked: list[list[str]] = []
@@ -257,12 +265,19 @@ def test_extra_research_finding_nothing_keeps_the_edge_assumed(
     make_llm, researched: RunState, tools
 ) -> None:
     # No third outcome: a second DAG call or another round would fail the test.
-    llm, _ = make_llm([proposal((*QUESTION, ["c1"]), ("age", "sore_throat", [])), NO_QUERIES])
+    llm, _ = make_llm(
+        [
+            proposal(
+                (*QUESTION, ["c1"]), ("age", "licorice_gargle", []), ("age", "sore_throat", [])
+            ),
+            NO_QUERIES,
+        ]
+    )
 
     run_dag(researched, llm, *tools)
 
     assert len(researched.rounds) == 2
-    assert [e.assumed for e in researched.edges] == [False, True]
+    assert [e.assumed for e in researched.edges] == [False, True, True]
 
 
 def test_no_rounds_left_keeps_the_edge_assumed(make_llm, researched: RunState, tools) -> None:
@@ -354,3 +369,36 @@ def test_dag_prompt_asks_for_outcome_causes_the_data_may_record() -> None:
 
     assert "other causes of the outcome" in text
     assert "day of week" in text
+
+
+def test_uncited_edges_from_outcome_only_nodes_run_no_extra_round(
+    make_llm, researched: RunState, tools
+) -> None:
+    # Step 1 of T10.9 asks the DAG for the outcome's other causes (weekday, holiday for D0):
+    # they only add precision, so finding a source for them is not worth a research round.
+    # One outcome only: an extra round would ask the model for a plan and fail.
+    llm, _ = make_llm(
+        [
+            proposal(
+                (*QUESTION, ["c1"]), ("weekday", "sore_throat", []), ("holiday", "sore_throat", [])
+            )
+        ]
+    )
+
+    run_dag(researched, llm, *tools)
+
+    assert len(researched.rounds) == 1
+    assert [e.assumed for e in researched.edges] == [False, True, True]
+
+
+def test_lone_uncited_edge_into_the_exposure_still_gets_a_research_round(
+    make_llm, researched: RunState, tools
+) -> None:
+    # A possible instrument: IV detection needs this edge cited, so it is worth a round.
+    llm, _ = make_llm(
+        [proposal((*QUESTION, ["c1"]), ("distance", "licorice_gargle", [])), NO_QUERIES]
+    )
+
+    run_dag(researched, llm, *tools)
+
+    assert len(researched.rounds) == 2

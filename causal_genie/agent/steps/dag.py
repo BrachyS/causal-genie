@@ -45,9 +45,15 @@ def run_dag(
     papers: EuropePMC,
     max_rounds: int = MAX_ROUNDS,
 ) -> None:
-    """Set `state.edges`, sending uncited edges back to research once if rounds are left."""
+    """Set `state.edges`, sending uncited edges back to research once if rounds are left.
+
+    Edges from outcome-only nodes (e.g. weekday -> births) are not sent: they only make the
+    estimate more precise and cannot bias it, so a source for them is not worth a round.
+    """
+    assert state.query is not None
     state.edges = build_dag(state, llm)
-    uncited = [e for e in state.edges if e.assumed]
+    outcome = state.query.outcome.name
+    uncited = [e for e in state.edges if e.assumed and not outcome_only(state.edges, e, outcome)]
     if not uncited:
         return
     if len(state.rounds) >= max_rounds:
@@ -58,6 +64,15 @@ def run_dag(
     research_gaps(state, llm, searcher, papers, gaps, max_rounds)
     if citable_claims(state) != claims_before:
         state.edges = build_dag(state, llm)
+
+
+def outcome_only(edges: list[DagEdge], edge: DagEdge, outcome: str) -> bool:
+    """The edge goes into the outcome from a node with no other edge: a precision variable.
+
+    A lone edge into the exposure is not one: it may be an instrument, which needs a source.
+    """
+    touching = [e for e in edges if edge.source in (e.source, e.target)]
+    return edge.target == outcome and touching == [edge]
 
 
 def citable_claims(state: RunState) -> list[Claim]:

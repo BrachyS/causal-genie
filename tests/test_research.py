@@ -257,3 +257,40 @@ def test_research_gaps_runs_one_round_aimed_at_the_gaps(
     assert "smoking -> y" in fake.requests[0]["messages"][1]["content"]
     assert [r["query"] for r in fake_tavily.requests] == ["smoking sore throat"]
     assert state.certainty is not None  # includes what the extra round found
+
+
+def test_done_plan_with_no_gaps_left_runs_no_queries(state, make_llm, searcher, papers) -> None:
+    # Live D0 (run 20261114-154259-6bb1d2): round 3's plan said done with no gaps, but its
+    # 6 queries still ran: 19 extract calls, ~39k tokens, nothing the report used.
+    round_2 = [q("mechanism", "licorice glycyrrhizin anti-inflammatory")]
+    llm, _ = make_llm([plan(FULL_ROUND), READ, plan(round_2, done=True)])
+
+    research(state, llm, searcher, papers)
+
+    assert len(searcher.calls) == len(GROUPS)  # round 2's query never ran
+    last = state.rounds[-1]
+    assert (last.number, last.new_studies, last.missing) == (2, 0, [])
+    assert last.stop_reason == "model said done before running; coverage met"
+
+
+def test_done_plan_still_runs_when_coverage_is_missing(
+    state, make_llm, searcher, papers, fake_tavily
+) -> None:
+    news = extraction(quotes=[], source_kind="secondary")
+    llm, _ = make_llm([plan(FULL_ROUND), news, plan([q("mechanism", "licorice mech")], done=True)])
+
+    research(state, llm, searcher, papers)
+
+    assert fake_tavily.requests[-1]["query"] == "licorice mech"
+
+
+def test_gap_round_runs_even_if_the_model_says_done(
+    state, make_llm, searcher, papers, fake_tavily
+) -> None:
+    earlier = ResearchPlan(queries=[], done=True, done_reason="test")
+    state.rounds.append(ResearchRound(number=1, plan=earlier, planned_by="model"))
+    llm, _ = make_llm([plan([q("confounders", "smoking sore throat")], done=True), READ])
+
+    research_gaps(state, llm, searcher, papers, ["no source yet for DAG edge smoking -> y"])
+
+    assert [r["query"] for r in fake_tavily.requests] == ["smoking sore throat"]

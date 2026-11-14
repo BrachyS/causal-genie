@@ -7,7 +7,8 @@ the stop decision. A plan that still fails its schema after the one repair retry
 the preset query groups, so research never depends on the model planning well.
 
 Stop rule: stop when a round has nothing new to run, after 3 rounds, when a round after the
-first adds < 2 new studies, or when the model says done **and** no coverage is missing. A
+first adds < 2 new studies, or when the model says done **and** no coverage is missing (a
+later round whose plan says done with no gaps left is not run at all). A
 `done` with coverage missing is overridden, and every summary names what is missing. "No
 included study yet" is one of those gaps, so empty results get exactly one reformulated round
 before the "< 2 new studies" rule ends the loop.
@@ -80,14 +81,23 @@ def run_round(
     number: int,
     max_rounds: int,
 ) -> ResearchRound:
-    """Plan and run one round, skipping queries earlier rounds already ran."""
+    """Plan and run one round, skipping queries earlier rounds already ran.
+
+    A plan that says done when the last round left no gaps is not run: its queries would
+    only add cost. Gaps from `research_gaps` sit in that `missing` list, so a gap round runs.
+    """
     ran = {(query.tool, query.text) for r in state.rounds for query in r.plan.queries}
+    gaps_before = state.rounds[-1].missing if state.rounds else None
     plan, planned_by = plan_round(state, llm, searcher, number, max_rounds)
     # Stored as a plain ResearchPlan: the round-specific checks already ran, and the saved
     # run must load back equal to the live one.
     stored = ResearchPlan.model_validate(plan.model_dump())
     current = ResearchRound(number=number, plan=stored, planned_by=planned_by)
     state.rounds.append(current)
+    if plan.done and gaps_before == []:
+        current.stop_reason = "model said done before running; coverage met"
+        log.info("round=%d not run: %s (%s)", number, current.stop_reason, plan.done_reason)
+        return current
     new = [query for query in plan.queries if (query.tool, query.text) not in ran]
     for query in new:
         run_query(query, number, searcher)
