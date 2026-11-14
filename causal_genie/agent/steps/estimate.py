@@ -69,10 +69,12 @@ def estimate_backdoor(
     scale: Literal["risk_difference", "mean_difference", "odds_ratio"],
     precision: list[str],
     mapped_from: dict[str, str],
+    cluster: str | None = None,
 ) -> Result:
     """Estimate an observational effect from the analysis table (one column per node),
     adjusting for the backdoor set from `identify` plus the `precision` variables (causes of
     the outcome only), which are recorded apart so the report does not call them confounders.
+    With `cluster` (see `cluster_column`), standard errors are cluster-robust by that column.
 
     Rows missing any used column are excluded and counted, never silently dropped.
     """
@@ -85,10 +87,14 @@ def estimate_backdoor(
         "scale": scale,
         "mapped_from": mapped_from,
     }
+    if cluster is not None:  # only when set, so earlier results keep their ids
+        inputs["cluster"] = cluster
     with log_step("estimate", **inputs) as rec:
         covariates = [*adjust_for, *precision]
-        data = table[[exposure, outcome, *covariates]].dropna()
-        outputs = backdoor_effect(data, exposure, outcome, covariates, scale) | {
+        used = [exposure, outcome, *covariates, *([cluster] if cluster else [])]
+        data = table[used].dropna()
+        outputs = backdoor_effect(data, exposure, outcome, covariates, scale, cluster=cluster) | {
+            "clustered_by": cluster,
             "adjusted_for": adjust_for,
             "precision": precision,
             "rows": len(table),
@@ -97,3 +103,11 @@ def estimate_backdoor(
         }
         rec["output"] = outputs
         return result("backdoor_effect", inputs, outputs)
+
+
+def cluster_column(table: pd.DataFrame, time: str | None) -> str | None:
+    """The time column if several rows share a time value (e.g. one row per state per day),
+    since rows on one date share that date's exposure and are not independent; else None."""
+    if time is not None and table[time].duplicated().any():
+        return time
+    return None

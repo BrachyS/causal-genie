@@ -91,8 +91,11 @@ def rct_effect(
     data = df[[treatment, outcome]]
     if data.isna().any().any():
         raise ValueError(f"missing values in {treatment!r} or {outcome!r}; drop them explicitly")
-    if not set(data[treatment].unique()) <= {0, 1}:
-        raise ValueError(f"treatment column {treatment!r} must be 0/1")
+    if set(data[treatment].unique()) != {0, 1}:
+        raise ValueError(
+            f"treatment column {treatment!r} must be 0/1 with both exposed and unexposed rows; "
+            f"got values {sorted(data[treatment].unique())}"
+        )
     treated = data.loc[data[treatment] == 1, outcome]
     control = data.loc[data[treatment] == 0, outcome]
     if scale == "risk_difference":
@@ -111,19 +114,26 @@ def backdoor_effect(
     adjust_for: list[str],
     scale: Literal["risk_difference", "mean_difference", "odds_ratio"],
     level: float = 0.95,
+    cluster: str | None = None,
 ) -> dict:
     """Effect of a 0/1 `treatment` on `outcome` adjusting for the backdoor set `adjust_for`,
     with the unadjusted (naive) estimate alongside so the report can show what adjustment did.
 
     Risk and mean differences come from OLS (a linear probability model for a 0/1 outcome),
-    odds ratios from logistic regression; both use HC1 robust standard errors. Text columns
-    become one dummy per category. Missing values are an error, as in `rct_effect`.
+    odds ratios from logistic regression; both use HC1 robust standard errors, or
+    cluster-robust ones grouped by the `cluster` column when rows are not independent (e.g.
+    many states on one date share that date's exposure). Text columns become one dummy per
+    category. Missing values are an error, as in `rct_effect`.
     """
     data = df[[treatment, outcome, *adjust_for]]
+    groups = None if cluster is None else pd.factorize(df[cluster])[0]
     if data.isna().any().any():
         raise ValueError(f"missing values in {list(data.columns)}; drop them explicitly")
-    if not set(data[treatment].unique()) <= {0, 1}:
-        raise ValueError(f"treatment column {treatment!r} must be 0/1")
+    if set(data[treatment].unique()) != {0, 1}:
+        raise ValueError(
+            f"treatment column {treatment!r} must be 0/1 with both exposed and unexposed rows; "
+            f"got values {sorted(data[treatment].unique())}"
+        )
     if scale != "mean_difference" and not set(data[outcome].unique()) <= {0, 1}:
         raise ValueError(f"outcome column {outcome!r} must be 0/1 for {scale}")
     covariates = (
@@ -137,10 +147,16 @@ def backdoor_effect(
         """Treatment coefficient and its CI on the reported scale."""
         X = sm.add_constant(pd.concat([data[[treatment]].astype(float), columns], axis=1))
         y = data[outcome].astype(float)
-        if scale == "odds_ratio":
+        # cov_kwds only when clustering: Logit warns (and will raise) on cov_kwds=None
+        cluster_kwds = {"groups": groups}
+        if scale == "odds_ratio" and groups is None:
             model = sm.Logit(y, X).fit(disp=0, cov_type="HC1")
-        else:
+        elif scale == "odds_ratio":
+            model = sm.Logit(y, X).fit(disp=0, cov_type="cluster", cov_kwds=cluster_kwds)
+        elif groups is None:
             model = sm.OLS(y, X).fit(cov_type="HC1")
+        else:
+            model = sm.OLS(y, X).fit(cov_type="cluster", cov_kwds=cluster_kwds)
         b, se = float(model.params[treatment]), float(model.bse[treatment])
         low, high = b - z * se, b + z * se
         if scale == "odds_ratio":
@@ -155,7 +171,8 @@ def backdoor_effect(
         "ci_low": ci_low,
         "ci_high": ci_high,
         "level": level,
-        "method": ("logistic" if scale == "odds_ratio" else "OLS") + ", HC1 robust SEs",
+        "method": ("logistic" if scale == "odds_ratio" else "OLS")
+        + (", HC1 robust SEs" if cluster is None else f", cluster-robust SEs by {cluster}"),
         "n": len(data),
         "n_treated": int(data[treatment].sum()),
         "adjusted_for": list(adjust_for),

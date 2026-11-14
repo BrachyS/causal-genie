@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from causal_genie.agent.state import DagEdge, DeriveRule, Mapping, NodeMapping
-from causal_genie.agent.steps.estimate import estimate_backdoor, estimate_rct
+from causal_genie.agent.steps.estimate import cluster_column, estimate_backdoor, estimate_rct
 from causal_genie.tools.derive import node_table, us_holiday
 from causal_genie.tools.identify import identify, precision_set
 
@@ -133,3 +133,25 @@ def test_d0_calendar_causes_of_births_in_the_dag_are_adjusted_for_precision() ->
     width, naive_width = out["ci_high"] - out["ci_low"], out["naive_ci_high"] - out["naive_ci_low"]
     assert width < naive_width / 5
     assert out["ci_low"] < 0 < out["ci_high"]  # no moon effect in the data
+
+
+def test_rows_sharing_a_time_value_are_clustered_by_it() -> None:
+    panel = pd.DataFrame({"date": ["d1", "d1", "d2", "d2"], "x": [1, 1, 0, 0]})
+    daily = pd.DataFrame({"date": ["d1", "d2"], "x": [1, 0]})
+
+    assert cluster_column(panel, "date") == "date"
+    assert cluster_column(daily, "date") is None
+    assert cluster_column(panel, None) is None
+
+
+def test_backdoor_estimate_with_a_cluster_records_it() -> None:
+    rng = np.random.default_rng(0)
+    date = np.repeat(np.arange(60), 5)
+    x = np.repeat((rng.random(60) < 0.3).astype(int), 5)
+    table = pd.DataFrame({"x": x, "y": rng.normal(0, 1, 300) + x, "date": date})
+
+    out = estimate_backdoor(table, "sha", "x", "y", [], "mean_difference", [], {}, "date").outputs
+
+    assert out["method"] == "OLS, cluster-robust SEs by date"
+    assert out["clustered_by"] == "date"
+    assert out["rows"] == 300

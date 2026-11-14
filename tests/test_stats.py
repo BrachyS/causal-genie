@@ -173,3 +173,74 @@ def test_backdoor_effect_rejects_missing_values_and_non_binary_exposure() -> Non
     df = confounded().head(10).assign(x=range(10))
     with pytest.raises(ValueError, match="0/1"):
         backdoor_effect(df, "x", "y", adjust_for=[], scale="mean_difference")
+
+
+def date_panel(dates: int = 300, units: int = 50, seed: int = 1) -> pd.DataFrame:
+    """D0's shape (live run 20261114-203202-cae574, mosaicData::Birthdays): several units
+    (states) per date, the exposure set per date, and a shock every unit shares that day.
+    True effect 0."""
+    rng = np.random.default_rng(seed)
+    date = np.repeat(np.arange(dates), units)
+    x = np.repeat((rng.random(dates) < 0.1).astype(int), units)
+    shock = np.repeat(rng.normal(0, 20, dates), units)
+    age = rng.normal(0, 1, dates * units)
+    y = 100 + shock + 2 * age + rng.normal(0, 5, dates * units)
+    return pd.DataFrame({"date": date, "x": x, "y": y, "age": age})
+
+
+def cluster_ols(X: np.ndarray, y: np.ndarray, groups: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """OLS coefficients and cluster-robust standard errors by hand, with the usual small-sample
+    factor G/(G-1) * (n-1)/(n-k)."""
+    n, k = X.shape
+    bread = np.linalg.inv(X.T @ X)
+    beta = bread @ X.T @ y
+    resid = y - X @ beta
+    labels = np.unique(groups)
+    meat = sum(np.outer(s, s) for s in (X[groups == g].T @ resid[groups == g] for g in labels))
+    g = len(labels)
+    cov = bread @ meat @ bread * g / (g - 1) * (n - 1) / (n - k)
+    return beta, np.sqrt(np.diag(cov))
+
+
+def test_clustered_errors_match_the_hand_sandwich() -> None:
+    df = date_panel()
+    X = np.column_stack([np.ones(len(df)), df["x"], df["age"]])
+    beta, se = cluster_ols(X, df["y"].to_numpy(), df["date"].to_numpy())
+    z = sps.norm.ppf(0.975)
+
+    r = backdoor_effect(df, "x", "y", ["age"], "mean_difference", cluster="date")
+
+    assert r["estimate"] == pytest.approx(beta[1])
+    assert (r["ci_low"], r["ci_high"]) == pytest.approx((beta[1] - z * se[1], beta[1] + z * se[1]))
+    assert r["method"] == "OLS, cluster-robust SEs by date"
+    assert r["n"] == len(df)
+
+
+def test_clustering_by_date_gives_the_honest_width_hc1_misses() -> None:
+    # 50 rows share each date's exposure and shock, so there are only ~300 independent draws.
+    # Known truth: the regression on date means uses exactly those, so its CI is the honest one.
+    df = date_panel()
+    means = df.groupby("date")[["x", "y"]].mean()
+
+    clustered = backdoor_effect(df, "x", "y", [], "mean_difference", cluster="date")
+    hc1 = backdoor_effect(df, "x", "y", [], "mean_difference")
+    by_date = backdoor_effect(means, "x", "y", [], "mean_difference")
+
+    def width(r: dict) -> float:
+        return r["ci_high"] - r["ci_low"]
+
+    assert width(clustered) == pytest.approx(width(by_date), rel=0.05)
+    assert width(hc1) < width(clustered) / 4  # HC1 is overconfident here
+    assert clustered["ci_low"] < 0 < clustered["ci_high"]  # true effect 0 inside
+    assert clustered["naive_ci_high"] - clustered["naive_ci_low"] == pytest.approx(width(clustered))
+
+
+@pytest.mark.parametrize("value", [0, 1])
+def test_an_exposure_with_one_value_is_an_error_not_an_estimate(value: int) -> None:
+    # Live D0: a date bug made every row unexposed and OLS returned 0.00 (0.00, 0.00).
+    df = pd.DataFrame({"x": [value] * 4, "y": [1.0, 2.0, 3.0, 4.0]})
+
+    with pytest.raises(ValueError, match="both exposed and unexposed"):
+        backdoor_effect(df, "x", "y", [], "mean_difference")
+    with pytest.raises(ValueError, match="both exposed and unexposed"):
+        rct_effect(df, "x", "y", "mean_difference")

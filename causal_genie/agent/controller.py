@@ -39,7 +39,7 @@ from causal_genie.agent.state import (
 )
 from causal_genie.agent.steps.dag import run_dag
 from causal_genie.agent.steps.data import find_data, use_table
-from causal_genie.agent.steps.estimate import estimate_backdoor, estimate_rct
+from causal_genie.agent.steps.estimate import cluster_column, estimate_backdoor, estimate_rct
 from causal_genie.agent.steps.frame import frame
 from causal_genie.agent.steps.genie import genie_aside
 from causal_genie.agent.steps.identify import map_columns, source
@@ -226,6 +226,7 @@ def analyze(
             scale,
             precision,
             {n: source(by_node[n]) for n in used},
+            cluster_column(table, mapping.time),
         )
     )
 
