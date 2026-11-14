@@ -1,11 +1,15 @@
+import logging
+from typing import cast
+
 import pandas as pd
 import pytest
 
-from causal_genie.agent.state import Mapping, NodeMapping
+from causal_genie.agent.state import DeriveRule, Mapping, NodeMapping
 from causal_genie.tools.derive import (
     day_of_week,
     full_moon,
     node_table,
+    node_values,
     season,
     to_dates,
     us_holiday,
@@ -129,3 +133,39 @@ def test_cutoff_over_several_columns_is_yes_if_any_is_above() -> None:
     # yes if any score is above; no only if every score is there and none is above
     assert sore.iloc[:3].tolist() == [0, 1, 1]
     assert sore.iloc[3:].isna().all()
+
+
+def test_impossible_dates_become_missing_and_are_logged(caplog) -> None:
+    # Live D0 (run 20261114-203202-cae574): mosaicData::Birthdays has 309 rows dated Feb 29
+    # in non-leap years (e.g. 1969-02-29); building dates from them crashed the run.
+    df = pd.DataFrame({"y": [1969, 1969, 1972], "m": [2, 3, 2], "d": [29, 1, 29]})
+
+    with caplog.at_level(logging.WARNING):
+        dates = to_dates(df, ["y", "m", "d"])
+
+    assert dates.isna().tolist() == [True, False, False]  # 1972 was a leap year
+    assert "1 rows have an invalid date" in caplog.text
+
+
+@pytest.mark.parametrize("rule", ["day_of_week", "weekend", "holiday", "season", "full_moon"])
+def test_every_date_rule_keeps_an_invalid_date_missing(rule: str) -> None:
+    df = pd.DataFrame({"date": ["1969-02-29", "1969-03-01"]})
+    m = NodeMapping(
+        node="n", columns=["date"], derive=cast(DeriveRule, rule), cutoff=None, categorical=False
+    )
+
+    values = node_values(df, m)
+
+    assert values.isna().tolist() == [True, False]
+
+
+def test_timezone_dates_are_plain_calendar_days_so_the_full_moon_is_found() -> None:
+    # Live D0 (run 20261114-203202-cae574): mosaicData::Birthdays dates look like
+    # "1969-01-01T00:00:00Z"; compared with tz-naive moon days, no row was ever a full moon,
+    # and the estimate came out as exactly 0 with no error.
+    df = pd.DataFrame({"date": ["2000-01-21T00:00:00Z", "2000-01-22T00:00:00Z"]})
+
+    dates = to_dates(df, ["date"])
+
+    assert dates.dt.tz is None
+    assert full_moon(dates).tolist() == [1, 0]  # full moon 2000-01-21 (a lunar eclipse)

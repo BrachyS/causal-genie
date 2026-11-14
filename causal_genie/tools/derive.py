@@ -5,11 +5,15 @@ model writes is ever executed. Dates are calendar days; the full moon is the UTC
 the full-moon instant, as published moon calendars list it.
 """
 
+import logging
+
 import ephem
 import pandas as pd
 from pandas.tseries.holiday import USFederalHolidayCalendar
 
 from causal_genie.agent.state import Mapping, NodeMapping
+
+log = logging.getLogger(__name__)
 
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 SEASONS = {
@@ -29,14 +33,24 @@ SEASONS = {
 
 
 def to_dates(df: pd.DataFrame, columns: list[str]) -> pd.Series:
-    """Calendar dates from one date column, or from year, month and day columns (in that order)."""
+    """Calendar dates from one date column, or from year, month and day columns (in that order).
+
+    An impossible date (e.g. Feb 29 in a non-leap year, found in mosaicData::Birthdays) is
+    missing, and logged with a count, so its row is excluded and counted like any missing value.
+    """
     if len(columns) == 1:
-        return pd.to_datetime(df[columns[0]]).dt.normalize()
-    if len(columns) == 3:
+        dates = pd.to_datetime(df[columns[0]], errors="coerce").dt.normalize()
+    elif len(columns) == 3:
         year, month, day = columns
         parts = pd.DataFrame({"year": df[year], "month": df[month], "day": df[day]})
-        return pd.to_datetime(parts)
-    raise ValueError(f"a date needs one date column or year, month, day; got {columns}")
+        dates = pd.to_datetime(parts, errors="coerce")
+    else:
+        raise ValueError(f"a date needs one date column or year, month, day; got {columns}")
+    if dates.dt.tz is not None:  # "1969-01-01T00:00:00Z": the calendar day, without the zone
+        dates = dates.dt.tz_convert("UTC").dt.tz_localize(None)
+    if invalid := int((dates.isna() & df[columns].notna().all(axis=1)).sum()):
+        log.warning("%d rows have an invalid date in %s; treated as missing", invalid, columns)
+    return dates
 
 
 def day_of_week(dates: pd.Series) -> pd.Series:
@@ -82,7 +96,8 @@ def node_values(df: pd.DataFrame, m: NodeMapping) -> pd.Series:
     """One node's values: the column as is, a date rule, or a 0/1 cutoff on one or more
     scores (yes if any is above it, e.g. sore throat at any of several time points)."""
     if m.derive in DATE_RULES:
-        return DATE_RULES[m.derive](to_dates(df, m.columns))
+        dates = to_dates(df, m.columns)
+        return DATE_RULES[m.derive](dates).where(dates.notna())
     if m.derive == "cutoff":
         assert m.cutoff is not None
         scores = df[m.columns]
