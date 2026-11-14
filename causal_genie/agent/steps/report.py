@@ -87,7 +87,8 @@ def paragraph(title: str, sentences: list[Sentence]) -> list[str]:
 
 
 def dag_section(state: RunState) -> list[str]:
-    """Each DAG edge with what backs it: cited claims, the question itself, or nothing."""
+    """Each DAG edge with what backs it (cited claims, the question itself, or nothing), then
+    the nodes treated as exogenous and the arrows into them that were dropped."""
     if not state.edges:
         return []
     lines = ["## Causal graph (DAG)", ""]
@@ -99,6 +100,15 @@ def dag_section(state: RunState) -> list[str]:
         else:
             backing = f"cites {', '.join(e.claim_ids)}"
         lines.append(f"- {e.source} → {e.target}: {backing}")
+    if state.exogenous:
+        lines += [
+            "",
+            "Treated as exogenous (the model's judgment that nothing in the graph can cause it; "
+            f"no source): {', '.join(state.exogenous)}.",
+        ]
+        if state.exogenous_dropped:
+            dropped = ", ".join(f"{e.source} → {e.target}" for e in state.exogenous_dropped)
+            lines[-1] += f" Arrows into them were dropped: {dropped}."
     return [*lines, ""]
 
 

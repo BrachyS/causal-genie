@@ -344,8 +344,11 @@ def extraction(included: bool = True, quotes: list[dict] | None = None, **change
     return json.dumps(out | changes)
 
 
-def proposal(*edges: tuple[str, str, list[str]]) -> str:
-    """DAG model output with the given (source, target, claim_ids) edges."""
+def proposal(*edges: tuple[str, str, list[str]], exogenous: tuple[str, ...] = ()) -> str:
+    """DAG model output with the given (source, target, claim_ids) edges and exogenous nodes."""
     return json.dumps(
-        {"edges": [{"source": s, "target": t, "claim_ids": ids} for s, t, ids in edges]}
+        {
+            "edges": [{"source": s, "target": t, "claim_ids": ids} for s, t, ids in edges],
+            "exogenous": list(exogenous),
+        }
     )

@@ -358,6 +358,34 @@ def test_dag_and_confounder_sections(estimated_state, confounder_claim) -> None:
     assert "randomized: assignment balances confounders" in report
 
 
+def test_dag_section_shows_exogenous_nodes_and_the_edges_dropped(estimated_state) -> None:
+    estimated_state.edges = [
+        DagEdge(source="licorice_gargle", target="sore_throat", claim_ids=[], question=True),
+    ]
+    estimated_state.exogenous = ["licorice_gargle"]
+    estimated_state.exogenous_dropped = [
+        DagEdge(source="smoking", target="licorice_gargle", claim_ids=["s1-adjusted_for"]),
+    ]
+
+    dag = write_report(estimated_state).split("## Causal graph (DAG)")[1].split("## ")[0]
+
+    assert (
+        "Treated as exogenous (the model's judgment that nothing in the graph can cause it; "
+        "no source): licorice_gargle" in dag
+    )
+    assert "Arrows into them were dropped: smoking → licorice_gargle" in dag
+
+
+def test_dag_section_says_nothing_about_exogenous_nodes_when_there_are_none(
+    estimated_state,
+) -> None:
+    estimated_state.edges = [
+        DagEdge(source="licorice_gargle", target="sore_throat", claim_ids=[], question=True),
+    ]
+
+    assert "exogenous" not in write_report(estimated_state)
+
+
 def test_partial_report_names_the_failed_step(sample_state: RunState) -> None:
     sample_state.step = "research"
     sample_state.failure = "APIConnectionError: Connection error."

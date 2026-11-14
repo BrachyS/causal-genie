@@ -10,6 +10,12 @@ and null, is the report's Evidence section. A node whose name
 is a near copy of the exposure's or outcome's (e.g. `licorice_gargling`) is logged: it usually
 means the model renamed a question node, which would leave a stray node in the graph.
 
+The model also names exogenous nodes: ones nothing in the graph can cause (moon phase, weather,
+calendar date, a coin flip). The harness drops and logs every edge into them, so a wrong arrow
+such as `season -> full_moon` cannot turn a calendar factor into a fake confounder. Edges out of
+them stay; a name not in the graph is logged and ignored. The nodes and the dropped edges are
+kept in the run state, so the report can show them as the model's assumption.
+
 The harness then makes the graph a DAG: each cycle loses its weakest-evidence edge. An edge
 with no citation sends research back for one more round if rounds are left; otherwise it stays
 assumed.
@@ -85,8 +91,37 @@ def break_cycles(edges: list[DagEdge], question: tuple[str, str]) -> list[DagEdg
     return kept
 
 
+def drop_into_exogenous(
+    edges: list[DagEdge], exogenous: list[str], question: tuple[str, str]
+) -> tuple[list[str], list[DagEdge], list[DagEdge]]:
+    """Split off (and log) every edge into a node the model says nothing can cause.
+
+    Returns the exogenous names found in the graph, the edges kept and the edges dropped. The
+    question edge is never dropped: it is the hypothesis being tested.
+    """
+    nodes = {n for e in edges for n in (e.source, e.target)}
+    for name in exogenous:
+        if name not in nodes:
+            log.warning("exogenous node %s is not in the graph; ignored", name)
+    found = [name for name in dict.fromkeys(exogenous) if name in nodes]
+    kept, dropped = [], []
+    for e in edges:
+        if e.target not in found:
+            kept.append(e)
+        elif (e.source, e.target) == question:
+            log.warning("%s called exogenous; kept the question edge %s -> %s", e.target, *question)
+            kept.append(e)
+        else:
+            log.info("exogenous %s: dropped %s -> %s", e.target, e.source, e.target)
+            dropped.append(e)
+    return found, kept, dropped
+
+
 def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
-    """Edges for the question's DAG, each citing documented ledger claims or marked assumed."""
+    """Edges for the question's DAG, each citing documented ledger claims or marked assumed.
+
+    Also records in `state` the exogenous nodes and the edges dropped into them.
+    """
     assert state.query is not None, "frame the question before building the DAG"
     exposure, outcome = state.query.exposure, state.query.outcome
     citable = citable_claims(state)
@@ -133,6 +168,9 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
     if not any(e.question for e in edges):
         log.warning("model left out %s -> %s; added as the question edge", *question)
         edges.append(DagEdge(source=question[0], target=question[1], claim_ids=[], question=True))
+    state.exogenous, edges, state.exogenous_dropped = drop_into_exogenous(
+        edges, proposed.exogenous, question
+    )
     edges = break_cycles(edges, question)
     log.info("dag: %d edges, %d assumed", len(edges), sum(e.assumed for e in edges))
     return edges

@@ -271,3 +271,76 @@ def test_no_rounds_left_keeps_the_edge_assumed(make_llm, researched: RunState, t
 
     assert len(researched.rounds) == 1
     assert [e.assumed for e in researched.edges] == [False, True]
+
+
+@pytest.fixture
+def full_moon_state(sample_state: RunState) -> RunState:
+    """D0: does a full moon cause more births? No claims, so every edge is assumed."""
+    assert sample_state.query is not None
+    query = sample_state.query.model_copy(
+        update={
+            "exposure": sample_state.query.exposure.model_copy(update={"name": "full_moon"}),
+            "outcome": sample_state.query.outcome.model_copy(update={"name": "birth"}),
+        }
+    )
+    return sample_state.model_copy(update={"query": query, "claims": []})
+
+
+def test_edges_into_an_exogenous_node_are_dropped_and_edges_out_stay(
+    make_llm, full_moon_state: RunState, step_logs
+) -> None:
+    # The D0 review (run 20261107-170133-b3826e): calendar factors drawn as causes of moon phase
+    llm, _ = make_llm(
+        [
+            proposal(
+                ("full_moon", "birth", []),
+                ("season", "full_moon", []),
+                ("holiday", "full_moon", []),
+                ("weekend", "full_moon", []),
+                ("weekend", "birth", []),
+                ("full_moon", "daytime", []),
+                exogenous=("full_moon",),
+            )
+        ]
+    )
+
+    edges = build_dag(full_moon_state, llm)
+
+    assert [(e.source, e.target) for e in edges] == [
+        ("full_moon", "birth"),
+        ("weekend", "birth"),
+        ("full_moon", "daytime"),
+    ]
+    for source in ("season", "holiday", "weekend"):
+        assert f"exogenous full_moon: dropped {source} -> full_moon" in step_logs.text
+    assert full_moon_state.exogenous == ["full_moon"]
+    assert [(e.source, e.target) for e in full_moon_state.exogenous_dropped] == [
+        ("season", "full_moon"),
+        ("holiday", "full_moon"),
+        ("weekend", "full_moon"),
+    ]
+
+
+def test_exogenous_name_not_in_the_graph_is_logged_and_ignored(
+    make_llm, full_moon_state: RunState, step_logs
+) -> None:
+    llm, _ = make_llm(
+        [proposal(("full_moon", "birth", []), ("weekend", "birth", []), exogenous=("weather",))]
+    )
+
+    edges = build_dag(full_moon_state, llm)
+
+    assert [(e.source, e.target) for e in edges] == [("full_moon", "birth"), ("weekend", "birth")]
+    assert "exogenous node weather is not in the graph; ignored" in step_logs.text
+    assert full_moon_state.exogenous == [] and full_moon_state.exogenous_dropped == []
+
+
+def test_question_edge_stays_even_if_the_outcome_is_called_exogenous(
+    make_llm, full_moon_state: RunState, step_logs
+) -> None:
+    llm, _ = make_llm([proposal(("full_moon", "birth", []), exogenous=("birth",))])
+
+    edges = build_dag(full_moon_state, llm)
+
+    assert [(e.source, e.target, e.question) for e in edges] == [("full_moon", "birth", True)]
+    assert "kept the question edge full_moon -> birth" in step_logs.text
