@@ -405,3 +405,84 @@ def test_genie_aside_is_shown_when_set(sample_state: RunState) -> None:
     report = write_report(sample_state)
 
     assert "## 🧞 Genie's aside\n\nThe moon keeps its secrets." in report
+
+
+def backdoor_result(adjusted_for: list[str], precision: list[str]) -> Result:
+    """A D0-like observational result (live run 20261114-154259-6bb1d2's numbers)."""
+    return Result(
+        id="res3",
+        tool="backdoor_effect",
+        tool_version="0.1.0",
+        inputs_hash="h",
+        outputs={
+            "scale": "mean_difference",
+            "estimate": -10.46,
+            "ci_low": -342.96,
+            "ci_high": 322.03,
+            "level": 0.95,
+            "method": "OLS, HC1 robust SEs",
+            "n": 3652,
+            "n_treated": 123,
+            "adjusted_for": adjusted_for,
+            "precision": precision,
+            "naive_estimate": -10.46,
+            "naive_ci_low": -342.96,
+            "naive_ci_high": 322.03,
+            "rows": 3652,
+            "rows_excluded_missing": 0,
+            "mapped_from": {"full_moon": "full_moon(date)", "births": "births"},
+        },
+    )
+
+
+def test_estimate_with_nothing_adjusted_for_is_called_unadjusted(estimated_state) -> None:
+    estimated_state.results[0] = backdoor_result([], [])
+
+    report = write_report(estimated_state)
+    entry = ledger_entries(estimated_state)["res3"]
+
+    line = "Unadjusted mean difference: -10.46 (95% CI -342.96 to 322.03), OLS, HC1 robust SEs."
+    assert line in report and line in entry
+    assert "Adjusted" not in report and "Adjusted" not in entry
+    assert "Unadjusted: " not in report  # no second, identical estimate line
+    assert "Nothing adjusted for: no backdoor path in the DAG" in report
+
+
+def test_estimand_shows_the_scale_computed_not_the_one_framed(estimated_state) -> None:
+    assert estimated_state.query is not None
+    estimated_state.query.effect_scale = "risk_difference"  # as framed in live D0
+    estimated_state.results[0] = backdoor_result([], ["day_of_week"])
+
+    report = write_report(estimated_state)
+
+    assert (
+        "- **Estimand:** ATE, mean difference (framed as risk difference; the outcome in the "
+        "data is not 0/1), deviations handled" in report
+    )
+    assert "risk difference," not in report
+
+
+def test_estimand_without_an_estimate_shows_the_framed_scale(sample_state: RunState) -> None:
+    assert sample_state.query is not None
+    sample_state.verdict = "published_only"
+
+    report = write_report(sample_state)
+
+    scale = sample_state.query.effect_scale.replace("_", " ")
+    assert f"- **Estimand:** {sample_state.query.target}, {scale}, deviations" in report
+
+
+def test_entries_leave_out_study_details_the_report_already_shows(estimated_state) -> None:
+    """Design, n and population claims are rendered by the harness (Evidence, Sources); sending
+    them to the report model doubled its input in live D0 (T10.9 step 4)."""
+    c1 = estimated_state.claims[0]
+    estimated_state.claims += [
+        c1.model_copy(update={"id": "c-design", "kind": "study_detail"}),
+        c1.model_copy(update={"id": "c-null", "kind": "null_result"}),
+        c1.model_copy(update={"id": "c-conf", "kind": "confounder"}),
+    ]
+
+    entries = ledger_entries(estimated_state)
+
+    assert "c-design" not in entries
+    assert {"c1", "c-null", "c-conf"} <= set(entries)

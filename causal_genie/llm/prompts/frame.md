@@ -14,7 +14,7 @@ Turn it into the **estimand**: exactly what effect we want to know, defined befo
   - `definition`: how it is measured, in plain words (e.g. "any sore throat after surgery").
 - `time_window`: when the outcome is measured (e.g. "first 24 h after surgery"), or null if the question implies none.
 - `target`: `ATE` (average effect if everyone were exposed vs not) unless the question is clearly about the effect in those who were exposed, then `ATT`.
-- `effect_scale`: `risk_difference` for yes/no outcomes, `mean_difference` for numeric outcomes. Use `risk_ratio` or `odds_ratio` only if the question asks for one.
+- `effect_scale`: `risk_difference` for yes/no outcomes, `mean_difference` for numeric outcomes, including counts such as births per day. Use `risk_ratio` or `odds_ratio` only if the question asks for one.
 - `deviation_strategy`: `as_assigned` for questions about assigning or offering a treatment (trials, A/B tests); `as_received` only if the question is about actually receiving it; `n/a` for exposures nobody assigns (e.g. moon phase, smoking).
 - `ambiguities`: at most 3 questions to the user, only for gaps that would **change the answer** (e.g. two very different populations or outcomes are plausible). Phrase each as a short question to the user, most important first. Fill everything else with sensible defaults instead of asking. Never ask again what the user already answered. Use an empty list when the question is clear enough.
 

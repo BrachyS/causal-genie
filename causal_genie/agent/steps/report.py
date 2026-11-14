@@ -171,12 +171,26 @@ def question_section(state: RunState) -> list[str]:
         f"- **Comparator:** {q.comparator}",
         f"- **Outcome:** {q.outcome.definition}",
         f"- **Time window:** {q.time_window or 'not specified'}",
-        f"- **Estimand:** {q.target}, {q.effect_scale.replace('_', ' ')}, "
+        f"- **Estimand:** {q.target}, {estimand_scale(state)}, "
         f"deviations handled {q.deviation_strategy.replace('_', ' ')}",
     ]
     if q.ambiguities:
         lines.append(f"- **Unresolved ambiguities:** {'; '.join(q.ambiguities)}")
     return [*lines, ""]
+
+
+def estimand_scale(state: RunState) -> str:
+    """The effect scale the tool computed (the data decides it), noting the framed one when
+    they differ, e.g. a count outcome framed as a risk difference."""
+    assert state.query is not None
+    framed = state.query.effect_scale.replace("_", " ")
+    if not state.results:
+        return framed
+    computed = state.results[0].outputs["scale"].replace("_", " ")
+    if computed == framed:
+        return computed
+    reason = "; the outcome in the data is not 0/1" if computed == "mean difference" else ""
+    return f"{computed} (framed as {framed}{reason})"
 
 
 def estimate_section(state: RunState) -> list[str]:
@@ -232,9 +246,19 @@ def backdoor_lines(r: dict) -> list[str]:
 
     unit = " percentage points" if r["scale"] == "risk_difference" else ""
     level = f"{r['level']:.0%} CI"
+    scale = r["scale"].replace("_", " ")
+    if not r["adjusted_for"] and not r.get("precision"):
+        return [
+            f"Unadjusted {scale}: {effect(r['estimate'])}{unit} "
+            f"({level} {effect(r['ci_low'])} to {effect(r['ci_high'])}), {r['method']}.",
+            "",
+            "Nothing adjusted for: no backdoor path in the DAG and no precision variables.",
+            "",
+            f"{r['n']} rows used ({r['n_treated']} exposed).",
+        ]
     confounders = ", ".join(r["adjusted_for"]) or "none (no backdoor path in the DAG)"
     lines = [
-        f"Adjusted {r['scale'].replace('_', ' ')}: {effect(r['estimate'])}{unit} "
+        f"Adjusted {scale}: {effect(r['estimate'])}{unit} "
         f"({level} {effect(r['ci_low'])} to {effect(r['ci_high'])}), {r['method']}.",
         "",
         f"Unadjusted: {effect(r['naive_estimate'])}{unit} "
@@ -320,7 +344,10 @@ def byline(study) -> str:
 
 def ledger_entries(state: RunState) -> dict[str, str]:
     """What the report model may cite, by id: run facts (`F-…`), tool results and the
-    documented claims (quote found and judged to support). Nothing else reaches the prose."""
+    documented claims (quote found and judged to support). Nothing else reaches the prose.
+
+    Study details (design, n, population) are left out: the Evidence and Sources sections
+    already show them, and in live D0 they were half the report model's input."""
     entries: dict[str, str] = {}
     if state.verdict is not None:
         entries["F-verdict"] = f"Verdict picked by the controller: {VERDICT_LABELS[state.verdict]}"
@@ -366,6 +393,8 @@ def ledger_entries(state: RunState) -> dict[str, str]:
     for c in state.claims:
         study = studies.get(c.study_id or "")
         if c.status != "documented" or study is None or not study.included:
+            continue
+        if c.kind == "study_detail":
             continue
         entries[c.id] = f'{byline(study)}, {study.design} ({c.kind}): {c.text}. Quote: "{c.quote}"'
     return entries
