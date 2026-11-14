@@ -32,10 +32,24 @@ T = TypeVar("T", bound=BaseModel)
 TRANSIENT_ERRORS = (openai.APIConnectionError, openai.RateLimitError, openai.InternalServerError)
 
 
+class ModelOutputError(ValueError):
+    """A model's output still failed its schema after the one repair retry (PRD §5.9).
+
+    Separate from pydantic's `ValidationError` so callers can tell a model's bad output from
+    a bug in the harness's own schema use: the controller turns this into a partial report.
+    """
+
+
 def load_models(path: Path = MODELS_YAML) -> dict[str, str]:
     """Tier → Token Factory model id, from `models.yaml`."""
     tiers = yaml.safe_load(path.read_text())["tiers"]
     return {tier: spec["model"] for tier, spec in tiers.items()}
+
+
+def load_max_tokens(path: Path = MODELS_YAML) -> dict[str, int]:
+    """Tier → completion token cap, from `models.yaml`; reasoning models need room to think."""
+    tiers = yaml.safe_load(path.read_text())["tiers"]
+    return {tier: spec["max_tokens"] for tier, spec in tiers.items()}
 
 
 def make_openai() -> OpenAI:
@@ -60,9 +74,11 @@ class LLMClient:
         prompts_dir: Path = PROMPTS_DIR,
         retry_wait_s: float = 2.0,
         replay: list[LLMCall] | None = None,
+        max_tokens: dict[str, int] | None = None,
     ) -> None:
         self.openai = openai
         self.models = models
+        self.max_tokens = max_tokens or load_max_tokens()
         self.prompts_dir = prompts_dir
         self.retry_wait_s = retry_wait_s
         self.replay = {(c.prompt_name, c.user_content): c for c in replay or []}
@@ -78,7 +94,7 @@ class LLMClient:
         """Ask the `tier` model to apply `prompts/<prompt_name>.md` to `user_content`.
 
         Returns an instance of `schema`: the model is forced to answer in that shape, and its
-        JSON is validated into it.
+        JSON is validated into it. Raises `ModelOutputError` if it still fails after repair.
         """
         inputs = {
             "prompt_name": prompt_name,
@@ -94,7 +110,12 @@ class LLMClient:
             # Recorded before validating, so a failed call still shows its tokens and output.
             self.calls.append(call)
             rec.update(model=call.model, tokens_in=call.tokens_in, tokens_out=call.tokens_out)
-            output = schema.model_validate_json(call.response)
+            try:
+                output = schema.model_validate_json(call.response)
+            except ValidationError as e:
+                raise ModelOutputError(
+                    f"prompt {prompt_name!r}: output failed schema after repair: {e}"
+                ) from e
             rec["output"] = output.model_dump()
             return output
 
@@ -124,7 +145,8 @@ class LLMClient:
         }
         start = time.perf_counter()
 
-        text, tokens_in, tokens_out = self._ask(model, messages, response_format)
+        text, tokens_in, tokens_out, finish = self._ask(tier, messages, response_format)
+        finish_reasons = [finish]
         error = None
         try:
             schema.model_validate_json(text)
@@ -138,8 +160,9 @@ class LLMClient:
                     "Return corrected JSON only, matching the schema.",
                 },
             ]
-            text, more_in, more_out = self._ask(model, messages, response_format)
+            text, more_in, more_out, finish = self._ask(tier, messages, response_format)
             tokens_in, tokens_out = tokens_in + more_in, tokens_out + more_out
+            finish_reasons.append(finish)
             try:
                 schema.model_validate_json(text)
             except ValidationError as e2:
@@ -155,31 +178,43 @@ class LLMClient:
             tokens_out=tokens_out,
             latency_s=time.perf_counter() - start,
             error=error,
+            finish_reasons=finish_reasons,
         )
         return call
 
     def _ask(
-        self, model: str, messages: list, response_format: ResponseFormatJSONSchema
-    ) -> tuple[str, int, int]:
-        """One completion → (text, tokens in, tokens out); one retry on transient API errors."""
+        self, tier: Tier, messages: list, response_format: ResponseFormatJSONSchema
+    ) -> tuple[str, int, int, str]:
+        """One completion → (text, tokens in, tokens out, finish reason); one retry on
+        transient API errors. A cut-off output (`length`) is logged as a warning."""
         assert self.openai is not None
         try:
-            response = self._create(model, messages, response_format)
+            response = self._create(tier, messages, response_format)
         except TRANSIENT_ERRORS as e:
-            log.warning("model=%s transient API error, retrying: %r", model, e)
+            log.warning("tier=%s transient API error, retrying: %r", tier, e)
             time.sleep(self.retry_wait_s)
-            response = self._create(model, messages, response_format)
+            response = self._create(tier, messages, response_format)
         usage = response.usage
         tokens = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, 0)
-        return response.choices[0].message.content or "", *tokens
+        choice = response.choices[0]
+        level = logging.WARNING if choice.finish_reason == "length" else logging.INFO
+        log.log(
+            level,
+            "model=%s finish_reason=%s tokens_out=%d max_tokens=%d",
+            self.models[tier],
+            choice.finish_reason,
+            tokens[1],
+            self.max_tokens[tier],
+        )
+        return choice.message.content or "", *tokens, choice.finish_reason
 
-    def _create(self, model: str, messages: list, response_format: ResponseFormatJSONSchema):
-        """The raw API request; deterministic (temperature 0) and token-capped."""
+    def _create(self, tier: Tier, messages: list, response_format: ResponseFormatJSONSchema):
+        """The raw API request; deterministic (temperature 0) and capped per tier."""
         assert self.openai is not None
         return self.openai.chat.completions.create(
-            model=model,
+            model=self.models[tier],
             messages=messages,
             response_format=response_format,
             temperature=0,
-            max_tokens=4000,
+            max_tokens=self.max_tokens[tier],
         )

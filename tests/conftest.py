@@ -62,9 +62,10 @@ def tavily() -> TavilyClient:
 
 
 class FakeOpenAI:
-    """Stands in for `openai.OpenAI`: replays queued outcomes (JSON text or an exception)."""
+    """Stands in for `openai.OpenAI`: replays queued outcomes (JSON text, a (text,
+    finish_reason) pair, or an exception)."""
 
-    def __init__(self, outcomes: list[str | Exception]) -> None:
+    def __init__(self, outcomes: list[str | tuple[str, str] | Exception]) -> None:
         self.outcomes = list(outcomes)
         self.requests: list[dict] = []
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
@@ -74,6 +75,7 @@ class FakeOpenAI:
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
+        text, finish_reason = outcome if isinstance(outcome, tuple) else (outcome, "stop")
         return ChatCompletion.model_validate(
             {
                 "id": "fake",
@@ -83,8 +85,8 @@ class FakeOpenAI:
                 "choices": [
                     {
                         "index": 0,
-                        "finish_reason": "stop",
-                        "message": {"role": "assistant", "content": outcome},
+                        "finish_reason": finish_reason,
+                        "message": {"role": "assistant", "content": text},
                     }
                 ],
                 "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
@@ -138,10 +140,12 @@ def prompts_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def make_llm(prompts_dir: Path) -> Callable[[list[str | Exception]], tuple[LLMClient, FakeOpenAI]]:
+def make_llm(
+    prompts_dir: Path,
+) -> Callable[[list[str | tuple[str, str] | Exception]], tuple[LLMClient, FakeOpenAI]]:
     """Build an LLMClient over a FakeOpenAI that returns the given outcomes in order."""
 
-    def make(outcomes: list[str | Exception]) -> tuple[LLMClient, FakeOpenAI]:
+    def make(outcomes: list[str | tuple[str, str] | Exception]) -> tuple[LLMClient, FakeOpenAI]:
         """Build the client and return it with the fake, so tests can inspect requests."""
         fake = FakeOpenAI(outcomes)
         llm = LLMClient(

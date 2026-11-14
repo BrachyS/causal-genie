@@ -4,6 +4,7 @@ Every new study is looked up automatically (not a model choice) for its DOI, PMI
 types and retraction status. Lookups are recorded so runs replay without network.
 """
 
+import logging
 import re
 import time
 
@@ -12,6 +13,8 @@ from rapidfuzz import fuzz
 
 from causal_genie.agent.state import LookupCall, PaperRecord
 from causal_genie.log import log_step
+
+log = logging.getLogger(__name__)
 
 SEARCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 # rapidfuzz ratio on normalized titles; below this, a title hit is a different paper
@@ -64,8 +67,14 @@ class EuropePMC:
     With `http=None` it answers only from `replay`.
     """
 
-    def __init__(self, http: httpx.Client | None, replay: list[LookupCall] | None = None) -> None:
+    def __init__(
+        self,
+        http: httpx.Client | None,
+        replay: list[LookupCall] | None = None,
+        retry_wait_s: float = 2.0,
+    ) -> None:
         self.http = http
+        self.retry_wait_s = retry_wait_s
         self.replay = {c.query: c for c in replay or []}
         self.calls: list[LookupCall] = []
 
@@ -109,17 +118,29 @@ class EuropePMC:
                 call = self.replay[query]
             else:
                 start = time.perf_counter()
-                response = self.http.get(
-                    SEARCH_URL,
-                    params={"query": query, "format": "json", "resultType": "core", "pageSize": 1},
-                )
-                response.raise_for_status()
+                response = self._get(query)
                 results = response.json()["resultList"]["result"]
                 record = parse_record(results[0]) if results else None
                 call = LookupCall(query=query, record=record, latency_s=time.perf_counter() - start)
             self.calls.append(call)
             rec["record"] = call.record.model_dump() if call.record else None
             return call.record
+
+    def _get(self, query: str) -> httpx.Response:
+        """One search request; PRD §5.9: retried once after a wait on a timeout or a 429 rate
+        limit, any other HTTP error raises at once."""
+        assert self.http is not None
+        params = {"query": query, "format": "json", "resultType": "core", "pageSize": 1}
+        try:
+            first: httpx.Response | None = self.http.get(SEARCH_URL, params=params)
+        except httpx.TimeoutException as e:
+            log.warning("Europe PMC timeout: %r", e)
+            first = None
+        if first is not None and first.status_code != 429:
+            return first.raise_for_status()
+        log.warning("Europe PMC timeout or rate limit, retrying once: %s", query)
+        time.sleep(self.retry_wait_s)
+        return self.http.get(SEARCH_URL, params=params).raise_for_status()
 
 
 def parse_record(result: dict) -> PaperRecord:

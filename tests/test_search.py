@@ -1,6 +1,7 @@
 from typing import cast
 
 import pytest
+import tavily.errors
 from tavily import TavilyClient
 
 from causal_genie.agent.state import SearchCall
@@ -97,3 +98,65 @@ def test_data_search_restricts_to_given_domains(searcher, fake_tavily) -> None:
     assert fake_tavily.requests[0]["include_domains"] == ["zenodo.org"]
     assert fake_tavily.requests[0]["include_domains_mode"] == "restrict"
     assert searcher.calls[0].mode == "restrict"
+
+
+class FlakyTavily:
+    """Raises the queued errors in order, then answers like `FakeTavily`."""
+
+    def __init__(self, fake_tavily, errors: list[Exception]) -> None:
+        self.fake = fake_tavily
+        self.errors = list(errors)
+        self.attempts = 0
+
+    def search(self, query: str, **kwargs) -> dict:
+        self.attempts += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return self.fake.search(query, **kwargs)
+
+    def extract(self, urls: list[str], **kwargs) -> dict:
+        self.attempts += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return self.fake.extract(urls, **kwargs)
+
+
+def flaky_searcher(fake_tavily, *errors: Exception) -> tuple[Searcher, FlakyTavily]:
+    flaky = FlakyTavily(fake_tavily, list(errors))
+    return Searcher(cast(TavilyClient, flaky), retry_wait_s=0), flaky
+
+
+@pytest.mark.parametrize(
+    "error",
+    [tavily.errors.TimeoutError(60), tavily.errors.UsageLimitExceededError("429 rate limit")],
+)
+def test_timeout_or_rate_limit_gets_one_retry(fake_tavily, error) -> None:
+    searcher, flaky = flaky_searcher(fake_tavily, error)
+
+    hits = searcher.search("licorice gargle sore throat")
+
+    assert len(hits) == 1
+    assert flaky.attempts == 2
+
+
+def test_extract_gets_one_retry(fake_tavily) -> None:
+    searcher, flaky = flaky_searcher(fake_tavily, tavily.errors.TimeoutError(30))
+
+    assert searcher.extract("https://example.org/paper").content == "Full text of the paper."
+    assert flaky.attempts == 2
+
+
+def test_second_timeout_raises(fake_tavily) -> None:
+    searcher, flaky = flaky_searcher(fake_tavily, *[tavily.errors.TimeoutError(60)] * 2)
+
+    with pytest.raises(tavily.errors.TimeoutError):
+        searcher.search("q")
+    assert flaky.attempts == 2
+
+
+def test_other_tavily_errors_are_not_retried(fake_tavily) -> None:
+    searcher, flaky = flaky_searcher(fake_tavily, tavily.errors.BadRequestError("bad query"))
+
+    with pytest.raises(tavily.errors.BadRequestError):
+        searcher.search("q")
+    assert flaky.attempts == 1

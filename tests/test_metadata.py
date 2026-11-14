@@ -134,3 +134,53 @@ def test_title_is_tried_when_the_id_finds_nothing() -> None:
 )
 def test_titles_match(a: str, b: str, same: bool) -> None:
     assert titles_match(a, b) is same
+
+
+def flaky_epmc(*failures: int | Exception) -> tuple[EuropePMC, list[str]]:
+    """A client whose first requests fail (an HTTP status or a raised error), then succeed."""
+    queue, served = list(failures), []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        served.append(str(request.url))
+        if queue:
+            failure = queue.pop(0)
+            if isinstance(failure, Exception):
+                raise failure
+            return httpx.Response(failure)
+        body = {"resultList": {"result": [epmc_result()]}}
+        return httpx.Response(200, json=body)
+
+    http = httpx.Client(transport=httpx.MockTransport(handle))
+    return EuropePMC(http, retry_wait_s=0), served
+
+
+@pytest.mark.parametrize("failure", [429, httpx.ReadTimeout("slow")])
+def test_timeout_or_rate_limit_gets_one_retry(failure) -> None:
+    epmc, served = flaky_epmc(failure)
+
+    assert epmc.find(pmid="23921656") is not None
+    assert len(served) == 2
+
+
+def test_second_rate_limit_raises() -> None:
+    epmc, served = flaky_epmc(429, 429)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        epmc.find(pmid="23921656")
+    assert len(served) == 2
+
+
+def test_other_http_errors_are_not_retried() -> None:
+    epmc, served = flaky_epmc(500)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        epmc.find(pmid="23921656")
+    assert len(served) == 1
+
+
+def test_rate_limit_then_timeout_is_not_retried_twice() -> None:
+    epmc, served = flaky_epmc(429, httpx.ReadTimeout("slow"))
+
+    with pytest.raises(httpx.ReadTimeout):
+        epmc.find(pmid="23921656")
+    assert len(served) == 2

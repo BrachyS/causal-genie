@@ -270,7 +270,7 @@ Sections: Verdict · Plain summary (≤ 120 words) · Question (PECO) · DAG · 
 |---|---|
 | Search finds nothing useful | Reformulate once → ❓ listing what was searched |
 | API timeout / rate limit | Backoff + one retry → partial report naming the failed step (never "no evidence exists") |
-| Model output fails schema | One repair retry → logged error |
+| Model output fails schema | One repair retry → logged error and partial report naming the failed step (never "no evidence exists") |
 | Research plan fails schema | One repair retry → fallback plan: the preset query groups (the fixed loop) |
 | Model says done too early | Controller overrides; the next prompt names the missing coverage |
 | DAG cycle | Drop the weakest-evidence edge (logged) |

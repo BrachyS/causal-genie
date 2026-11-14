@@ -46,7 +46,7 @@ from causal_genie.agent.steps.identify import map_columns, source
 from causal_genie.agent.steps.report import draft_report, write_report
 from causal_genie.agent.steps.research import research
 from causal_genie.agent.verdict import pick_verdict
-from causal_genie.llm.client import LLMClient, load_models, make_openai
+from causal_genie.llm.client import LLMClient, ModelOutputError, load_models, make_openai
 from causal_genie.log import setup_logging
 from causal_genie.tools.derive import node_table
 from causal_genie.tools.identify import detect_design, identify, precision_set
@@ -59,8 +59,10 @@ log = logging.getLogger(__name__)
 
 RUNS_DIR = Path("runs")
 CACHE_DIR = Path("cache") / "downloads"
-# An external API still failing after its retry: the run stops with a partial report.
-API_ERRORS = (
+# What stops a run with a partial report naming the step: an external API still failing
+# after its retry, or a model's output still failing its schema after the repair retry.
+STEP_FAILURES = (
+    ModelOutputError,
     openai.APIError,
     httpx.HTTPError,
     requests.RequestException,  # Tavily's transport
@@ -129,7 +131,7 @@ def run(
                 state.step = "genie"
                 state.genie = genie_aside(state, llm)
             state.step = None
-        except API_ERRORS as e:
+        except STEP_FAILURES as e:
             log.exception(
                 "run_id=%s: step %s failed; writing a partial report", state.run_id, state.step
             )

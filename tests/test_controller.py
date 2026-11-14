@@ -444,6 +444,15 @@ def test_api_failure_saves_a_partial_report_naming_the_step(
     assert (run_dir / "report.md").read_text() == state.report
 
 
+def test_schema_failure_after_repair_saves_a_partial_report(run_live, tmp_path: Path) -> None:
+    state = run_live(D1, [routed(True), "not json", '{"wrong": 1}'])  # frame fails twice
+
+    assert state.verdict is None and state.step == "frame"
+    assert state.failure is not None and "ModelOutputError" in state.failure
+    assert state.report is not None and "`frame` step failed" in state.report
+    assert (tmp_path / "runs" / state.run_id / "report.md").read_text() == state.report
+
+
 def user_data_run(run_live, framed, round_plan, fixture: str) -> RunState:
     """Run D1's framing on a user's table (D3/D4 fixtures); the user says yes to both the
     mapping and random assignment. No study is included, so no DAG and no data search."""

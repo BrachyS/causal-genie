@@ -7,13 +7,23 @@ Research searches ask Tavily to *prefer* scholarly sources (PRD §5.3), never to
 them: news, blogs and critiques still come back as leads and for the disproving search.
 """
 
+import logging
 import time
-from typing import Literal
+from collections.abc import Callable
+from typing import Literal, TypeVar
 
+import tavily.errors
 from tavily import TavilyClient
 
 from causal_genie.agent.state import ExtractCall, SearchCall, SearchHit
 from causal_genie.log import log_step
+
+log = logging.getLogger(__name__)
+R = TypeVar("R")
+
+# PRD §5.9: backoff + one retry on a timeout or rate limit (Tavily raises
+# UsageLimitExceededError on HTTP 429); anything else surfaces at once.
+TRANSIENT_ERRORS = (tavily.errors.TimeoutError, tavily.errors.UsageLimitExceededError)
 
 # PRD §5.3 preferred sources: PubMed, Europe PMC, Cochrane, NIH/CDC, NBER, medRxiv.
 RESEARCH_DOMAINS: tuple[str, ...] = (
@@ -40,8 +50,10 @@ class Searcher:
         max_results: int = 10,
         replay: list[SearchCall] | None = None,
         replay_extracts: list[ExtractCall] | None = None,
+        retry_wait_s: float = 2.0,
     ) -> None:
         self.tavily = tavily
+        self.retry_wait_s = retry_wait_s
         self.max_results = max_results
         self.replay = {(c.query, tuple(c.domains)): c for c in replay or []}
         self.replay_extracts = {c.url: c for c in replay_extracts or []}
@@ -54,6 +66,15 @@ class Searcher:
     ) -> "Searcher":
         """A searcher that answers only from a saved run's searches and extracts; no keys."""
         return cls(tavily=None, replay=calls, replay_extracts=extracts)
+
+    def _with_retry(self, request: Callable[[], R]) -> R:
+        """`request()`, retried once after a wait on a timeout or rate limit."""
+        try:
+            return request()
+        except TRANSIENT_ERRORS as e:
+            log.warning("Tavily timeout or rate limit, retrying: %r", e)
+            time.sleep(self.retry_wait_s)
+            return request()
 
     def search(
         self,
@@ -69,18 +90,23 @@ class Searcher:
                     raise KeyError(f"no recorded search for {query!r} with domains {domains}")
                 call = self.replay[(query, domains)]
             else:
+                tv = self.tavily
                 start = time.perf_counter()
                 if domains:
-                    found = self.tavily.search(
-                        query,
-                        search_depth="advanced",
-                        max_results=self.max_results,
-                        include_domains=list(domains),
-                        include_domains_mode=mode,
+                    found = self._with_retry(
+                        lambda: tv.search(
+                            query,
+                            search_depth="advanced",
+                            max_results=self.max_results,
+                            include_domains=list(domains),
+                            include_domains_mode=mode,
+                        )
                     )
                 else:
-                    found = self.tavily.search(
-                        query, search_depth="advanced", max_results=self.max_results
+                    found = self._with_retry(
+                        lambda: tv.search(
+                            query, search_depth="advanced", max_results=self.max_results
+                        )
                     )
                 hits = [
                     SearchHit(
@@ -108,8 +134,9 @@ class Searcher:
                     raise KeyError(f"no recorded extract for {url!r}")
                 call = self.replay_extracts[url]
             else:
+                tv = self.tavily
                 start = time.perf_counter()
-                found = self.tavily.extract(urls=[url])
+                found = self._with_retry(lambda: tv.extract(urls=[url]))
                 ok, failed = found["results"], found.get("failed_results", [])
                 call = ExtractCall(
                     url=url,

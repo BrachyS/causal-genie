@@ -525,6 +525,8 @@ class LLMCall(Schema):
     tokens_out: int
     latency_s: float
     error: str | None = None  # validation error left after the repair attempt
+    # one per attempt; "length" means the token cap cut the output (reasoning counts toward it)
+    finish_reasons: list[str] = Field(default_factory=list)
 
 
 class RunState(Schema):
@@ -552,7 +554,7 @@ class RunState(Schema):
     downloads: list[Download] = Field(default_factory=list)
     verdict: Verdict | None = None  # set by the controller only
     step: str | None = None  # the step running now, or the one that failed
-    failure: str | None = None  # API error that stopped the run; the report is partial
+    failure: str | None = None  # API or schema error that stopped the run; report is partial
     prose: ReportDraft | None = None  # model-written report sections, after lint
     genie: str | None = None  # the Genie's aside, if the gate allowed one
     report: str | None = None

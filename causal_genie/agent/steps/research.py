@@ -17,8 +17,6 @@ import logging
 from collections import Counter
 from typing import Literal
 
-from pydantic import ValidationError
-
 from causal_genie.agent.certainty import certainty, design_tier
 from causal_genie.agent.state import (
     CausalQuery,
@@ -31,7 +29,7 @@ from causal_genie.agent.state import (
     RunState,
 )
 from causal_genie.agent.steps.sources import process_sources
-from causal_genie.llm.client import LLMClient
+from causal_genie.llm.client import LLMClient, ModelOutputError
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import RESEARCH_DOMAINS, Searcher
 
@@ -168,7 +166,7 @@ def plan_round(
     summary = summarize(state, searcher, number, max_rounds)
     try:
         return llm.complete("small", "research_plan", summary, schema), "model"
-    except ValidationError as e:
+    except ModelOutputError as e:
         # PRD §5.9: after one repair retry, fall back to the fixed loop's preset query groups.
         log.warning("round=%d plan failed schema after repair, using fallback: %s", number, e)
         return fallback_plan(state.query), "fallback"
