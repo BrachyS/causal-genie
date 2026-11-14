@@ -463,8 +463,9 @@ class LookupCall(Schema):
     """One Europe PMC search as recorded for tracing and replay."""
 
     query: str  # Europe PMC query syntax, e.g. EXT_ID:23921656 AND SRC:MED
-    record: PaperRecord | None  # None: no match
+    record: PaperRecord | None  # None: no match, or the lookup failed
     latency_s: float
+    error: str | None = None  # set when the lookup failed after its retry; the study is kept
 
 
 class Download(Schema):

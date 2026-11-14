@@ -9,6 +9,7 @@ from causal_genie.agent.state import (
     DagEdge,
     DagProposal,
     DatasetCandidate,
+    LookupCall,
     ResearchPlan,
     RunState,
 )
@@ -86,3 +87,13 @@ def test_runs_saved_before_t7_6_load_with_no_exogenous_nodes(sample_state: RunSt
     saved = sample_state.model_dump(exclude={"exogenous", "exogenous_dropped"})
     loaded = RunState.model_validate(saved)
     assert loaded.exogenous == [] and loaded.exogenous_dropped == []
+
+
+def test_lookup_call_records_a_failure_and_old_lookups_load_without_one() -> None:
+    old = LookupCall.model_validate(
+        {"query": "EXT_ID:1 AND SRC:MED", "record": None, "latency_s": 0.1}
+    )
+    assert old.error is None
+
+    failed = LookupCall(query="q", record=None, latency_s=1.0, error="HTTP 500")
+    assert LookupCall.model_validate_json(failed.model_dump_json()) == failed
