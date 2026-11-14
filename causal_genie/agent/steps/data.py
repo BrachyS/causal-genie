@@ -30,6 +30,7 @@ from causal_genie.agent.state import (
     SourceKind,
 )
 from causal_genie.llm.client import LLMClient
+from causal_genie.tools.derive import DATE_RULES
 from causal_genie.tools.download import (
     ALLOWLIST,
     FORMATS,
@@ -49,6 +50,8 @@ RDATASETS = "https://vincentarelbundock.github.io/Rdatasets"
 RDATASETS_INDEX = f"{RDATASETS}/datasets.csv"
 TOP_N = 10
 MAX_DOWNLOADS = 3
+# Day-of-month column names that, with `year` and `month`, give a calendar date.
+DAY_COLUMNS = ("day", "day_of_month", "date_of_month", "mday")
 
 # Data held behind an access application: shown as 🔒, never downloaded.
 RESTRICTED_HOSTS = (
@@ -384,10 +387,36 @@ def score(cands: list[DatasetCandidate], state: RunState, llm: LLMClient) -> Non
         if unknown := set(given) - set(nodes):
             log.warning("candidate %d: ignored coverage of unknown nodes %s", i, sorted(unknown))
         c.coverage = {n: given.get(n) for n in nodes}
+        cover_calendar_nodes(c)
         c.score = sum(col is not None for col in c.coverage.values()) / len(nodes)
         lacks = [n for n in nodes[:2] if c.coverage[n] is None]
         if lacks:
             c.rejected_reason = f"lacks {', '.join(lacks)}"
+
+
+def calendar_columns(columns: list[str]) -> str | None:
+    """The column(s) a calendar date can be built from, as `derive.to_dates` takes them: one
+    date column (`date`, `*_date`), or year, month and day columns; None if there are none."""
+    lower = {col.lower(): col for col in columns}
+    for col in columns:
+        if col.lower() == "date" or col.lower().endswith("_date"):
+            return col
+    day = next((lower[d] for d in DAY_COLUMNS if d in lower), None)
+    if "year" in lower and "month" in lower and day:
+        return f"{lower['year']}, {lower['month']}, {day}"
+    return None
+
+
+def cover_calendar_nodes(c: DatasetCandidate) -> None:
+    """Mark a node named like a `derive` date rule (e.g. `full_moon`) covered when the table has
+    a date, whatever the model said: the harness can compute it, and the small model was
+    inconsistent about this. A column the model gave is kept."""
+    if not (dates := calendar_columns(c.columns)):
+        return
+    for node, col in c.coverage.items():
+        if node in DATE_RULES and col is None:
+            c.coverage[node] = dates
+            log.info("candidate %s: %s covered from %s by the harness", c.url, node, dates)
 
 
 def missing_nodes(cands: list[DatasetCandidate], exposure: str, outcome: str) -> list[str]:

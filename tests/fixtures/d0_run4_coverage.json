@@ -1,0 +1,324 @@
+{
+ "source_run": "20261114-211437-12b84e",
+ "query": {
+  "population": "pregnant people giving birth in hospitals",
+  "exposure": {
+   "name": "full_moon",
+   "definition": "the night of the full moon, defined as the lunar phase when the Moon is fully illuminated as seen from Earth"
+  },
+  "comparator": "any other night (not full moon)",
+  "outcome": {
+   "name": "births",
+   "definition": "the number of live births occurring in a hospital during a 24-hour period"
+  },
+  "time_window": "the 24 hours following the full moon",
+  "target": "ATE",
+  "effect_scale": "mean_difference",
+  "deviation_strategy": "n/a",
+  "ambiguities": []
+ },
+ "edges": [
+  {
+   "source": "full_moon",
+   "target": "births",
+   "claim_ids": [],
+   "question": true
+  },
+  {
+   "source": "day_of_week",
+   "target": "births",
+   "claim_ids": [
+    "sa80967f0-adjusted_for"
+   ],
+   "question": false
+  },
+  {
+   "source": "season",
+   "target": "births",
+   "claim_ids": [
+    "s424ad64d-adjusted_for",
+    "sbeac1891-adjusted_for"
+   ],
+   "question": false
+  },
+  {
+   "source": "year",
+   "target": "births",
+   "claim_ids": [
+    "sa80967f0-adjusted_for"
+   ],
+   "question": false
+  },
+  {
+   "source": "weather",
+   "target": "births",
+   "claim_ids": [
+    "sbeac1891-adjusted_for"
+   ],
+   "question": false
+  },
+  {
+   "source": "season",
+   "target": "weather",
+   "claim_ids": [],
+   "question": false
+  }
+ ],
+ "exogenous": [
+  "full_moon",
+  "day_of_week",
+  "season",
+  "year"
+ ],
+ "candidates": [
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/fivethirtyeight/US_births_1994_2003.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": "CC-BY-4.0",
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "fivethirtyeight::US_births_1994_2003: Some People Are Too Superstitious To Have A Baby On Friday The 13th",
+    "description": "3652 rows \u00d7 6 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "year",
+     "month",
+     "date_of_month",
+     "date",
+     "day_of_week",
+     "births"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "births",
+    "day_of_week": "day_of_week",
+    "season": "month",
+    "weather": null,
+    "year": "year"
+   }
+  },
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/fivethirtyeight/US_births_2000_2014.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": "CC-BY-4.0",
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "fivethirtyeight::US_births_2000_2014: Some People Are Too Superstitious To Have A Baby On Friday The 13th",
+    "description": "5479 rows \u00d7 6 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "year",
+     "month",
+     "date_of_month",
+     "date",
+     "day_of_week",
+     "births"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "births",
+    "day_of_week": "day_of_week",
+    "season": "month",
+    "weather": null,
+    "year": "year"
+   }
+  },
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/Birthdays.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": null,
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "mosaicData::Birthdays: US Births in 1969 - 1988",
+    "description": "372864 rows \u00d7 7 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "state",
+     "year",
+     "month",
+     "day",
+     "date",
+     "wday",
+     "births"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "births",
+    "day_of_week": "wday",
+    "season": "month",
+    "weather": null,
+    "year": "year"
+   }
+  },
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/Births.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": null,
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "mosaicData::Births: US Births",
+    "description": "7305 rows \u00d7 8 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "date",
+     "births",
+     "wday",
+     "year",
+     "month",
+     "day_of_year",
+     "day_of_month",
+     "day_of_week"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "births",
+    "day_of_week": "day_of_week",
+    "season": "month",
+    "weather": null,
+    "year": "year"
+   }
+  },
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/BirthsCDC.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": null,
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "mosaicData::BirthsCDC: US Births",
+    "description": "3652 rows \u00d7 8 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "date",
+     "births",
+     "wday",
+     "year",
+     "month",
+     "day_of_year",
+     "day_of_month",
+     "day_of_week"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "births",
+    "day_of_week": "day_of_week",
+    "season": "month",
+    "weather": null,
+    "year": "year"
+   }
+  },
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/BirthsSSA.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": null,
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "mosaicData::BirthsSSA: US Births",
+    "description": "5479 rows \u00d7 8 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "date",
+     "births",
+     "wday",
+     "year",
+     "month",
+     "day_of_year",
+     "day_of_month",
+     "day_of_week"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "births",
+    "day_of_week": "day_of_week",
+    "season": "month",
+    "weather": null,
+    "year": "year"
+   }
+  },
+  {
+   "candidate": {
+    "url": "https://vincentarelbundock.github.io/Rdatasets/csv/fpp3/aus_births.csv",
+    "host": "vincentarelbundock.github.io",
+    "license": null,
+    "access": "open",
+    "coverage": {},
+    "score": null,
+    "rejected_reason": null,
+    "source": "repository",
+    "title": "fpp3::aus_births: Australian births data",
+    "description": "4512 rows \u00d7 3 columns (Rdatasets)",
+    "columns": [
+     "rownames",
+     "State",
+     "Month",
+     "Births"
+    ],
+    "bytes": null,
+    "rank": null,
+    "accepted": false,
+    "study_id": null
+   },
+   "model_coverage": {
+    "full_moon": null,
+    "births": "Births",
+    "day_of_week": null,
+    "season": "Month",
+    "weather": null,
+    "year": null
+   }
+  }
+ ]
+}

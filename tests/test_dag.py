@@ -9,6 +9,7 @@ from causal_genie.agent.state import DagEdge, ResearchPlan, ResearchRound, RunSt
 from causal_genie.agent.steps import dag
 from causal_genie.agent.steps.dag import break_cycles, build_dag, run_dag
 from causal_genie.llm.client import PROMPTS_DIR
+from causal_genie.tools.derive import DATE_RULES
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
@@ -368,7 +369,15 @@ def test_dag_prompt_asks_for_outcome_causes_the_data_may_record() -> None:
     text = (PROMPTS_DIR / "dag.md").read_text()
 
     assert "other causes of the outcome" in text
-    assert "day of week" in text
+    assert "`day_of_week`" in text
+
+
+def test_dag_prompt_names_calendar_nodes_like_the_derive_rules() -> None:
+    """The data step covers a node named like a date rule from any table with a date (T10.9)."""
+    text = (PROMPTS_DIR / "dag.md").read_text()
+
+    for rule in DATE_RULES:
+        assert f"`{rule}`" in text
 
 
 def test_uncited_edges_from_outcome_only_nodes_run_no_extra_round(
@@ -402,3 +411,76 @@ def test_lone_uncited_edge_into_the_exposure_still_gets_a_research_round(
     run_dag(researched, llm, *tools)
 
     assert len(researched.rounds) == 2
+
+
+@pytest.fixture
+def gaps_asked(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    """The gap lists `run_dag` sends to research; the round itself finds nothing."""
+    asked: list[list[str]] = []
+
+    def record(state: RunState, llm, searcher, papers, gaps: list[str], _) -> None:
+        asked.append(gaps)
+
+    monkeypatch.setattr(dag, "research_gaps", record)
+    return asked
+
+
+def test_d0_run4_uncited_edges_off_any_backdoor_path_run_no_round(
+    make_llm, full_moon_state: RunState, tools, gaps_asked
+) -> None:
+    # Live D0 run 20261114-211437-12b84e spent ~50k tokens on a round for `season -> weather`.
+    # Nothing causes the exposure, so no uncited edge can lie on a backdoor path.
+    llm, _ = make_llm(
+        [
+            proposal(
+                ("full_moon", "birth", []),
+                ("day_of_week", "birth", []),
+                ("season", "birth", []),
+                ("year", "birth", []),
+                ("weather", "birth", []),
+                ("season", "weather", []),
+                exogenous=("full_moon", "day_of_week", "season", "year"),
+            )
+        ]
+    )
+
+    run_dag(full_moon_state, llm, *tools)
+
+    assert gaps_asked == []
+    assert sum(e.assumed for e in full_moon_state.edges) == 5
+
+
+def test_both_uncited_edges_of_a_confounder_are_sent(
+    make_llm, researched: RunState, tools, gaps_asked
+) -> None:
+    llm, _ = make_llm(
+        [proposal((*QUESTION, ["c1"]), ("age", "licorice_gargle", []), ("age", "sore_throat", []))]
+    )
+
+    run_dag(researched, llm, *tools)
+
+    assert gaps_asked == [
+        [
+            "no source yet for DAG edge age -> licorice_gargle",
+            "no source yet for DAG edge age -> sore_throat",
+        ]
+    ]
+
+
+def test_uncited_edges_out_of_the_exposure_run_no_round(
+    make_llm, researched: RunState, tools, gaps_asked
+) -> None:
+    # A mediator's edges never change the backdoor set (descendants are never adjusted for).
+    llm, _ = make_llm(
+        [
+            proposal(
+                (*QUESTION, ["c1"]),
+                ("licorice_gargle", "throat_coating", []),
+                ("throat_coating", "sore_throat", []),
+            )
+        ]
+    )
+
+    run_dag(researched, llm, *tools)
+
+    assert gaps_asked == []

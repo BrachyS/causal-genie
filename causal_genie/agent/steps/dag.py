@@ -17,8 +17,8 @@ them stay; a name not in the graph is logged and ignored. The nodes and the drop
 kept in the run state, so the report can show them as the model's assumption.
 
 The harness then makes the graph a DAG: each cycle loses its weakest-evidence edge. An edge
-with no citation sends research back for one more round if rounds are left; otherwise it stays
-assumed.
+with no citation out of a cause of the exposure (a possible backdoor path or instrument) sends
+research back for one more round if rounds are left; every other uncited edge stays assumed.
 """
 
 import logging
@@ -47,13 +47,15 @@ def run_dag(
 ) -> None:
     """Set `state.edges`, sending uncited edges back to research once if rounds are left.
 
-    Edges from outcome-only nodes (e.g. weekday -> births) are not sent: they only make the
-    estimate more precise and cannot bias it, so a source for them is not worth a round.
+    Only edges out of a cause of the exposure are sent: they may lie on a backdoor path, so
+    they decide what to adjust for (and a lone edge into the exposure may be an instrument).
+    Other edges, e.g. weekday -> births, season -> weather or exposure -> mediator, cannot change
+    the adjustment set, so a source for them is not worth a round.
     """
     assert state.query is not None
     state.edges = build_dag(state, llm)
-    outcome = state.query.outcome.name
-    uncited = [e for e in state.edges if e.assumed and not outcome_only(state.edges, e, outcome)]
+    causes = exposure_causes(state.edges, state.query.exposure.name)
+    uncited = [e for e in state.edges if e.assumed and e.source in causes]
     if not uncited:
         return
     if len(state.rounds) >= max_rounds:
@@ -66,13 +68,10 @@ def run_dag(
         state.edges = build_dag(state, llm)
 
 
-def outcome_only(edges: list[DagEdge], edge: DagEdge, outcome: str) -> bool:
-    """The edge goes into the outcome from a node with no other edge: a precision variable.
-
-    A lone edge into the exposure is not one: it may be an instrument, which needs a source.
-    """
-    touching = [e for e in edges if edge.source in (e.source, e.target)]
-    return edge.target == outcome and touching == [edge]
+def exposure_causes(edges: list[DagEdge], exposure: str) -> set[str]:
+    """Every node with a directed path into the exposure (its ancestors in the DAG)."""
+    graph = nx.DiGraph([(e.source, e.target) for e in edges])
+    return nx.ancestors(graph, exposure) if exposure in graph else set()
 
 
 def citable_claims(state: RunState) -> list[Claim]:

@@ -12,7 +12,7 @@ import pytest
 from conftest import FIXTURES
 from tavily import TavilyClient
 
-from causal_genie.agent.state import DatasetCandidate, RunState
+from causal_genie.agent.state import DagEdge, DatasetCandidate, RunState
 from causal_genie.agent.steps import data
 from causal_genie.agent.steps.data import (
     candidate,
@@ -460,3 +460,76 @@ def test_shortlist_ties_go_to_the_larger_table() -> None:
         "US_births_1994_2003.csv",
         "present.csv",
     ]
+
+
+# Live D0 run 20261114-211437-12b84e: the small model marked `full_moon` uncovered in every
+# table, though six have a `date` column. Metadata only (titles, URLs, headers), no data rows.
+D0_RUN4 = json.loads((FIXTURES / "d0_run4_coverage.json").read_text())
+
+
+def d0_run4_scored(make_llm) -> list[DatasetCandidate]:
+    """Score the run's candidates with the model's recorded coverage replayed."""
+    state = RunState(
+        run_id="t",
+        question="Does the full moon cause more births?",
+        query=D0_RUN4["query"],
+        edges=D0_RUN4["edges"],
+        exogenous=D0_RUN4["exogenous"],
+    )
+    cands = [DatasetCandidate.model_validate(c["candidate"]) for c in D0_RUN4["candidates"]]
+    llm, _ = make_llm([coverage(*[c["model_coverage"] for c in D0_RUN4["candidates"]])])
+    data.score(cands, state, llm)
+    return cands
+
+
+def test_d0_run4_daily_us_tables_cover_full_moon_from_their_date(make_llm) -> None:
+    cands = d0_run4_scored(make_llm)
+
+    daily, australian = cands[:6], cands[6]
+    for c in daily:
+        assert c.rejected_reason is None, c.title
+        assert c.coverage["full_moon"] == "date"
+        assert c.coverage["day_of_week"] in ("day_of_week", "wday")  # the model's column is kept
+    assert australian.coverage["full_moon"] is None  # Month only: no calendar day
+    assert australian.rejected_reason == "lacks full_moon"
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        (["date", "births"], "date"),
+        (["Birth_Date", "births"], "Birth_Date"),
+        (["Year", "Month", "Day", "births"], "Year, Month, Day"),
+        (["year", "month", "date_of_month", "births"], "year, month, date_of_month"),
+        (["year", "month", "day_of_month", "births"], "year, month, day_of_month"),
+        (["year", "month", "mday", "births"], "year, month, mday"),
+        (["date_of_month", "births"], None),  # a day number is not a date
+        (["year", "month", "births"], None),
+        ([], None),  # header unknown
+    ],
+)
+def test_calendar_columns(columns: list[str], expected: str | None) -> None:
+    assert data.calendar_columns(columns) == expected
+
+
+def test_harness_covers_only_calendar_nodes_the_model_left_null(make_llm, sample_state) -> None:
+    sample_state.query.exposure.name = "full_moon"  # type: ignore[union-attr]
+    sample_state.query.outcome.name = "births"  # type: ignore[union-attr]
+    sample_state.edges = [
+        DagEdge(source=s, target="births", claim_ids=[])
+        for s in ("full_moon", "holiday", "season", "weather")
+    ]
+    c = candidate(BIRTHS, "repository", "US births", "")
+    c.columns = ["date", "births", "month"]
+    llm, _ = make_llm([coverage({"births": "births", "season": "month"})])
+
+    data.score([c], sample_state, llm)
+
+    assert c.coverage == {
+        "full_moon": "date",
+        "births": "births",
+        "holiday": "date",
+        "season": "month",  # the model's column is kept
+        "weather": None,  # not a calendar rule
+    }
+    assert c.score == 4 / 5 and c.rejected_reason is None
