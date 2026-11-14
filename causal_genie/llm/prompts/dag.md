@@ -8,7 +8,9 @@ Nodes:
 - Use the exposure and outcome names exactly as given.
 - Name every other node with a short snake_case id (e.g. `age`, `smoking`, `surgery_length`).
 - Include the exposure → outcome edge with `claim_ids: []`. It is the question being tested, not a fact to cite: the evidence for and against it is reported separately.
-- Add a node only if it matters for this question: a common cause of exposure and outcome (confounder), a step between them (mediator), or a common effect that someone might wrongly adjust for (collider). Prefer variables the claims name, e.g. ones studies adjusted for. Keep the graph small: at most about 10 nodes.
+- Add a node only if it matters for this question: a common cause of exposure and outcome (confounder), a step between them (mediator), or a common effect that someone might wrongly adjust for (collider). Prefer variables the claims name, e.g. ones studies adjusted for.
+- Also add the main other causes of the outcome that a dataset on this question is likely to record, each with an arrow into the outcome only, e.g. day of week, holidays, season and year for daily birth counts, or age for a disease. Adjusting for them makes the estimate more precise. Do not draw an arrow from them into the exposure unless they really cause it.
+- Keep the graph small: at most about 12 nodes.
 
 Exogenous nodes:
 - List in `exogenous` every node that nothing in the graph can cause, such as moon phase, weather, a calendar date or a coin flip (random assignment). Use the node names exactly as in `edges`.

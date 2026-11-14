@@ -8,6 +8,7 @@ from tavily import TavilyClient
 from causal_genie.agent.state import DagEdge, ResearchPlan, ResearchRound, RunState
 from causal_genie.agent.steps import dag
 from causal_genie.agent.steps.dag import break_cycles, build_dag, run_dag
+from causal_genie.llm.client import PROMPTS_DIR
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
@@ -344,3 +345,12 @@ def test_question_edge_stays_even_if_the_outcome_is_called_exogenous(
 
     assert [(e.source, e.target, e.question) for e in edges] == [("full_moon", "birth", True)]
     assert "kept the question edge full_moon -> birth" in step_logs.text
+
+
+def test_dag_prompt_asks_for_outcome_causes_the_data_may_record() -> None:
+    """Precision variables come only from the DAG (`precision_set` reads it), so the prompt
+    must ask for the outcome's main other causes, e.g. weekday for daily births (T10.9)."""
+    text = (PROMPTS_DIR / "dag.md").read_text()
+
+    assert "other causes of the outcome" in text
+    assert "day of week" in text
