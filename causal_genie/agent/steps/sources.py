@@ -32,6 +32,9 @@ log = logging.getLogger(__name__)
 
 MAX_TEXT_CHARS = 20_000  # full pages are cut here; quotes are checked against the cut text
 PARALLEL = 8  # model / Europe PMC calls in flight at once
+# Words that mark a method description or a generic phrase, not a variable. No length limit:
+# in 27 saved runs every adjusted_for entry over 4 words was a real variable or caught here.
+GENERIC_WORDS = {"effect", "variable", "component", "confounder", "confounding", "covariate"}
 
 
 @dataclass(frozen=True)
@@ -125,6 +128,9 @@ def extract(state: RunState, llm: LLMClient, source: Source) -> Study:
         ]
     )
     e = llm.complete("small", "extract", user, Extraction)
+    if dropped := [a for a in e.adjusted_for if not is_variable_name(a)]:
+        log.info("adjusted_for of %s: dropped non-variable entries %s", source.url, dropped)
+        e = e.model_copy(update={"adjusted_for": [a for a in e.adjusted_for if a not in dropped]})
     # A quote for an empty field ("no confounders are mentioned") is not evidence of anything.
     empty = {q.field for q in e.quotes if getattr(e, q.field) in (None, [])}
     if empty:
@@ -157,6 +163,15 @@ def extract(state: RunState, llm: LLMClient, source: Source) -> Study:
         full_text=source.full_text,
         also_at=[],
     )
+
+
+def is_variable_name(item: str) -> bool:
+    """A variable name ("maternal age"), not a description of the method ("quasi-periodic
+    and discrete components") or a generic phrase ("several confounding variables"), which the
+    verdict would otherwise count as unmeasured confounders."""
+    words = item.lower().replace("_", " ").split()
+    generic = {w.removesuffix("s") for w in words} & GENERIC_WORDS
+    return bool(words) and not generic
 
 
 def source_block(source: Source) -> str:

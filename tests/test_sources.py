@@ -1,11 +1,12 @@
 import hashlib
 import json
+import logging
 
 import pytest
 from conftest import GROUNDED, SNIPPET, epmc_result, extraction
 
 from causal_genie.agent.state import ExtractCall, RunState, SearchCall, SearchHit
-from causal_genie.agent.steps.sources import process_sources
+from causal_genie.agent.steps.sources import is_variable_name, process_sources
 from causal_genie.tools.search import Searcher
 
 PUBMED = "https://pubmed.ncbi.nlm.nih.gov/23921656/"
@@ -205,3 +206,62 @@ def test_quotes_for_empty_fields_are_ignored(state, searcher, make_llm, make_epm
 
     assert state.studies[0].quotes == {} and state.claims == []
     assert len(fake.requests) == 1
+
+
+NOISE = [  # adjusted_for entries extracted in live D0 run 20261114-154259-6bb1d2
+    "non linearly the effect of several confounding variables",
+    "quasi-periodic and discrete components",
+]
+
+
+@pytest.mark.parametrize(
+    ("item", "kept"),
+    [
+        (NOISE[0], False),  # "effect", "confounding", "variables"
+        (NOISE[1], False),  # "components"
+        ("other confounders", False),
+        ("covariates", False),
+        ("maternal age", True),
+        ("parity", True),
+        ("body mass index", True),
+        ("use of oral contraceptives", True),
+        ("comorbidities such as sleep apnea and insomnia", True),  # long but real
+        ("", False),
+        ("smoking_status", True),
+    ],
+)
+def test_only_variable_names_count_as_adjusted_for(item: str, kept: bool) -> None:
+    assert is_variable_name(item) is kept
+
+
+def test_adjusted_for_descriptions_are_dropped_with_their_claim(
+    state, searcher, make_llm, make_epmc, caplog
+) -> None:
+    quotes = [{"field": "adjusted_for", "text": "Randomized trial of 236 adults"}]
+    llm, fake = make_llm([extraction(quotes=quotes, adjusted_for=NOISE)])
+
+    with caplog.at_level(logging.INFO):
+        process_sources(state, llm, searcher, make_epmc([epmc_result()])[0])
+
+    (study,) = state.studies
+    assert study.adjusted_for == [] and study.quotes == {} and state.claims == []
+    assert len(fake.requests) == 1  # no support check: nothing left to check
+    assert all(item in caplog.text for item in NOISE)
+
+
+def test_real_adjusted_for_names_survive_next_to_dropped_ones(
+    state, searcher, make_llm, make_epmc
+) -> None:
+    quotes = [{"field": "adjusted_for", "text": "Randomized trial of 236 adults"}]
+    outputs = [
+        extraction(quotes=quotes, adjusted_for=["maternal age", NOISE[1]]),
+        supported(f"{sid(PUBMED)}-adjusted_for"),
+    ]
+    llm, _ = make_llm(outputs)
+
+    process_sources(state, llm, searcher, make_epmc([epmc_result()])[0])
+
+    (study,) = state.studies
+    assert study.adjusted_for == ["maternal age"]
+    (claim,) = state.claims
+    assert claim.text.endswith("adjusted_for = maternal age")

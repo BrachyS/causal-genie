@@ -18,7 +18,7 @@ Return JSON with:
 - `n`: number of participants, or null if not stated.
 - `effect`: the main result for this exposure and outcome in a few words, with the numbers as written (e.g. "sore throat at 30 min: 24% vs 61%"), or null if not stated.
 - `direction`: what the exposure does to the outcome **as the question defines it**: `+` (the outcome becomes more common or larger), `-` (less common or smaller), `null` (no effect found), `mixed` or `unclear`. This is not whether the result is good: a treatment that reduces sore throat is `-`.
-- `adjusted_for`: confounders the study adjusted for or matched on, as short names; empty if none stated.
+- `adjusted_for`: the variables the study adjusted for or matched on, one short name each (one to four words, e.g. `maternal age`, `parity`); list each variable separately; never a description of the method (e.g. `seasonal components`) or a generic phrase (e.g. `several confounders`); empty if none stated.
 - `data_link`: URL of the study's public dataset if the text gives one, else null.
 - `quotes`: for each of `design`, `population`, `n`, `effect`, `adjusted_for` and `data_link` that you filled in, one `{"field": ..., "text": ...}` whose `text` is copied **verbatim** from the source text (one or two sentences) and shows that value. Use `...` only to skip words inside one passage. Copy only from the source text, never from the question or your own summary: a `population` quote must be the source's own words, not the question's population. If you cannot find a passage that shows a value, set that value to null (or empty) instead of guessing.
 
