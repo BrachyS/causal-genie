@@ -3,15 +3,17 @@
 Candidates come from included studies' data links first, then a Tavily search restricted to
 allowlisted hosts and the Rdatasets index. A rule filter (no model tokens) rejects restricted,
 multi-table, off-allowlist, non-data, oversized, closed-license and off-topic candidates; the
-top 10 by keyword match have their header line read, and the small model says which DAG nodes
-each covers. The harness computes the scores, then downloads the best (next on failure, at most
-3). If no candidate covers both exposure and outcome, it searches once more naming what's
-missing. Every candidate is kept on the run with why it was rejected or which rank won.
+top 10 by keyword match (rare words weigh more) have their header line read, and the small
+model says which DAG nodes each covers. The harness computes the scores, then downloads the
+best (next on failure, at most 3). If no candidate covers both exposure and outcome, it
+searches once more naming what's missing. Every candidate is kept on the run with why it was
+rejected or which rank won.
 """
 
 import hashlib
 import io
 import logging
+import math
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -94,7 +96,7 @@ def find_data(
     found = paper_candidates(state, index, http)
     found += search_candidates(searcher, f"{words(exposure)} {words(outcome)} dataset", index, http)
     found += repository_candidates(index, kws)
-    state.datasets = screen(unique(found), state, llm, http, kws, lead=keywords([outcome]))
+    state.datasets = screen(unique(found), state, llm, http, kws, keywords([outcome]), index)
 
     if not any(c.score is not None and c.rejected_reason is None for c in state.datasets):
         missing = missing_nodes(state.datasets, exposure, outcome)
@@ -102,7 +104,7 @@ def find_data(
         seen = {c.url for c in state.datasets}
         query = " ".join(words(n) for n in missing) + " data"
         new = [c for c in search_candidates(searcher, query, index, http) if c.url not in seen]
-        state.datasets += screen(unique(new), state, llm, http, kws, lead=keywords(missing))
+        state.datasets += screen(unique(new), state, llm, http, kws, keywords(missing), index)
 
     rank(state.datasets)
     return pick(state, http, cache_dir, max_downloads)
@@ -131,6 +133,43 @@ def mentions(text: str, kw: str) -> bool:
 def keyword_hits(c: DatasetCandidate, kws: list[str]) -> int:
     """How many keywords appear in the candidate's title, URL or description."""
     return sum(mentions(f"{c.title} {c.url} {c.description}", kw) for kw in kws)
+
+
+def index_text(index: pd.DataFrame) -> pd.Series:
+    """Each Rdatasets table's package, name and title, lowercased, for keyword matching."""
+    return (index["Package"] + " " + index["Item"] + " " + index["Title"]).str.lower()
+
+
+def keyword_weights(index: pd.DataFrame, kws: list[str]) -> dict[str, float]:
+    """log((1 + N) / (1 + tables whose title has the word)) over the Rdatasets index's N
+    tables: a word few dataset titles use ("moon", "birth") counts more than a common one
+    ("count", which also starts "country"). A word in no title gets the most, log(1 + N)."""
+    text = list(index_text(index))
+    return {kw: math.log((1 + len(text)) / (1 + sum(mentions(t, kw) for t in text))) for kw in kws}
+
+
+def shortlist(
+    passing: list[DatasetCandidate], kws: list[str], lead: list[str], index: pd.DataFrame
+) -> list[DatasetCandidate]:
+    """Candidates in the order their headers are worth reading: paper links first, then by
+    weighted hits on the `lead` keywords, then on all `kws`, then larger Rdatasets tables
+    first (a tie would otherwise go by name; search results count as 0 rows)."""
+    weights = keyword_weights(index, sorted({*kws, *lead}))
+    rows = dict(zip(index["CSV"], index["Rows"], strict=True))
+
+    def weighted(c: DatasetCandidate, words: list[str]) -> float:
+        text = f"{c.title} {c.url} {c.description}"
+        return sum(weights[kw] for kw in words if mentions(text, kw))
+
+    return sorted(
+        passing,
+        key=lambda c: (
+            c.source != "paper",
+            -weighted(c, lead),
+            -weighted(c, kws),
+            -rows.get(c.url, 0),
+        ),
+    )
 
 
 def candidate(
@@ -237,8 +276,7 @@ def search_candidates(
 
 def repository_candidates(index: pd.DataFrame, kws: list[str]) -> list[DatasetCandidate]:
     """Rdatasets tables whose package, name or title contains a keyword."""
-    text = (index["Package"] + " " + index["Item"] + " " + index["Title"]).str.lower()
-    hits = text.apply(lambda t: any(mentions(t, kw) for kw in kws))
+    hits = index_text(index).apply(lambda t: any(mentions(t, kw) for kw in kws))
     return [index_candidate(row, "repository") for _, row in index[hits].iterrows()]
 
 
@@ -280,16 +318,16 @@ def screen(
     http: httpx.Client,
     kws: list[str],
     lead: list[str],
+    index: pd.DataFrame,
 ) -> list[DatasetCandidate]:
     """Rule-filter the candidates, read the top 10's headers, have the model score them.
 
-    The top 10 are paper links first, then by hits on the `lead` keywords (the outcome, which
-    a table must hold, while an exposure like moon phase may be derived), then on all `kws`.
+    The top 10 come from `shortlist`; `lead` is the outcome's keywords, since a table must
+    hold the outcome while an exposure like moon phase may be derived.
     """
     for c in found:
         rule_filter(c, kws)
-    passing = [c for c in found if c.rejected_reason is None]
-    passing.sort(key=lambda c: (c.source != "paper", -keyword_hits(c, lead), -keyword_hits(c, kws)))
+    passing = shortlist([c for c in found if c.rejected_reason is None], kws, lead, index)
     for c in passing[TOP_N:]:
         c.rejected_reason = f"outside the top {TOP_N} by keyword match"
     top = passing[:TOP_N]

@@ -1,11 +1,13 @@
 import hashlib
 import json
+import math
 import zipfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import cast
 
 import httpx
+import pandas as pd
 import pytest
 from conftest import FIXTURES
 from tavily import TavilyClient
@@ -15,10 +17,14 @@ from causal_genie.agent.steps import data
 from causal_genie.agent.steps.data import (
     candidate,
     find_data,
+    index_candidate,
     keyword_hits,
+    keyword_weights,
     keywords,
+    read_index,
     resolve_link,
     rule_filter,
+    shortlist,
     use_table,
 )
 from causal_genie.tools import download as dl
@@ -399,3 +405,58 @@ def test_user_table_is_profiled_as_the_accepted_candidate(sample_state: RunState
     (d,) = sample_state.downloads
     assert d.path == str(path) and d.sha256 == hashlib.sha256(path.read_bytes()).hexdigest()
     assert "new_flow" in accepted.columns
+
+
+def sized_index(*rows: tuple[str, str, str, int]) -> pd.DataFrame:
+    """A parsed Rdatasets index with (package, item, title, row count) rows."""
+    lines = [
+        ROW.format(pkg=p, item=i, title=t, rd=RD).replace(",235,", f",{n},", 1)
+        for p, i, t, n in rows
+    ]
+    return read_index("\n".join([INDEX_HEADER, *lines]).encode())
+
+
+# Live D0 (run 20261114-195218-618018): the outcome was named `birth_count`, so "count"
+# (COUNT package, Country, County, Counts of ...) tied with "birth" and the US births tables
+# fell outside the top 10 alphabetically.
+D0_INDEX = sized_index(
+    *[("COUNT", f"c{i}", f"Counts of things {i}", 100) for i in range(6)],
+    ("admiral", "country_code_lookup", "Country Code Lookup", 250),
+    ("AER", "OrangeCounty", "Orange County Employment", 52),
+    ("openintro", "present", "Birth counts", 63),
+    ("fivethirtyeight", "US_births_1994_2003", "Some People Are Too Superstitious", 3652),
+    ("mosaicData", "Births", "US Births", 7305),
+    *[("filler", f"f{i}", f"Unrelated table {i}", 10) for i in range(20)],
+)
+
+
+def as_candidates(index: pd.DataFrame) -> list[DatasetCandidate]:
+    return [index_candidate(row, "repository") for _, row in index.iterrows()]
+
+
+def test_rare_words_weigh_more_and_unknown_words_most() -> None:
+    w = keyword_weights(D0_INDEX, ["birth", "count", "zzz"])
+
+    assert w["zzz"] > w["birth"] > w["count"]
+    assert w["zzz"] == pytest.approx(math.log(1 + len(D0_INDEX)))
+
+
+def test_d0_shortlist_puts_birth_tables_before_count_and_country_tables() -> None:
+    kws, lead = keywords(["full_moon", "birth_count"]), keywords(["birth_count"])
+
+    top = shortlist(as_candidates(D0_INDEX), kws, lead, D0_INDEX)
+
+    titles = [c.title.split(":")[0] for c in top[:3]]
+    assert titles == ["openintro", "mosaicData", "fivethirtyeight"]  # birth AND count first
+
+
+def test_shortlist_ties_go_to_the_larger_table() -> None:
+    kws = lead = keywords(["births"])
+
+    top = shortlist(as_candidates(D0_INDEX), kws, lead, D0_INDEX)
+
+    assert [c.url.split("/")[-1] for c in top[:3]] == [
+        "Births.csv",
+        "US_births_1994_2003.csv",
+        "present.csv",
+    ]
