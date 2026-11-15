@@ -6,6 +6,10 @@ inline JS (Streamlit's built-in `st.components.v2`, no extra package) store the 
 back. Clearing site data gives a new ID; the per-voter rate limits in `board_db` bound what that
 can do.
 
+Board tab (U13a): `render_board` shows today's answered question, the questions up next with
+a vote button, the ask box and the archive. Question text (and the model's line) is shown with
+every Markdown character escaped, never as Markdown or HTML, and never in a button label.
+
 Asking (U12): an exact repeat (ignoring case and punctuation) of a question on the board is a
 vote for it; a similar one (fuzzy score >= 85) is shown to the asker first, because fuzzy text
 matches also join different questions (sugar vs salt and blood pressure scores 92). A new
@@ -14,19 +18,25 @@ question gets one large-model check; the harness, not the model, decides whether
 
 import logging
 import os
+import re
 import uuid
+from pathlib import Path
 from typing import Literal
 
 import streamlit as st
 from pydantic import BaseModel
 from rapidfuzz import fuzz
 from sqlalchemy import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 from causal_genie.agent.router import normalize
 from causal_genie.agent.state import Schema
+from causal_genie.agent.steps.report import VERDICT_LABELS
 from causal_genie.llm.client import LLMClient
 from causal_genie.ui import board_db
+from causal_genie.ui.gallery import GALLERY_DIR
 from causal_genie.ui.live import passcode_ok
+from causal_genie.ui.picks import Pick, rank
 
 log = logging.getLogger(__name__)
 
@@ -185,3 +195,146 @@ def admin_panel(db: Engine) -> None:
             on_click=_toggle,
             args=(db, q),
         )
+
+
+PUNCTUATION = re.compile(r"([!-/:-@\[-`{-~])")  # all ASCII punctuation; CommonMark escapes any
+RUN_ID = re.compile(r"[A-Za-z0-9_-]{1,100}")
+
+
+def plain(text: str) -> str:
+    """Stranger text made safe for `st.markdown`: every punctuation mark backslash-escaped, so
+    emphasis, links, HTML, `:color[]` and `$math$` all show literally, on one line."""
+    return PUNCTUATION.sub(r"\\\1", " ".join(text.split()))
+
+
+def run_link(run_id: str | None) -> str | None:
+    """The app's deep link to a saved run (U14), only for a well-formed run id."""
+    return f"?run={run_id}" if run_id and RUN_ID.fullmatch(run_id) else None
+
+
+def _pick(gallery_dir: Path, run_id: str | None) -> Pick | None:
+    path = gallery_dir / (run_id or "") / "pick.json"
+    return Pick.model_validate_json(path.read_text()) if run_id and path.is_file() else None
+
+
+def _votes(n: int) -> str:
+    return f"{n} vote" + ("" if n == 1 else "s")
+
+
+def _say(message: str) -> None:
+    st.session_state.board_message = message
+
+
+def _vote(db: Engine, question_id: int, voter_id: str) -> None:
+    try:
+        board_db.vote(db, question_id, voter_id)
+    except board_db.LimitReached as e:
+        _say(str(e))
+
+
+def _ask(db: Engine, text: str, voter_id: str, llm: LLMClient, force: bool = False) -> None:
+    st.session_state.pop("board_similar", None)
+    try:
+        asked = ask(db, text, voter_id, llm, force=force)
+    except (ValueError, board_db.LimitReached) as e:
+        _say(str(e))
+        return
+    if asked.outcome == "similar":
+        st.session_state.board_similar = (text, asked.question_id)
+    _say(asked.message)
+
+
+def _vote_for_similar(db: Engine, question_id: int, voter_id: str) -> None:
+    st.session_state.pop("board_similar", None)
+    _vote(db, question_id, voter_id)
+    _say("Counted as your vote.")
+
+
+def render_board(
+    db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir: Path = GALLERY_DIR
+) -> None:
+    """The board tab. A database failure shows "Board unavailable" and leaves the app running.
+
+    `voter_id` is None until the browser has reported it (voting waits); `llm` None turns the
+    ask box off.
+    """
+    try:
+        _render(db, voter_id, llm, gallery_dir)
+    except SQLAlchemyError:
+        log.exception("board: database unavailable")
+        st.warning("Board unavailable right now. The rest of the app still works.")
+
+
+def _render(db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir: Path) -> None:
+    latest = board_db.latest_answered(db)
+    if latest:
+        st.subheader("Today's question")
+        with st.container(border=True):
+            st.markdown(f"**{plain(latest.text)}**")
+            pick = _pick(gallery_dir, latest.run_id)
+            if pick and pick.verdict:
+                st.markdown(VERDICT_LABELS[pick.verdict])
+            if latest.announcement:
+                st.markdown(f"🧞 {plain(latest.announcement)}")
+            if link := run_link(latest.run_id):
+                st.markdown(f"[Read the Genie's answer]({link})")
+
+    if message := st.session_state.pop("board_message", None):
+        st.info(message)
+
+    st.subheader("Up next")
+    st.caption("The question with the most votes is answered each night.")
+    voted = board_db.voted(db, voter_id) if voter_id else set()
+    ranked = rank(board_db.board(db))
+    if not ranked:
+        st.markdown("No questions yet. Ask the first one below.")
+    for q in ranked:
+        text, button = st.columns([6, 1], vertical_alignment="center")
+        text.markdown(f"{plain(q.text)}  \n{_votes(q.votes)}")
+        mine = q.id in voted
+        button.button(
+            "✓ Voted" if mine else "Vote",
+            key=f"vote-{q.id}",
+            disabled=mine or voter_id is None,
+            on_click=_vote,
+            args=(db, q.id, voter_id),
+        )
+
+    st.subheader("Ask the Genie")
+    st.caption(
+        "Questions here are public and anyone can vote. For a private question, use a live "
+        "run with the passcode."
+    )
+    if similar := st.session_state.get("board_similar"):
+        text, similar_id = similar
+        existing = board_db.get_question(db, similar_id).text
+        st.markdown(f"Similar question already on the board: {plain(existing)}")
+        vote_col, ask_col = st.columns(2)
+        if voter_id and llm:
+            vote_col.button(
+                "Vote for that one",
+                key="similar-vote",
+                on_click=_vote_for_similar,
+                args=(db, similar_id, voter_id),
+            )
+            ask_col.button(
+                "Ask mine anyway",
+                key="similar-ask",
+                on_click=_ask,
+                args=(db, text, voter_id, llm, True),
+            )
+    with st.form("board-ask", clear_on_submit=True):
+        text = st.text_input(
+            "Your cause-and-effect question", max_chars=board_db.MAX_CHARS, key="board-ask-text"
+        )
+        asked = st.form_submit_button("Ask", disabled=voter_id is None or llm is None)
+    if asked and text and voter_id and llm:
+        _ask(db, text, voter_id, llm)
+        st.rerun()
+
+    archive = board_db.answered(db)[1:]
+    if archive:
+        with st.expander(f"Answered before ({len(archive)})"):
+            for q in archive:
+                link = run_link(q.run_id)
+                st.markdown(plain(q.text) + (f" · [answer]({link})" if link else ""))

@@ -217,3 +217,133 @@ def test_admin_can_hide_and_unhide(admin) -> None:
     assert board_db.get_question(db, shown).status == "hidden"
     assert board_db.get_question(db, shown).reason == "hidden by admin"
     assert board_db.get_question(db, hidden).status == "shown"
+
+
+# --- U13a: the board tab ------------------------------------------------------------------------
+
+
+EVIL = "Does **sugar** <b>x</b> [link](https://evil.example) :red[x] $x$ cause `y`?"
+
+
+def test_question_text_is_escaped_for_markdown() -> None:
+    shown = board.plain(EVIL)
+
+    for raw in ("**", "<b>", "](", ":red[", "$x$", "`y`"):
+        assert raw not in shown
+    assert shown.replace("\\", "") == EVIL
+
+
+def _board_app(url: str, voter: str | None, gallery: str) -> None:
+    from pathlib import Path
+
+    from causal_genie.ui import board_db
+    from causal_genie.ui.board import render_board
+
+    render_board(board_db.connect(url), voter, llm=None, gallery_dir=Path(gallery))
+
+
+@pytest.fixture
+def board_app(tmp_path) -> tuple[str, Engine, str]:
+    url = f"sqlite:///{tmp_path / 'board.db'}"
+    return url, board_db.connect(url), str(tmp_path / "gallery")
+
+
+def _texts(app: AppTest) -> list[str]:
+    return [m.value for m in app.markdown]
+
+
+def test_up_next_lists_questions_by_votes_with_vote_buttons(board_app) -> None:
+    url, db, gallery = board_app
+    low = _shown(db, "Does tea cause calm?")
+    high = _shown(db, "Does coffee cause headaches?")
+    board_db.vote(db, high, "someone")
+    app = AppTest.from_function(_board_app, args=(url, "me", gallery))
+    app.run()
+
+    texts = _texts(app)
+    coffee = next(i for i, t in enumerate(texts) if "coffee" in t)
+    tea = next(i for i, t in enumerate(texts) if "tea" in t)
+    assert coffee < tea
+    assert app.button(key=f"vote-{high}").label == "Vote"
+    assert app.button(key=f"vote-{low}")
+
+
+def test_voting_counts_once_and_shows_you_voted(board_app) -> None:
+    url, db, gallery = board_app
+    qid = _shown(db, "Does tea cause calm?")
+    app = AppTest.from_function(_board_app, args=(url, "me", gallery))
+    app.run()
+
+    app.button(key=f"vote-{qid}").click().run()
+
+    assert board_db.get_question(db, qid).votes == 1
+    assert app.button(key=f"vote-{qid}").disabled
+    assert "Voted" in app.button(key=f"vote-{qid}").label
+
+
+def test_voting_waits_for_the_browser_id(board_app) -> None:
+    url, db, gallery = board_app
+    qid = _shown(db, "Does tea cause calm?")
+    app = AppTest.from_function(_board_app, args=(url, None, gallery))
+    app.run()
+
+    assert app.button(key=f"vote-{qid}").disabled
+
+
+def test_question_text_on_the_board_is_escaped(board_app) -> None:
+    url, db, gallery = board_app
+    _shown(db, EVIL)
+    app = AppTest.from_function(_board_app, args=(url, "me", gallery))
+    app.run()
+
+    assert any(board.plain(EVIL) in t for t in _texts(app))
+    assert not any(EVIL in t for t in _texts(app))
+
+
+def test_todays_question_shows_the_latest_answer_with_its_link(board_app, tmp_path) -> None:
+    url, db, gallery = board_app
+    qid = _shown(db, "Does tea cause calm?")
+    board_db.set_status(db, qid, "answered", run_id="r1", announcement="Brewing tonight!")
+    (tmp_path / "gallery" / "r1").mkdir(parents=True)
+    (tmp_path / "gallery" / "r1" / "pick.json").write_text(
+        json.dumps(
+            {
+                "question_id": qid,
+                "question": "Does tea cause calm?",
+                "votes": 4,
+                "run_id": "r1",
+                "verdict": "published_only",
+                "announcement": "Brewing tonight!",
+                "genie": True,
+            }
+        )
+    )
+    app = AppTest.from_function(_board_app, args=(url, "me", gallery))
+    app.run()
+
+    page = "\n".join(_texts(app))
+    assert app.subheader[0].value == "Today's question"
+    assert "Published evidence only" in page and board.plain("Brewing tonight!") in page
+    assert "?run=r1" in page
+
+
+def test_database_down_shows_board_unavailable(tmp_path) -> None:
+    def broken_app() -> None:
+        from pathlib import Path
+
+        from sqlalchemy import create_engine
+
+        from causal_genie.ui.board import render_board
+
+        st_db = create_engine("sqlite:////nonexistent-dir/board.db")
+        render_board(st_db, "me", llm=None, gallery_dir=Path("gallery"))
+        import streamlit as st
+
+        st.write("rest of the app")
+
+    app = AppTest.from_function(broken_app)
+    app.run()
+
+    assert not app.exception
+    assert any("Board unavailable" in w.value for w in app.warning)
+    assert "rest of the app" in _texts(app)
