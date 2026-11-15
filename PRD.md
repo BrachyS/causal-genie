@@ -295,6 +295,19 @@ docs/      SYSTEM_CARD.md  DECISIONS.md
 
 Env vars: `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`, `GENIE_MODE`, `CG_REPLAY=1` (replay without keys).
 
+### 5.11 Question of the Day (public board)
+
+Anyone can post a public "does X cause Y?" question in the app and vote, with no account; each night the top question is answered, reviewed by a person, and posted.
+
+- **Ask and vote:** questions (≤ 200 characters) and votes live in a hosted Postgres database (`BOARD_DB_URL`; tests use SQLite). One vote per browser: a random ID kept in the browser's localStorage. Per ID: 3 questions a day, 30 votes an hour. Private questions stay the passcode live run and never touch the board.
+- **Moderation:** one large-model call (reasoning off, `board_check`) labels a new question `causal` and `problem` (abusive, personal info, spam, off topic); the harness shows it only if causal with no problem, otherwise hides it and tells the asker why. An exact repeat (ignoring case and punctuation) of a question on the board counts as a vote; a similar one (fuzzy score ≥ 85) is shown to the asker, who votes for it or asks anyway. An admin view behind the passcode hides or unhides any question.
+- **Pick rule (no model):** the shown question with the most votes, ties to the oldest. A GitHub Action (`daily-genie.yml`, 10:00 UTC; a manual run may answer up to 3) runs the full pipeline in batch mode with Genie mode on.
+- **Fallback:** a partial run or a non-causal route marks the question `skipped` with the reason and the next candidate is tried, at most 2 tries per slot; a slot with no answer fails the job visibly.
+- **Review:** the answers are exported to `gallery/` with a `pick.json` (question, votes, verdict, the Genie's one-line announcement) and opened as **one PR**. Nothing is public until it is merged.
+- **Announcement:** one playful line (large model, `genie_pick`), gated like the aside: on a sensitive topic, or with a number not in the question, the plain "Tonight's question: …" is used.
+- **Bluesky:** after the merge, `genie-publish.yml` marks the question answered and posts the question, vote count, verdict label, the Genie's line (not on sensitive topics) and a link to the run (≤ 300 characters; the question is cut, never the link). A failed post fails the job; the answer stays published. X and Reddit are shared by hand (their APIs are paid or closed to new bots).
+- **Budget:** about 250k model tokens and 50 Tavily credits per answer (a local check used 259k in, 42k out), at most 2 runs a night with the fallback, plus about 500 tokens of moderation per question asked.
+
 ---
 
 ## 6. Demos
