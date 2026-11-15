@@ -321,14 +321,15 @@ def test_report_renders_prose_with_citations_and_sources(estimated_state) -> Non
 
     report = write_report(estimated_state)
 
-    assert "## Plain summary\n\nLicorice gargle cut sore throat. [c1, res1]" in report
+    findings = "## What the research and analysis found\n\n"
+    assert findings + "Licorice gargle cut sore throat. [c1, res1]" in report
     assert "## Comparison with published\n\nOur estimate matches the trial." in report
     assert "## Limitations\n\n- The mapping was not confirmed." in report
     assert "[F-data]" not in report  # run facts are shown in their own sections
     assert '- [c1] Ruetzler 2013: "sore throat ... was reduced" — https://pubmed' in report
     sections = [line for line in report.splitlines() if line.startswith("## ")]
     assert sections == [
-        "## Plain summary",
+        "## What the research and analysis found",
         "## Question (PECO)",
         "## Causal graph (DAG)",
         "## Key confounders",

@@ -1,34 +1,34 @@
 """Genie mode (PRD §5.8): an optional playful aside, off unless `GENIE_MODE` is set.
 
-The small model judges whether the topic is sensitive or whimsical and drafts the aside; the
-harness decides whether it is shown. An aside is allowed only after a verdict without an
-estimate (📚, ❓, 🚫) or for a whimsical question, never on a sensitive topic, never with a
-number in it, and it always ends with the model's useful next step.
+The large model (reasoning off) judges whether the topic is sensitive and drafts the aside;
+the harness decides whether it is shown. Any verdict may get one (decided Nov 14: the aside
+carries no facts or numbers, so the verdict doesn't make it riskier), but never on a
+sensitive topic, never with a number that isn't in the question, and it always ends with
+the model's useful next step. The model's `whimsical` label is only logged.
 """
 
 import logging
 
-from causal_genie.agent.state import GenieJudgment, RunState, Verdict
-from causal_genie.agent.steps.report import NUMBER, VERDICT_LABELS
+from causal_genie.agent.state import GenieJudgment, RunState
+from causal_genie.agent.steps.report import VERDICT_LABELS, free_numbers, numbers
 from causal_genie.llm.client import LLMClient
 
 log = logging.getLogger(__name__)
-
-NO_ESTIMATE: set[Verdict] = {"published_only", "insufficient", "not_causal"}
 
 
 def genie_aside(state: RunState, llm: LLMClient) -> str | None:
     """The aside to show, or None when the gate forbids one (reason logged)."""
     assert state.verdict is not None, "the gate needs the controller's verdict"
     user = f"Question: {state.question}\nVerdict: {VERDICT_LABELS[state.verdict]}"
-    judgment = llm.complete("small", "genie_gate", user, GenieJudgment)
+    # large tier: the small one labeled licorice gargling before surgery "not sensitive" and
+    # wrote an aside implying it soothes (Nov 14, run 20261114-224708-06e803)
+    judgment = llm.complete("large", "genie_gate", user, GenieJudgment)
     text = f"{judgment.aside.strip()} {judgment.next_step.strip()}"
+    log.info("genie: sensitive=%s whimsical=%s", judgment.sensitive, judgment.whimsical)
     if judgment.sensitive:
         reason = "sensitive topic"
-    elif state.verdict not in NO_ESTIMATE and not judgment.whimsical:
-        reason = f"verdict {state.verdict} and the question is not whimsical"
-    elif NUMBER.search(text):
-        reason = "the aside contains a number"
+    elif numbers(text) - free_numbers(state):
+        reason = "the aside contains a number not in the question"
     else:
         return text
     log.info("genie: no aside: %s", reason)

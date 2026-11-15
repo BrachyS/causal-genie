@@ -49,7 +49,7 @@ cases:
   - id: D1
     question: Does licorice gargling reduce post-op sore throat?
     expected_verdict: estimated
-    genie_allowed: false  # clinical question with real data; no aside
+    genie_allowed: false  # clinical treatment: sensitive, no aside
     data:
       url: https://vincentarelbundock.github.io/Rdatasets/csv/medicaldata/licorice_gargle.csv
       host: vincentarelbundock.github.io/Rdatasets
@@ -85,7 +85,7 @@ cases:
   - id: D3
     question: Did the new onboarding flow raise 7-day activation?
     expected_verdict: estimated
-    genie_allowed: false
+    genie_allowed: true  # product question, not sensitive
     data:
       synthetic: tests/fixtures/d3_onboarding_ab.csv  # built in T9.6
       design: randomized A/B test, all assigned users included
@@ -97,7 +97,7 @@ cases:
   - id: D4
     question: Did the new onboarding flow raise 7-day activation?
     expected_verdict: study_plan
-    genie_allowed: false
+    genie_allowed: true  # product question, not sensitive
     data:
       synthetic: tests/fixtures/d4_onboarding_completers.csv  # built in T9.6
       design: same A/B test, but the export has only users who finished onboarding

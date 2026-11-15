@@ -525,10 +525,10 @@ class ReportDraft(Schema):
 
 
 class GenieJudgment(Schema):
-    """The small model's read of the question and its draft aside; the harness decides."""
+    """The model's read of the question and its draft aside; the harness decides."""
 
     sensitive: bool  # health risks people act on, vaccines, mental health, harm, etc.
-    whimsical: bool  # a playful or folk-wisdom question (e.g. the full moon)
+    whimsical: bool  # a playful or folk-wisdom question; logged, not used by the gate
     aside: str  # one or two playful sentences, no numbers and no new facts
     next_step: str  # the useful next step the aside must end with
 

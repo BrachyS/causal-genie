@@ -174,7 +174,7 @@ def test_report_and_dag_turn_reasoning_off_and_other_prompts_keep_it(make_llm) -
 
 
 def test_no_thinking_prompts_come_from_models_yaml() -> None:
-    assert load_no_thinking() == {"report", "dag", "eval_forbidden"}
+    assert load_no_thinking() == {"report", "dag", "eval_forbidden", "genie_gate"}
 
 
 def test_extract_prompt_has_its_own_lower_cap(make_llm) -> None:

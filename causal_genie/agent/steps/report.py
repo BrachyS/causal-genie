@@ -2,7 +2,7 @@
 
 Sections with facts (verdict, PECO, DAG, confounders, evidence, data, estimate) are rendered
 here from run state, so their numbers are copied from `Result`s. The large model writes only
-the plain summary, the comparison with published results and the limitations, from a list of
+the summary of findings, the comparison with published results and the limitations, from a list of
 ledger entries: documented claims, tool results and run facts. The harness lints each
 sentence (it cites an entry; each number in it appears in a cited entry or in the question),
 asks once for a rewrite naming the problems, then drops the sentences that still fail.
@@ -19,6 +19,7 @@ from causal_genie.llm.client import LLMClient
 log = logging.getLogger(__name__)
 
 SUMMARY_WORDS = 120
+FINDINGS = "What the research and analysis found"  # the summary's heading
 NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 VERDICT_LABELS: dict[Verdict, str] = {
@@ -56,7 +57,7 @@ def write_report(state: RunState) -> str:
         if state.route.causal_rewrite:
             lines += [f"A causal question you might mean: *{state.route.causal_rewrite}*", ""]
     prose = state.prose or ReportDraft(summary=[], comparison=[], limitations=[])
-    lines += paragraph("Plain summary", prose.summary)
+    lines += paragraph(FINDINGS, prose.summary)
     lines += question_section(state) + dag_section(state) + confounders_section(state)
     lines += evidence_section(state) + data_section(state)
     if state.failure is None or state.results or state.design is not None:

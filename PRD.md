@@ -93,7 +93,7 @@ Not medical, legal or financial advice; every report says so.
 
 | Part | What it is |
 |---|---|
-| **Model** | Token Factory: a small model for routing, per-source extraction, mapping, humor gate; a large one for the DAG and the report |
+| **Model** | Token Factory: a small model for routing, per-source extraction, mapping; a large one for the DAG, the report and the humor gate |
 | **Controller** (harness) | Runs steps and loops, validates outputs against schemas, enforces budgets, picks the verdict, logs everything |
 | **Tools** (harness) | Tested deterministic functions: search, metadata, download, profile, derive, identify, estimate, render |
 
@@ -261,8 +261,8 @@ The **claim ledger** is the list of `Claim`s; the report may only use ledger ent
 
 ### 5.8 Report and Genie mode
 
-Sections: Verdict · Plain summary (≤ 120 words) · Question (PECO) · DAG · Key confounders · Evidence by study design + certainty + evidence-flow counts · Data used · Estimate *or* study plan (names any recognized DiD/IV/RDD design, its key assumption, what it would estimate and the check to run) · Comparison with published · Limitations · Sources · Run ID.
-**Genie mode** (off by default): one labeled "🧞 Genie's aside", only for 📚/❓/🚫 or whimsical questions, never on sensitive topics; no numbers or new facts; always ends with the useful next step. The harness decides.
+Sections: Verdict · What the research and analysis found (summary, ≤ 120 words; the UI shows its first sentence as the short answer) · Question (PECO) · DAG · Key confounders · Evidence by study design + certainty + evidence-flow counts · Data used · Estimate *or* study plan (names any recognized DiD/IV/RDD design, its key assumption, what it would estimate and the check to run) · Comparison with published · Limitations · Sources · Run ID.
+**Genie mode** (off by default): one labeled "🧞 Genie's aside", after any verdict, never on sensitive topics (health treatments people act on, vaccines, mental health, harm, money, groups of people); no new facts and no numbers except those in the question; always ends with the useful next step. The large model (reasoning off) labels the topic; the harness decides. *(Changed Nov 14: was "only for 📚/❓/🚫 or whimsical questions", judged by the small model, which called licorice gargling before surgery not sensitive; see docs/DECISIONS.md.)* In the demos, D0, D3/D4 and D5 may show an aside; D1 (a treatment) and the vaccines gate test must not.
 
 ### 5.9 Failure handling
 
@@ -305,7 +305,7 @@ Env vars: `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`, `GENIE_MODE`, `
 | **D1 RCT** | "Does licorice gargling reduce post-op sore throat?" | Paper → `medicaldata` trial data | ✅ | Paper → data route; re-analysis matches the paper |
 | **D3 A/B** | "Did the new onboarding flow raise 7-day activation?" | Synthetic CSV, known effect | ✅ | Product analytics; true effect in CI |
 | **D4 refusal** | Same, but only users who finished onboarding | Synthetic CSV | 🧪 | Detects selection after assignment; withholds the estimate |
-| **D5 humor** | "Does cracking your knuckles cause arthritis?" | None usable | 📚 + 🧞 | Graceful no-data answer; humor gate |
+| **D5 humor** | "Does cracking your knuckles cause arthritis?" | None usable | 📚 + 🧞 | Graceful no-data answer; humor gate (D0 and D4 also get 🧞; D1 is gated off as a treatment) |
 
 Gallery (replay): full moon/births, sugar/hyperactivity, knuckle cracking, shaving/hair, carrots/night vision. Vaccines/autism is only a gate test.
 **Video (3 min):** D0 live → click a citation and a number → evidence-flow counts → D4 refuses → D5 Genie → eval scorecard.
