@@ -119,3 +119,33 @@ def test_direction_reason_is_readable(make_study) -> None:
     c = certainty([make_study(direction="-"), make_study(direction="null")])
 
     assert c is not None and "(-, null)" in c.reasons[-1]
+
+
+def test_indirect_outliers_do_not_count_as_disagreement(make_study) -> None:
+    # Live G1 (20261115-044257-37ecc1): 20 observational studies found no link; one indirect
+    # "+" (mercury dose and several diagnoses) and one indirect "-" (sibling vaccination rates)
+    # made it "very low", so the verdict became ❓. PRD §5.4 steps down for disagreement "with
+    # no explanation"; being about another population or exposure is the explanation.
+    studies = [
+        *[make_study(design="cohort", direction="null") for _ in range(3)],
+        make_study(design="case_control", direction="+", peco_match="indirect"),
+        make_study(design="cohort", direction="-", peco_match="indirect"),
+    ]
+
+    c = certainty(studies)
+
+    assert c is not None and c.level == "low"
+    assert c.reasons == ["starts low: best evidence is observational"]
+
+
+def test_direct_studies_that_disagree_still_go_down(make_study) -> None:
+    studies = [
+        make_study(design="cohort", direction="null"),
+        make_study(design="cohort", direction="+"),
+        make_study(design="cohort", direction="-", peco_match="indirect"),
+    ]
+
+    c = certainty(studies)
+
+    assert c is not None and c.level == "very_low"
+    assert "(+, null)" in c.reasons[-1]

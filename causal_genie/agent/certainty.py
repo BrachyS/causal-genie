@@ -43,7 +43,11 @@ def certainty(studies: list[Study]) -> Certainty | None:
         level, best = 0, included
         reasons = ["very low: only case reports, other designs or secondary sources"]
 
-    directions = {s.direction for s in best} & DIRECTIONS
+    # Disagreement is judged among best studies that match the question: an indirect study
+    # pointing elsewhere is explained by its other population or exposure (PRD §5.4 steps
+    # down only "with no explanation"), and indirectness has its own step below.
+    judged = [s for s in best if s.peco_match == "direct"] or best
+    directions = {s.direction for s in judged} & DIRECTIONS
     if len(directions) > 1 and level > 0:
         level -= 1
         shown = ", ".join(sorted(directions))
