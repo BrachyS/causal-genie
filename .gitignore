@@ -29,3 +29,7 @@ notes_Q&A.md
 CLAUDE.md
 TASKS.md
 REVIEW.md
+
+# local run logs (controller stdout/stderr)
+LOG
+LOG.report
