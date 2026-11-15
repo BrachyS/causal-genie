@@ -128,7 +128,11 @@ def run_find(make_llm, fake_tavily, http, sample_state: RunState, tmp_path: Path
         llm, fake = make_llm(outcomes)
         client, _ = http
         found = find_data(
-            sample_state, llm, Searcher(cast(TavilyClient, fake_tavily)), client, tmp_path
+            sample_state,
+            llm,
+            Searcher(cast(TavilyClient, fake_tavily)),
+            dl.Fetcher(client),
+            tmp_path,
         )
         return found, sample_state, fake
 
@@ -202,7 +206,9 @@ def test_resolve_github_blob_to_raw_file(http) -> None:
     client, _ = http
     url = "https://github.com/fivethirtyeight/data/blob/master/births/US_births_2000-2014_SSA.csv"
 
-    (c,) = resolve_link(url, "search", "", "", index=data.read_index(INDEX), http=client)
+    (c,) = resolve_link(
+        url, "search", "", "", index=data.read_index(INDEX), fetcher=dl.Fetcher(client)
+    )
 
     assert c.url == (
         "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/"
@@ -220,7 +226,7 @@ def test_resolve_named_github_folder_lists_its_data_files(http) -> None:
         "births",
         "",
         index=data.read_index(INDEX),
-        http=client,
+        fetcher=dl.Fetcher(client),
     )
 
     assert c.url.endswith("/births/US_births_2000-2014_SSA.csv")
@@ -238,7 +244,9 @@ def test_resolve_named_github_folder_lists_its_data_files(http) -> None:
 def test_resolve_package_docs_to_rdatasets_csv(link: str, http) -> None:
     client, seen = http
 
-    (c,) = resolve_link(link, "paper", "", "", index=data.read_index(INDEX), http=client)
+    (c,) = resolve_link(
+        link, "paper", "", "", index=data.read_index(INDEX), fetcher=dl.Fetcher(client)
+    )
 
     assert (c.url, c.license, c.source) == (LICORICE, "MIT", "paper")
     assert "235 rows" in c.description
@@ -249,7 +257,12 @@ def test_other_links_are_kept_for_the_rule_filter(http) -> None:
     client, _ = http
 
     (c,) = resolve_link(
-        "https://zenodo.org/records/1", "search", "t", "", index=data.read_index(INDEX), http=client
+        "https://zenodo.org/records/1",
+        "search",
+        "t",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
     )
 
     assert c.url == "https://zenodo.org/records/1"
@@ -282,7 +295,7 @@ def test_d1_data_found_scored_downloaded_and_profiled(run_find, fake_tavily) -> 
 
 def test_failed_download_moves_to_the_next_rank(run_find, served, monkeypatch) -> None:
     calls: list[str] = []
-    real = data.download
+    real = dl.download
 
     def flaky(url: str, *args, **kwargs):
         if url == data.RDATASETS_INDEX:
@@ -292,7 +305,7 @@ def test_failed_download_moves_to_the_next_rank(run_find, served, monkeypatch) -
             raise dl.DownloadRejected("size exceeds cap")
         return real(url, *args, **kwargs)
 
-    monkeypatch.setattr(data, "download", flaky)
+    monkeypatch.setattr(dl, "download", flaky)
 
     found, state, _ = run_find([coverage(FULL, FULL)])
 
@@ -303,7 +316,7 @@ def test_failed_download_moves_to_the_next_rank(run_find, served, monkeypatch) -
 
 
 def test_multi_table_zip_is_not_usable_and_next_is_tried(run_find, monkeypatch, tmp_path) -> None:
-    real = data.download
+    real = dl.download
 
     def zipped(url: str, *args, **kwargs):
         d = real(url, *args, **kwargs)
@@ -315,7 +328,7 @@ def test_multi_table_zip_is_not_usable_and_next_is_tried(run_find, monkeypatch, 
             d.path = str(path)
         return d
 
-    monkeypatch.setattr(data, "download", zipped)
+    monkeypatch.setattr(dl, "download", zipped)
 
     found, state, _ = run_find([coverage(FULL, FULL)])
 
@@ -331,7 +344,7 @@ def test_at_most_three_downloads(run_find, served, monkeypatch) -> None:
         *[("medicaldata", f"licorice_{i}", "Licorice gargle trial") for i in range(4)]
     )
     calls: list[str] = []
-    real = data.download
+    real = dl.download
 
     def failing(url: str, *args, **kwargs):
         if url == data.RDATASETS_INDEX:
@@ -339,7 +352,7 @@ def test_at_most_three_downloads(run_find, served, monkeypatch) -> None:
         calls.append(url)
         raise dl.DownloadRejected("nope")
 
-    monkeypatch.setattr(data, "download", failing)
+    monkeypatch.setattr(dl, "download", failing)
 
     found, _, _ = run_find([coverage(*[FULL] * 4)])
 

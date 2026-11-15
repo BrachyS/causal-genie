@@ -480,6 +480,30 @@ class Download(Schema):
     license: str | None
 
 
+class ListedFile(Schema):
+    """One entry of a GitHub contents API folder listing."""
+
+    name: str
+    type: str  # "file" or "dir"
+    size: int
+    download_url: str | None  # None for folders
+
+
+class FetchCall(Schema):
+    """One data-step HTTP request (Rdatasets index or table download, header read, GitHub
+    folder listing) as recorded for tracing and offline replay. Downloaded bytes stay in
+    cache/ and are found again by checksum."""
+
+    kind: Literal["download", "peek", "listing"]
+    url: str  # a listing's URL includes its `?ref=`
+    latency_s: float
+    download: Download | None = None
+    columns: list[str] | None = None  # peek: the header line's column names
+    files: list[ListedFile] | None = None  # listing
+    error: str | None = None  # why the request failed; replay raises it again
+    error_type: Literal["rejected", "http"] | None = None  # DownloadRejected / httpx.HTTPError
+
+
 class Sentence(Schema):
     text: str
     cites: list[str]  # ledger entry ids (claims, results, run facts) that back the sentence
@@ -560,6 +584,7 @@ class RunState(Schema):
     extracts: list[ExtractCall] = Field(default_factory=list)
     lookups: list[LookupCall] = Field(default_factory=list)
     downloads: list[Download] = Field(default_factory=list)
+    fetches: list[FetchCall] = Field(default_factory=list)  # data-step HTTP, for replay
     verdict: Verdict | None = None  # set by the controller only
     step: str | None = None  # the step running now, or the one that failed
     failure: str | None = None  # API or schema error that stopped the run; report is partial

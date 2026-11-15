@@ -14,6 +14,7 @@ from tavily import TavilyClient
 from causal_genie.agent.state import DagEdge, RunState, Variable
 from causal_genie.agent.steps.data import find_data
 from causal_genie.llm.client import LLMClient, load_models
+from causal_genie.tools.download import Fetcher
 from causal_genie.tools.search import Searcher
 
 pytestmark = pytest.mark.live
@@ -46,7 +47,7 @@ def find(state: RunState, nebius: OpenAI, tavily: TavilyClient, tmp_path: Path):
     """Run data discovery live and return the accepted candidate."""
     llm = LLMClient(openai=nebius, models=load_models())
     with httpx.Client(timeout=60) as http:
-        found = find_data(state, llm, Searcher(tavily), http, tmp_path)
+        found = find_data(state, llm, Searcher(tavily), Fetcher(http), tmp_path)
     return found, llm
 
 

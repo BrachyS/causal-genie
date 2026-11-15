@@ -2,19 +2,23 @@
 
 Downloads are data: nothing in them is ever executed, and they live under cache/ (never
 committed). Each file is recorded with its checksum so estimates trace to exact bytes.
+`Fetcher` records every request the data step makes, so a saved run replays offline.
 """
 
 import csv
 import hashlib
 import ipaddress
 import socket
+import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
+from typing import Literal, TypeVar
 from urllib.parse import urljoin, urlsplit
 
 import httpx
 
-from causal_genie.agent.state import Download
+from causal_genie.agent.state import Download, FetchCall, ListedFile
 from causal_genie.log import log_step
 
 # host → allowed path prefixes (PRD §5.6). GitHub is limited to the named repos.
@@ -36,6 +40,8 @@ FORMATS = {".csv", ".tsv", ".xlsx", ".parquet", ".zip"}
 MAX_BYTES = 50 * 1024 * 1024
 MAX_REDIRECTS = 5
 PEEK_BYTES = 64 * 1024  # a header line longer than this is not a table we can use
+GITHUB_API = "https://api.github.com/repos"
+T = TypeVar("T")
 
 
 class DownloadRejected(ValueError):
@@ -148,3 +154,98 @@ def peek_columns(url: str, http: httpx.Client, max_bytes: int = PEEK_BYTES) -> l
         columns = next(csv.reader([line], delimiter="\t" if suffix == ".tsv" else ","))
         rec["columns"] = columns
         return columns
+
+
+class Fetcher:
+    """Downloads, header reads and GitHub folder listings for the data step, each recorded
+    (failures too) so a run replays without network, like `Searcher` and `EuropePMC`.
+
+    With `http=None` it answers only from `replay`: no request and no DNS lookup (the URLs
+    were checked when recorded); a download is read from the cache by its checksum.
+    """
+
+    def __init__(self, http: httpx.Client | None, replay: list[FetchCall] | None = None) -> None:
+        self.http = http
+        self.replay = {(c.kind, c.url): c for c in replay or []}
+        self.calls: list[FetchCall] = []
+
+    @classmethod
+    def from_replay(cls, calls: list[FetchCall]) -> "Fetcher":
+        """A fetcher that answers only from a saved run's fetches; no network."""
+        return cls(http=None, replay=calls)
+
+    def download(self, url: str, cache_dir: Path, doi: str | None, license: str | None) -> Download:
+        """`download()` live; in replay, the recorded file from `cache_dir`, checksum checked."""
+        if self.http is None:
+            d = self._replayed("download", url).download
+            assert d is not None
+            path = cache_dir / Path(d.path).name
+            if not path.exists():
+                raise FileNotFoundError(f"{path} for {url} is not in the cache; re-record the run")
+            if hashlib.sha256(path.read_bytes()).hexdigest() != d.sha256:
+                raise ValueError(f"{path} does not match the recorded checksum {d.sha256}")
+            return d.model_copy(update={"path": str(path)})
+        http = self.http
+        d = self._live("download", url, lambda: download(url, http, cache_dir, doi, license))
+        self.calls[-1].download = d
+        return d
+
+    def peek(self, url: str) -> list[str]:
+        """`peek_columns()` live, or the recorded header."""
+        if self.http is None:
+            return self._replayed("peek", url).columns or []
+        http = self.http
+        columns = self._live("peek", url, lambda: peek_columns(url, http))
+        self.calls[-1].columns = columns
+        return columns
+
+    def listing(self, owner: str, repo: str, ref: str, path: str) -> list[ListedFile]:
+        """A named GitHub repo folder's entries, from the contents API or the recording."""
+        url = f"{GITHUB_API}/{owner}/{repo}/contents/{path}?ref={ref}"
+        if self.http is None:
+            return self._replayed("listing", url).files or []
+        http = self.http
+
+        def get() -> list[ListedFile]:
+            response = http.get(url)
+            response.raise_for_status()
+            return [ListedFile(**pick_listed(f)) for f in response.json()]
+
+        files = self._live("listing", url, get)
+        self.calls[-1].files = files
+        return files
+
+    def _live(
+        self, kind: Literal["download", "peek", "listing"], url: str, fetch: Callable[[], T]
+    ) -> T:
+        """Run `fetch`, recording the call; a failure is recorded, then raised."""
+        start = time.perf_counter()
+        call = FetchCall(kind=kind, url=url, latency_s=0.0)
+        self.calls.append(call)
+        try:
+            return fetch()
+        except DownloadRejected as e:
+            call.error, call.error_type = str(e), "rejected"
+            raise
+        except httpx.HTTPError as e:
+            call.error, call.error_type = str(e), "http"
+            raise
+        finally:
+            call.latency_s = time.perf_counter() - start
+
+    def _replayed(self, kind: Literal["download", "peek", "listing"], url: str) -> FetchCall:
+        """The recorded call, re-raising its recorded failure; a miss raises `KeyError`."""
+        if (kind, url) not in self.replay:
+            raise KeyError(f"no recorded {kind} of {url!r}")
+        call = self.replay[(kind, url)]
+        self.calls.append(call)
+        if call.error_type == "rejected":
+            raise DownloadRejected(call.error)
+        if call.error_type == "http":
+            raise httpx.HTTPError(call.error or "")
+        return call
+
+
+def pick_listed(entry: dict) -> dict:
+    """The fields of a GitHub contents API entry that `ListedFile` keeps."""
+    return {k: entry[k] for k in ("name", "type", "size", "download_url")}

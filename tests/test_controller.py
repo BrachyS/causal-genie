@@ -15,6 +15,7 @@ from causal_genie.agent.state import RunState
 from causal_genie.agent.steps.data import RDATASETS, RDATASETS_INDEX
 from causal_genie.llm.client import LLMClient
 from causal_genie.tools import download as dl
+from causal_genie.tools.download import Fetcher
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.search import Searcher
 
@@ -142,7 +143,7 @@ def run_live(make_llm, make_epmc, tavily, http, tmp_path: Path):
             llm,
             searcher,
             papers,
-            http,
+            Fetcher(http),
             tmp_path / "runs",
             tmp_path / "cache",
             ask=ask,
@@ -330,17 +331,21 @@ def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:
     assert [c.prompt_name for c in state.llm_calls] == ["route"]
 
 
-def test_replay_reproduces_a_run_without_model_or_search(
-    run_live, framed, round_plan, http, prompts_dir: Path, tmp_path: Path
+def test_replay_reproduces_a_run_offline(
+    run_live, framed, round_plan, prompts_dir: Path, tmp_path: Path, monkeypatch
 ) -> None:
     live = run_live(D1, [routed(True), framed, round_plan, *D1_CALLS])
+    saved = RunState.load(tmp_path / "runs" / live.run_id / "state.json")
+    assert [c.kind for c in saved.fetches] == ["download", "peek", "download"]
 
+    monkeypatch.setattr(httpx.Client, "send", lambda *a, **k: pytest.fail("HTTP request"))
+    monkeypatch.setattr(dl, "resolve_ips", lambda host: pytest.fail(f"DNS lookup of {host}"))
     replayed = controller.run(
         D1,
-        LLMClient.from_replay(live.llm_calls, prompts_dir=prompts_dir),
-        Searcher.from_replay(live.searches, live.extracts),
-        EuropePMC.from_replay(live.lookups),
-        http,
+        LLMClient.from_replay(saved.llm_calls, prompts_dir=prompts_dir),
+        Searcher.from_replay(saved.searches, saved.extracts),
+        EuropePMC.from_replay(saved.lookups),
+        Fetcher.from_replay(saved.fetches),
         tmp_path / "runs",
         tmp_path / "cache",
         ask=None,
@@ -350,22 +355,15 @@ def test_replay_reproduces_a_run_without_model_or_search(
     assert replayed.rounds == live.rounds
     assert replayed.edges == live.edges
     assert replayed.design == live.design
+    assert replayed.datasets == live.datasets
+    assert replayed.downloads == live.downloads  # read from cache/ by checksum
+    assert replayed.fetches == live.fetches
     assert replayed.report is not None and live.report is not None
-
-    def stable(state: RunState) -> str:
-        """The report minus what legitimately differs: run id and download time (replay still
-        downloads the data again until T11.4, so a second can tick between the two runs)."""
-        assert state.report is not None
-        text = state.report.replace(state.run_id, "")
-        for d in state.downloads:
-            text = text.replace(d.retrieved_at, "")
-        return text
-
-    assert stable(replayed) == stable(live)
+    assert replayed.report.replace(replayed.run_id, "") == live.report.replace(live.run_id, "")
 
 
 def test_replay_answers_clarifying_questions_from_the_run(
-    run_live, sample_state: RunState, round_plan, http, prompts_dir: Path, tmp_path: Path
+    run_live, sample_state: RunState, round_plan, prompts_dir: Path, tmp_path: Path
 ) -> None:
     assert sample_state.query is not None
     which = "Sore throat at which time after surgery?"
@@ -384,7 +382,7 @@ def test_replay_answers_clarifying_questions_from_the_run(
         LLMClient.from_replay(live.llm_calls, prompts_dir=prompts_dir),
         Searcher.from_replay(live.searches, live.extracts),
         EuropePMC.from_replay(live.lookups),
-        http,
+        Fetcher.from_replay(live.fetches),
         tmp_path / "runs",
         tmp_path / "cache",
         ask=live.clarifications.__getitem__,
@@ -494,3 +492,30 @@ def test_user_data_completers_only_gives_a_study_plan(run_live, framed, round_pl
     assert state.verdict == "study_plan"
     assert state.design is not None and state.design.design == "selection_after_assignment"
     assert state.results == []
+
+
+def test_cli_replay_runs_offline_without_keys(
+    run_live, framed, round_plan, prompts_dir: Path, tmp_path: Path, monkeypatch, capsys
+) -> None:
+    live = run_live(D1, [routed(True), framed, round_plan, *D1_CALLS])
+    capsys.readouterr()
+    monkeypatch.setattr(controller, "RUNS_DIR", tmp_path / "runs")
+    monkeypatch.setattr(controller, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setattr(controller, "load_dotenv", lambda: None)
+    monkeypatch.setattr(controller, "setup_logging", lambda: None)
+    real_replay = LLMClient.from_replay
+    monkeypatch.setattr(
+        LLMClient, "from_replay", lambda calls: real_replay(calls, prompts_dir=prompts_dir)
+    )
+    for key in ("NEBIUS_API_KEY", "TAVILY_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("CG_REPLAY", "1")
+    monkeypatch.setattr(httpx.Client, "send", lambda *a, **k: pytest.fail("HTTP request"))
+    monkeypatch.setattr(dl, "resolve_ips", lambda host: pytest.fail(f"DNS lookup of {host}"))
+
+    controller.main([D1])
+
+    (replayed,) = [p for p in (tmp_path / "runs").iterdir() if p.name != live.run_id]
+    assert live.report is not None
+    out = capsys.readouterr().out
+    assert out.replace(replayed.name, "") == live.report.replace(live.run_id, "")

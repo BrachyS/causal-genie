@@ -49,6 +49,7 @@ from causal_genie.agent.verdict import pick_verdict
 from causal_genie.llm.client import LLMClient, ModelOutputError, load_models, make_openai
 from causal_genie.log import setup_logging
 from causal_genie.tools.derive import node_table
+from causal_genie.tools.download import Fetcher
 from causal_genie.tools.identify import detect_design, identify, precision_set
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.profile import read_table
@@ -81,7 +82,7 @@ def run(
     llm: LLMClient,
     searcher: Searcher,
     papers: EuropePMC,
-    http: httpx.Client,
+    fetcher: Fetcher,
     runs_dir: Path,
     cache_dir: Path,
     ask: Callable[[str], str] | None,
@@ -121,7 +122,7 @@ def run(
                     run_dag(state, llm, searcher, papers)
                     render_dag(state.edges, runs_dir / state.run_id)
                 analyze(
-                    state, llm, searcher, http, cache_dir, ask_and_record if ask else None, data
+                    state, llm, searcher, fetcher, cache_dir, ask_and_record if ask else None, data
                 )
             state.verdict = pick_verdict(state)
             if state.verdict != "not_causal":
@@ -136,10 +137,10 @@ def run(
                 "run_id=%s: step %s failed; writing a partial report", state.run_id, state.step
             )
             state.failure = f"{type(e).__name__}: {e}"
-        record_calls(state, llm, searcher, papers)  # the report lists the sources found
+        record_calls(state, llm, searcher, papers, fetcher)  # the report lists the sources found
         state.report = write_report(state)
     finally:
-        record_calls(state, llm, searcher, papers)
+        record_calls(state, llm, searcher, papers, fetcher)
         path = state.save(runs_dir)
         if state.report is not None:
             (path.parent / "report.md").write_text(state.report)
@@ -157,7 +158,7 @@ def analyze(
     state: RunState,
     llm: LLMClient,
     searcher: Searcher,
-    http: httpx.Client,
+    fetcher: Fetcher,
     cache_dir: Path,
     ask: Callable[[str], str] | None,
     data: Path | None = None,
@@ -171,7 +172,7 @@ def analyze(
     if data is not None:
         accepted = use_table(state, data)
     else:
-        accepted = find_data(state, llm, searcher, http, cache_dir)
+        accepted = find_data(state, llm, searcher, fetcher, cache_dir)
     if accepted is None:
         return
     state.step = "map"
@@ -261,12 +262,16 @@ def user_says_randomized(
     return reply.strip().lower().startswith("y")
 
 
-def record_calls(state: RunState, llm: LLMClient, searcher: Searcher, papers: EuropePMC) -> None:
-    """Copy the model calls, searches, extracts and lookups made so far into the run state."""
+def record_calls(
+    state: RunState, llm: LLMClient, searcher: Searcher, papers: EuropePMC, fetcher: Fetcher
+) -> None:
+    """Copy the model calls, searches, extracts, lookups and data fetches made so far into
+    the run state."""
     state.llm_calls = list(llm.calls)
     state.searches = list(searcher.calls)
     state.extracts = list(searcher.extracts)
     state.lookups = list(papers.calls)
+    state.fetches = list(fetcher.calls)
 
 
 def find_run(question: str, runs_dir: Path) -> Path | None:
@@ -316,23 +321,40 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(f"no saved run of {args.question!r} in {RUNS_DIR}/ to replay")
         recorded = RunState.load(path)
         llm = LLMClient.from_replay(recorded.llm_calls)
-        searcher = Searcher.from_replay(recorded.searches, recorded.extracts)
-        papers = EuropePMC.from_replay(recorded.lookups)
         if recorded.clarifications:
             ask = recorded.clarifications.__getitem__
         genie = any(c.prompt_name == "genie_gate" for c in recorded.llm_calls)
+
+        state = run(
+            args.question,
+            llm,
+            Searcher.from_replay(recorded.searches, recorded.extracts),
+            EuropePMC.from_replay(recorded.lookups),
+            Fetcher.from_replay(recorded.fetches),
+            RUNS_DIR,
+            CACHE_DIR,
+            ask,
+            args.data,
+            genie,
+        )
     else:
         llm = LLMClient(make_openai(), load_models())
         searcher = Searcher(TavilyClient(api_key=os.environ["TAVILY_API_KEY"]))
         if sys.stdin.isatty():
             ask = ask_user
-
-    with httpx.Client(timeout=60) as http:
-        if not replaying:
-            papers = EuropePMC(http)
-        state = run(
-            args.question, llm, searcher, papers, http, RUNS_DIR, CACHE_DIR, ask, args.data, genie
-        )
+        with httpx.Client(timeout=60) as http:
+            state = run(
+                args.question,
+                llm,
+                searcher,
+                EuropePMC(http),
+                Fetcher(http),
+                RUNS_DIR,
+                CACHE_DIR,
+                ask,
+                args.data,
+                genie,
+            )
     sys.stdout.write(state.report or "")
 
 

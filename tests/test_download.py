@@ -176,3 +176,101 @@ def test_peek_without_header_line_within_cap_is_rejected(make_http) -> None:
 
     with pytest.raises(DownloadRejected, match="header"):
         peek_columns(CSV_URL, http, max_bytes=100)
+
+
+# --- Fetcher: records every data-step request so replay needs no network (T11.4) ---
+
+LISTING_URL = "https://api.github.com/repos/fivethirtyeight/data/contents/births"
+LISTING = [
+    {"name": "README.md", "type": "file", "size": 826, "download_url": "https://x/README.md"},
+    {"name": "sub", "type": "dir", "size": 0, "download_url": None},
+]
+
+
+@pytest.fixture
+def no_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(dl, "resolve_ips", lambda host: pytest.fail(f"DNS lookup of {host}"))
+
+
+def test_fetcher_records_downloads_peeks_and_listings(make_http, tmp_path: Path) -> None:
+    def handle(r: httpx.Request) -> httpx.Response:
+        if r.url.host == "api.github.com":
+            assert r.url.params["ref"] == "master"
+            return httpx.Response(200, json=LISTING)
+        return httpx.Response(200, content=BODY)
+
+    http, _ = make_http(handle)
+    fetcher = dl.Fetcher(http)
+
+    d = fetcher.download(CSV_URL, tmp_path, doi=None, license="MIT")
+    assert fetcher.peek(CSV_URL) == ["treat", "pain"]
+    files = fetcher.listing("fivethirtyeight", "data", "master", "births")
+
+    assert [f.name for f in files] == ["README.md", "sub"] and files[1].download_url is None
+    kinds = [(c.kind, c.url) for c in fetcher.calls]
+    assert kinds == [
+        ("download", CSV_URL),
+        ("peek", CSV_URL),
+        ("listing", f"{LISTING_URL}?ref=master"),
+    ]
+    assert fetcher.calls[0].download == d and fetcher.calls[1].columns == ["treat", "pain"]
+    assert all(c.error is None and c.latency_s >= 0 for c in fetcher.calls)
+
+
+def test_fetcher_replay_makes_no_request_or_dns_lookup(make_http, tmp_path: Path, no_dns) -> None:
+    def handle(r: httpx.Request) -> httpx.Response:
+        if r.url.host == "api.github.com":
+            return httpx.Response(200, json=LISTING)
+        return httpx.Response(200, content=BODY)
+
+    http, _ = make_http(handle)
+    live = dl.Fetcher(http)
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(dl, "resolve_ips", lambda host: ["185.199.108.153"])
+        d = live.download(CSV_URL, tmp_path, doi=None, license="MIT")
+        columns = live.peek(CSV_URL)
+        files = live.listing("fivethirtyeight", "data", "master", "births")
+
+    replay = dl.Fetcher.from_replay(live.calls)
+    assert replay.download(CSV_URL, tmp_path, doi=None, license="MIT") == d
+    assert replay.peek(CSV_URL) == columns
+    assert replay.listing("fivethirtyeight", "data", "master", "births") == files
+    assert [(c.kind, c.url) for c in replay.calls] == [(c.kind, c.url) for c in live.calls]
+
+
+def test_fetcher_replays_recorded_failures_as_the_same_errors(make_http, tmp_path: Path) -> None:
+    http, _ = make_http(lambda r: httpx.Response(404))
+    live = dl.Fetcher(http)
+    with pytest.raises(httpx.HTTPStatusError) as peek_error:
+        live.peek(CSV_URL)
+    with pytest.raises(DownloadRejected) as rejected:
+        live.download("https://example.com/t.csv", tmp_path, doi=None, license=None)
+
+    replay = dl.Fetcher.from_replay(live.calls)
+    with pytest.raises(httpx.HTTPError) as replayed_peek:
+        replay.peek(CSV_URL)
+    with pytest.raises(DownloadRejected) as replayed_rejection:
+        replay.download("https://example.com/t.csv", tmp_path, doi=None, license=None)
+    assert str(replayed_peek.value) == str(peek_error.value)  # same rejection reason on the run
+    assert str(replayed_rejection.value) == str(rejected.value)
+
+
+def test_fetcher_replay_miss_raises(tmp_path: Path) -> None:
+    replay = dl.Fetcher.from_replay([])
+
+    with pytest.raises(KeyError, match="no recorded peek"):
+        replay.peek(CSV_URL)
+
+
+def test_fetcher_replay_checks_the_cached_file(make_http, tmp_path: Path) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content=BODY))
+    live = dl.Fetcher(http)
+    d = live.download(CSV_URL, tmp_path, doi=None, license=None)
+    replay = dl.Fetcher.from_replay(live.calls)
+
+    Path(d.path).write_bytes(b"changed")
+    with pytest.raises(ValueError, match="checksum"):
+        replay.download(CSV_URL, tmp_path, doi=None, license=None)
+    Path(d.path).unlink()
+    with pytest.raises(FileNotFoundError, match="re-record"):
+        replay.download(CSV_URL, tmp_path, doi=None, license=None)

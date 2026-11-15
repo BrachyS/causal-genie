@@ -37,9 +37,8 @@ from causal_genie.tools.download import (
     GITHUB_REPOS,
     MAX_BYTES,
     DownloadRejected,
+    Fetcher,
     allowlisted,
-    download,
-    peek_columns,
 )
 from causal_genie.tools.profile import NotSingleTable, profile
 from causal_genie.tools.search import Searcher
@@ -85,7 +84,7 @@ def find_data(
     state: RunState,
     llm: LLMClient,
     searcher: Searcher,
-    http: httpx.Client,
+    fetcher: Fetcher,
     cache_dir: Path,
     max_downloads: int = MAX_DOWNLOADS,
 ) -> DatasetCandidate | None:
@@ -93,24 +92,26 @@ def find_data(
     `state.downloads` / `state.profile`), or None if no usable single table was found."""
     assert state.query is not None, "frame the question before looking for data"
     exposure, outcome = state.query.exposure.name, state.query.outcome.name
-    index = read_index(download(RDATASETS_INDEX, http, cache_dir, doi=None, license=None).path)
+    index = read_index(fetcher.download(RDATASETS_INDEX, cache_dir, doi=None, license=None).path)
     kws = keywords([exposure, outcome])
 
-    found = paper_candidates(state, index, http)
-    found += search_candidates(searcher, f"{words(exposure)} {words(outcome)} dataset", index, http)
+    found = paper_candidates(state, index, fetcher)
+    found += search_candidates(
+        searcher, f"{words(exposure)} {words(outcome)} dataset", index, fetcher
+    )
     found += repository_candidates(index, kws)
-    state.datasets = screen(unique(found), state, llm, http, kws, keywords([outcome]), index)
+    state.datasets = screen(unique(found), state, llm, fetcher, kws, keywords([outcome]), index)
 
     if not any(c.score is not None and c.rejected_reason is None for c in state.datasets):
         missing = missing_nodes(state.datasets, exposure, outcome)
         log.info("no candidate covers %s and %s; searching once for %s", exposure, outcome, missing)
         seen = {c.url for c in state.datasets}
         query = " ".join(words(n) for n in missing) + " data"
-        new = [c for c in search_candidates(searcher, query, index, http) if c.url not in seen]
-        state.datasets += screen(unique(new), state, llm, http, kws, keywords(missing), index)
+        new = [c for c in search_candidates(searcher, query, index, fetcher) if c.url not in seen]
+        state.datasets += screen(unique(new), state, llm, fetcher, kws, keywords(missing), index)
 
     rank(state.datasets)
-    return pick(state, http, cache_dir, max_downloads)
+    return pick(state, fetcher, cache_dir, max_downloads)
 
 
 def words(name: str) -> str:
@@ -217,7 +218,7 @@ def resolve_link(
     title: str,
     description: str,
     index: pd.DataFrame,
-    http: httpx.Client,
+    fetcher: Fetcher,
 ) -> list[DatasetCandidate]:
     """The data files a link points to: an R package's docs page → its Rdatasets CSV, a GitHub
     file → its raw URL, a named GitHub folder → its data files. Other links are returned as
@@ -231,7 +232,7 @@ def resolve_link(
             raw = f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}"
             return [candidate(raw, source, title or path, description)]
         if f"/{owner}/{repo}/" in GITHUB_REPOS:
-            return github_folder(owner, repo, ref, path, source, description, http)
+            return github_folder(owner, repo, ref, path, source, description, fetcher)
     return [candidate(url, source, title, description)]
 
 
@@ -242,38 +243,34 @@ def github_folder(
     path: str,
     source: SourceKind,
     description: str,
-    http: httpx.Client,
+    fetcher: Fetcher,
 ) -> list[DatasetCandidate]:
     """Data files in a folder of a named GitHub repo, listed by the GitHub contents API."""
-    response = http.get(
-        f"https://api.github.com/repos/{owner}/{repo}/contents/{path}", params={"ref": ref}
-    )
-    response.raise_for_status()
     return [
-        candidate(f["download_url"], source, f"{owner}/{repo}: {f['name']}", description, f["size"])
-        for f in response.json()
-        if f["type"] == "file" and Path(f["name"]).suffix.lower() in FORMATS
+        candidate(f.download_url, source, f"{owner}/{repo}: {f.name}", description, f.size)
+        for f in fetcher.listing(owner, repo, ref, path)
+        if f.type == "file" and f.download_url and Path(f.name).suffix.lower() in FORMATS
     ]
 
 
-def paper_candidates(state: RunState, index: pd.DataFrame, http: httpx.Client) -> list:
+def paper_candidates(state: RunState, index: pd.DataFrame, fetcher: Fetcher) -> list:
     """Data links that included studies give, resolved to files."""
     found = []
     for s in state.studies:
         if s.included and s.data_link and s.data_link.startswith("https://"):
             title = f"data link from {s.first_author or s.title} {s.year or ''}".strip()
-            for c in resolve_link(s.data_link, "paper", title, s.title, index, http):
+            for c in resolve_link(s.data_link, "paper", title, s.title, index, fetcher):
                 found.append(c.model_copy(update={"study_id": s.id}))
     return found
 
 
 def search_candidates(
-    searcher: Searcher, query: str, index: pd.DataFrame, http: httpx.Client
+    searcher: Searcher, query: str, index: pd.DataFrame, fetcher: Fetcher
 ) -> list[DatasetCandidate]:
     """Tavily hits restricted to allowlisted hosts, resolved to files."""
     found = []
     for hit in searcher.search(query, domains=tuple(ALLOWLIST), mode="restrict"):
-        found += resolve_link(hit.url, "search", hit.title, hit.content[:300], index, http)
+        found += resolve_link(hit.url, "search", hit.title, hit.content[:300], index, fetcher)
     return found
 
 
@@ -318,7 +315,7 @@ def screen(
     found: list[DatasetCandidate],
     state: RunState,
     llm: LLMClient,
-    http: httpx.Client,
+    fetcher: Fetcher,
     kws: list[str],
     lead: list[str],
     index: pd.DataFrame,
@@ -336,7 +333,7 @@ def screen(
     top = passing[:TOP_N]
     for c in top:
         try:
-            c.columns = peek_columns(c.url, http)
+            c.columns = fetcher.peek(c.url)
         except (DownloadRejected, httpx.HTTPError) as e:
             log.warning("peek failed for %s: %r", c.url, e)
             c.rejected_reason = f"header could not be read: {e}"
@@ -437,7 +434,7 @@ def rank(cands: list[DatasetCandidate]) -> None:
 
 
 def pick(
-    state: RunState, http: httpx.Client, cache_dir: Path, max_downloads: int
+    state: RunState, fetcher: Fetcher, cache_dir: Path, max_downloads: int
 ) -> DatasetCandidate | None:
     """Download and profile usable candidates in rank order until one is a single table."""
     usable = sorted(
@@ -446,7 +443,7 @@ def pick(
     )
     for c in usable[:max_downloads]:
         try:
-            d = download(c.url, http, cache_dir, doi=None, license=c.license)
+            d = fetcher.download(c.url, cache_dir, doi=None, license=c.license)
             table = profile(Path(d.path))
         except (DownloadRejected, NotSingleTable, pd.errors.ParserError, httpx.HTTPError) as e:
             log.warning("candidate rank %s failed: %s", c.rank, e)
