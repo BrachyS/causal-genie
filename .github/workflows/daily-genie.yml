@@ -1,0 +1,72 @@
+# Question of the Day (U16): each night, answer the board's top-voted question and open a PR
+# for review. Merging the PR publishes the answer (see the after-merge workflow, U18).
+#
+# Question text comes from strangers. It never appears on a `run:` line: Python reads it from
+# the database and writes files; values reach the shell only through `env:`.
+#
+# Setup (once): Actions secrets BOARD_DB_URL, NEBIUS_API_KEY, NEBIUS_BASE_URL, TAVILY_API_KEY;
+# Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
+name: Daily Genie
+
+on:
+  schedule:
+    - cron: "0 10 * * *"  # 10:00 UTC
+  workflow_dispatch:
+    inputs:
+      n:
+        description: How many questions to answer
+        type: choice
+        options: ["1", "2", "3"]
+        default: "1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: daily-genie
+  cancel-in-progress: false
+
+jobs:
+  answer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: sudo apt-get update && sudo apt-get install -y -o Acquire::Retries=3 graphviz
+        timeout-minutes: 5
+      - run: uv sync --locked
+
+      - name: Answer the top questions
+        env:
+          BOARD_DB_URL: ${{ secrets.BOARD_DB_URL }}
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+          NEBIUS_BASE_URL: ${{ secrets.NEBIUS_BASE_URL }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          GENIE_MODE: "1"
+          N: ${{ inputs.n || '1' }}
+        # Exits 1 if a slot found no answer after 2 tries; the PR step still runs for the others.
+        run: uv run python -m causal_genie.ui.picks run --n "$N" --body-file "$RUNNER_TEMP/pr_body.md"
+
+      - name: Open the review PR
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f "$RUNNER_TEMP/pr_body.md" ]; then
+            echo "No answers to review."
+            exit 0
+          fi
+          day="$(date -u +%Y-%m-%d)"
+          branch="genie/pick-$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add gallery
+          git commit -m "Question of the Day: $day"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Question of the Day: $day" --body-file "$RUNNER_TEMP/pr_body.md"

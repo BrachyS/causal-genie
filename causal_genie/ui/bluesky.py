@@ -1,0 +1,145 @@
+"""After a Question of the Day PR is merged (U18): mark the question answered, post to Bluesky.
+
+The after-merge workflow runs `python -m causal_genie.ui.bluesky publish`. It reads every
+`gallery/*/pick.json`; a pick whose question is still `running` with that run is the one just
+merged. It is marked `answered` first, then posted, so a failed post leaves the answer
+published on the board and fails the job for a retry by hand; a re-run never posts twice.
+
+The post (at most 300 characters) has the question (cut if needed, never the link), the vote
+count, the verdict label, the Genie's line (not on a sensitive topic) and a deep link to the
+run. Only our link gets a facet, so links or @mentions inside a stranger's question stay plain
+text. Plain httpx: log in with the app password, then create the record.
+"""
+
+import argparse
+import logging
+import os
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+import httpx
+from sqlalchemy import Engine
+
+from causal_genie.agent.steps.report import VERDICT_LABELS
+from causal_genie.log import setup_logging
+from causal_genie.ui import board_db
+from causal_genie.ui.gallery import GALLERY_DIR
+from causal_genie.ui.picks import Pick
+
+log = logging.getLogger(__name__)
+
+XRPC = "https://bsky.social/xrpc"
+# Bluesky counts graphemes; code points are never fewer, so this count is on the safe side.
+MAX_CHARS = 300
+MIN_QUESTION = 40  # below this, the Genie's line is dropped to leave room for the question
+
+
+def run_link(app_url: str, run_id: str) -> str:
+    """The app's deep link to a saved run (U14)."""
+    return f"{app_url.rstrip('/')}/?run={run_id}"
+
+
+def compose(pick: Pick, app_url: str) -> tuple[str, list[dict]]:
+    """The post text and its facets (the link's UTF-8 byte range, so it is clickable)."""
+    link = run_link(app_url, pick.run_id)
+    votes = f"{pick.votes} vote" + ("" if pick.votes == 1 else "s")
+    head = f"Question of the Day ({votes}): "
+    verdict = VERDICT_LABELS[pick.verdict] if pick.verdict else ""
+    lines = [verdict] + ([pick.announcement] if pick.genie else [])
+    tail = "".join(f"\n{line}" for line in lines if line) + f"\n{link}"
+    room = MAX_CHARS - len(head) - len(tail)
+    if room < MIN_QUESTION and pick.genie:
+        tail = (f"\n{verdict}" if verdict else "") + f"\n{link}"
+        room = MAX_CHARS - len(head) - len(tail)
+    question = pick.question
+    if len(question) > room:
+        question = question[: room - 1].rstrip() + "…"
+    text = head + question + tail
+    start = len(text.encode()) - len(link.encode())
+    facet = {
+        "index": {"byteStart": start, "byteEnd": start + len(link.encode())},
+        "features": [{"$type": "app.bsky.richtext.facet#link", "uri": link}],
+    }
+    return text, [facet]
+
+
+def post(http: httpx.Client, handle: str, app_password: str, text: str, facets: list[dict]) -> str:
+    """Log in and create the post; returns its at:// URI. HTTP errors are raised."""
+    session = http.post(
+        f"{XRPC}/com.atproto.server.createSession",
+        json={"identifier": handle, "password": app_password},
+    )
+    session.raise_for_status()
+    auth = session.json()
+    record = {
+        "$type": "app.bsky.feed.post",
+        "text": text,
+        "facets": facets,
+        "langs": ["en"],
+        "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+    }
+    created = http.post(
+        f"{XRPC}/com.atproto.repo.createRecord",
+        headers={"Authorization": f"Bearer {auth['accessJwt']}"},
+        json={"repo": auth["did"], "collection": "app.bsky.feed.post", "record": record},
+    )
+    created.raise_for_status()
+    return created.json()["uri"]
+
+
+def publish(
+    db: Engine, gallery: Path, http: httpx.Client, handle: str, app_password: str, app_url: str
+) -> list[str]:
+    """Mark merged picks answered and post each; returns the run ids whose post failed."""
+    failed: list[str] = []
+    for path in sorted(gallery.glob("*/pick.json")):
+        pick = Pick.model_validate_json(path.read_text())
+        q = board_db.get_question(db, pick.question_id)
+        if q.status != "running" or q.run_id != pick.run_id:
+            continue
+        board_db.set_status(
+            db,
+            q.id,
+            "answered",
+            run_id=pick.run_id,
+            announcement=pick.announcement if pick.genie else None,
+        )
+        text, facets = compose(pick, app_url)
+        try:
+            uri = post(http, handle, app_password, text, facets)
+        except httpx.HTTPError:
+            log.exception("bluesky: post for run %s failed; the question stays answered", q.run_id)
+            failed.append(pick.run_id)
+            continue
+        log.info("bluesky: posted run %s as %s", pick.run_id, uri)
+    return failed
+
+
+def transport() -> httpx.BaseTransport:
+    return httpx.HTTPTransport(retries=1)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Publish merged Question of the Day answers.")
+    sub = parser.add_subparsers(dest="command", required=True)
+    pub = sub.add_parser("publish", help="mark merged picks answered and post them to Bluesky")
+    pub.add_argument("--gallery", type=Path, default=GALLERY_DIR)
+    args = parser.parse_args(argv)
+    setup_logging()
+    db = board_db.connect(os.environ["BOARD_DB_URL"])
+    with httpx.Client(transport=transport(), timeout=30) as http:
+        failed = publish(
+            db,
+            args.gallery,
+            http,
+            os.environ["BLUESKY_HANDLE"],
+            os.environ["BLUESKY_APP_PASSWORD"],
+            os.environ["CG_APP_URL"],
+        )
+    if failed:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -22,7 +22,9 @@ tiers:
 # (1 of 2 tries); large with reasoning off flagged nothing wrong in 8 tries, about 1 s each.
 # genie_gate (large tier since Nov 14): its sensitive label is the whole humor gate; the small
 # tier called a clinical treatment question (licorice gargle before surgery) not sensitive.
-no_thinking: [report, dag, eval_forbidden, genie_gate]
+# board_check (moderation of public board questions) and genie_pick (the nightly pick's one
+# line), both large tier: labels and one sentence, ~500 tokens.
+no_thinking: [report, dag, eval_forbidden, genie_gate, board_check, genie_pick]
 
 # Per-prompt caps overriding the tier's max_tokens. extract: live D0 outputs were 263 tokens
 # (median), 651 at most, but one runaway (likely a repetition loop; the small tier does not reason)
