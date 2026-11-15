@@ -57,6 +57,9 @@ ExclusionReason = Literal[
     "not_a_study",
     "retracted",
 ]
+# Set only by the harness on a study, never offered to the model: its extraction still failed
+# the schema after the repair retry, so the source is skipped, not the run (PRD §5.9).
+HarnessExclusion = Literal["extraction_failed"]
 PecoMatch = Literal["direct", "indirect"]
 # What a review or meta-analysis pools; n/a for any other design.
 Pooled = Literal["trials", "observational", "mixed", "n/a"]
@@ -126,7 +129,7 @@ class Study(Schema):
     pooled: Pooled  # a review counts at the level of what it pools
     strategy: Strategy
     included: bool
-    exclusion_reason: ExclusionReason | None
+    exclusion_reason: ExclusionReason | HarnessExclusion | None
     peco_match: PecoMatch  # indirect evidence lowers certainty
     population: str
     n: int | None

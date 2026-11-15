@@ -5,7 +5,9 @@ citations.
 The model reads and judges; the harness sets identifiers and retraction status from Europe
 PMC, merges duplicates, and checks that every quote is really in the text the model read.
 Model and Europe PMC calls for different sources run in parallel; results keep source order,
-and an error in any of them is raised, not skipped.
+and an error in any of them is raised, not skipped, except one: an extraction whose output
+still fails its schema after the repair retry skips that source (excluded as
+`extraction_failed`, logged), since one unreadable page should not end the run (PRD §5.9).
 """
 
 import hashlib
@@ -22,7 +24,7 @@ from causal_genie.agent.state import (
     Study,
     SupportCheck,
 )
-from causal_genie.llm.client import LLMClient
+from causal_genie.llm.client import LLMClient, ModelOutputError
 from causal_genie.tools.citations import quote_found
 from causal_genie.tools.dedupe import dedupe
 from causal_genie.tools.metadata import EuropePMC, ids_from_url
@@ -127,7 +129,11 @@ def extract(state: RunState, llm: LLMClient, source: Source) -> Study:
             f"- Outcome: {q.outcome.name} ({q.outcome.definition})",
         ]
     )
-    e = llm.complete("small", "extract", user, Extraction)
+    try:
+        e = llm.complete("small", "extract", user, Extraction)
+    except ModelOutputError as err:
+        log.error("extraction failed; source %s skipped: %s", source.url, err)
+        return failed_study(source)
     if dropped := [a for a in e.adjusted_for if not is_variable_name(a)]:
         log.info("adjusted_for of %s: dropped non-variable entries %s", source.url, dropped)
         e = e.model_copy(update={"adjusted_for": [a for a in e.adjusted_for if a not in dropped]})
@@ -159,6 +165,38 @@ def extract(state: RunState, llm: LLMClient, source: Source) -> Study:
         retracted=False,
         secondary_only=e.source_kind == "secondary",
         quotes=quotes,
+        publication_types=[],
+        full_text=source.full_text,
+        also_at=[],
+    )
+
+
+def failed_study(source: Source) -> Study:
+    """An excluded placeholder for a source whose extraction failed, so the evidence flow
+    counts it; it holds nothing the model read."""
+    return Study(
+        id="s" + hashlib.sha256(source.url.encode()).hexdigest()[:8],
+        url=source.url,
+        doi=None,
+        pmid=None,
+        title=source.title,
+        first_author=None,
+        year=None,
+        design="other",
+        pooled="n/a",
+        strategy="unclear",
+        included=False,
+        exclusion_reason="extraction_failed",
+        peco_match="indirect",
+        population="",
+        n=None,
+        effect=None,
+        direction="unclear",
+        adjusted_for=[],
+        data_link=None,
+        retracted=False,
+        secondary_only=False,
+        quotes={},
         publication_types=[],
         full_text=source.full_text,
         also_at=[],

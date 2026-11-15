@@ -5,8 +5,10 @@ import logging
 import pytest
 from conftest import GROUNDED, SNIPPET, epmc_result, extraction
 
-from causal_genie.agent.state import ExtractCall, RunState, SearchCall, SearchHit
+from causal_genie.agent.certainty import evidence_flow
+from causal_genie.agent.state import ExtractCall, Extraction, RunState, SearchCall, SearchHit
 from causal_genie.agent.steps.sources import is_variable_name, process_sources
+from causal_genie.llm.client import LLMClient
 from causal_genie.tools.search import Searcher
 
 PUBMED = "https://pubmed.ncbi.nlm.nih.gov/23921656/"
@@ -265,3 +267,33 @@ def test_real_adjusted_for_names_survive_next_to_dropped_ones(
     assert study.adjusted_for == ["maternal age"]
     (claim,) = state.claims
     assert claim.text.endswith("adjusted_for = maternal age")
+
+
+def test_failed_extraction_skips_the_source_not_the_run(
+    state, searcher, make_llm, make_epmc, prompts_dir, caplog
+) -> None:
+    # Live G1 (20261115-034156-f3618c): an extract of a Wikipedia page over-quoted past its
+    # 1,500-token cap twice, and the schema failure ended the run (user chose to skip, Nov 14).
+    llm, fake = make_llm(["not json", "still not json"])
+    papers, served = make_epmc([epmc_result()])
+
+    with caplog.at_level(logging.ERROR):
+        process_sources(state, llm, searcher, papers)
+
+    (study,) = state.studies
+    assert (study.id, study.url, study.title) == (sid(PUBMED), PUBMED, "Licorice gargle trial")
+    assert not study.included and study.exclusion_reason == "extraction_failed"
+    assert served == [] and state.claims == [] and len(fake.requests) == 2  # call + repair
+    assert evidence_flow(state.studies).excluded == {"extraction_failed": 1}
+    assert "extraction failed" in caplog.text
+
+    replayed = RunState(run_id="r2", question=state.question, query=state.query)
+    process_sources(
+        replayed, LLMClient.from_replay(llm.calls, prompts_dir), searcher, make_epmc([])[0]
+    )
+    assert replayed.studies == state.studies
+
+
+def test_extraction_failed_is_never_offered_to_the_model() -> None:
+    schema = json.dumps(Extraction.model_json_schema())
+    assert "extraction_failed" not in schema
