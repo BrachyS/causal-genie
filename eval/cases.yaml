@@ -25,6 +25,14 @@ cases:
         A second file (US_births_1994-2003_CDC_NCHS.csv, same columns, CDC source) overlaps
         2000–2003; use one table only (MVP). File names say "births", not "moon": discovery
         must search for the outcome, and the treatment comes from `derive`.
+      also_accept:  # T12.7: either FiveThirtyEight births table counts, from GitHub or Rdatasets
+        - https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_1994-2003_CDC_NCHS.csv
+        - https://vincentarelbundock.github.io/Rdatasets/csv/fivethirtyeight/US_births_1994_2003.csv
+        - https://vincentarelbundock.github.io/Rdatasets/csv/fivethirtyeight/US_births_2000_2014.csv
+    dag:  # T12.5; every case also forbids edges out of the outcome
+      required_nodes: [day_of_week]
+      no_edges_into_exposure: true  # moon phase is exogenous
+      forbidden_edges: [[full_moon, daytime]]  # from the T7.3 review
     key_studies:
       - {pmid: "15902138", doi: 10.1016/j.ajog.2004.12.034, first_author: Arliss, year: 2005,
          finding: "no association between lunar phase and births in 564,039 births"}
@@ -65,6 +73,8 @@ cases:
       90min: {licorice: 10%, sugar: 35%, rr: "0.31 (0.14-0.68)"}  # [12/117 vs 41/116, RD -0.251, RR 0.29]
       4h: {licorice: 21%, sugar: 45%, rr: "0.48 (0.28-0.83)"}  # [24/117 vs 52/116, RD -0.243, RR 0.46]
       note: proportions match exactly; the paper's RRs are model-based, so ours differ slightly
+    dag:  # randomized trial: nothing causes the assigned gargle (user, Nov 14)
+      no_edges_into_exposure: true
     key_studies:
       - {pmid: "23921656", doi: 10.1213/ANE.0b013e318299a650, first_author: Ruetzler, year: 2013,
          finding: "licorice gargle halved the incidence of postoperative sore throat (RCT, n=236)"}
@@ -93,6 +103,7 @@ cases:
       design: same A/B test, but the export has only users who finished onboarding
       why_no_estimate: selection after assignment (rows ≠ randomized roster); ask for the full roster
     key_studies: []
+    no_estimate: true  # checked by rule: no Result and no estimate in the report (PRD §2: 0)
     forbidden_conclusions:
       - Any numeric effect estimate.  # PRD §2: estimates produced for D4 must be 0
 
@@ -101,6 +112,8 @@ cases:
     expected_verdict: published_only
     genie_allowed: true  # whimsical, no usable data
     data: null  # no open single-table dataset expected
+    dag:  # age drives both habit and arthritis (user, Nov 14)
+      required_nodes: [age]
     key_studies:
       - {pmid: "2344210", doi: 10.1136/ard.49.5.308, first_author: Castellanos, year: 1990,
          finding: "no more arthritis in 300 habitual crackers; more hand swelling, weaker grip"}

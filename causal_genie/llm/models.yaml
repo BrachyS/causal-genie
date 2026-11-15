@@ -18,7 +18,9 @@ tiers:
 # (20261114-230639-f286ea) timed out twice at ~600 s; live D3 (20261114-234555-c5e141) spent
 # all 16,000 tokens reasoning with no output. Off on 5 recorded DAG inputs: each < 5 s, schema
 # valid first time, same structural checks; content differs both ways (T12.5 scores it).
-no_thinking: [report, dag]
+# eval_forbidden (eval judge, large tier): the small tier flipped on live D1's "likely reduces"
+# (1 of 2 tries); large with reasoning off flagged nothing wrong in 8 tries, about 1 s each.
+no_thinking: [report, dag, eval_forbidden]
 
 # Per-prompt caps overriding the tier's max_tokens. extract: live D0 outputs were 263 tokens
 # (median), 651 at most, but one runaway (likely a repetition loop; the small tier does not reason)
