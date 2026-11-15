@@ -14,17 +14,29 @@ from causal_genie.agent.state import DagEdge
 
 log = logging.getLogger(__name__)
 
+QUESTION_COLOR = "#8b5cf6"  # mid-tone purple: readable on light and dark backgrounds
+
 
 def dag_dot(edges: list[DagEdge]) -> graphviz.Digraph:
-    """The Graphviz drawing of `edges`: the question edge bold, assumed dashed, cited solid."""
+    """The Graphviz drawing of `edges`: assumed dashed, cited solid, and the question edge
+    bold, purple and marked "?", since it is the hypothesis tested, not a cited cause."""
     names = list(dict.fromkeys(name for e in edges for name in (e.source, e.target)))
     ids = {name: f"n{i}" for i, name in enumerate(names)}
     dot = graphviz.Digraph()
     for name in names:
         dot.node(ids[name], label=graphviz.escape(name))
     for e in edges:
-        style = "bold" if e.question else "dashed" if e.assumed else None
-        dot.edge(ids[e.source], ids[e.target], style=style)
+        if e.question:
+            dot.edge(
+                ids[e.source],
+                ids[e.target],
+                style="bold",
+                color=QUESTION_COLOR,
+                fontcolor=QUESTION_COLOR,
+                label=" ? ",
+            )
+        else:
+            dot.edge(ids[e.source], ids[e.target], style="dashed" if e.assumed else None)
     return dot
 
 

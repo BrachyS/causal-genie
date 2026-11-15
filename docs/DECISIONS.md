@@ -28,7 +28,7 @@ Each entry gives the decision, why, and what it costs. Entries marked *open* are
 
 ## Causal graph
 
-**The question edge is the hypothesis, not a cited fact.** Exposure → outcome is always drawn (bold), never cites claims, and never triggers extra research. Its evidence, for and against, is in the Evidence section.
+**The question edge is the hypothesis, not a cited fact.** Exposure → outcome is always drawn, never cites claims, and never triggers extra research. Its evidence, for and against, is in the Evidence section. It is drawn bold, purple and marked "?" so it does not read as a finding; one graph rather than a question graph plus a result graph, since with no estimate there is nothing honest to draw on the second (removing the arrow would claim no effect).
 
 **Exogenous nodes.** The model lists nodes nothing in the graph can cause (moon phase, calendar date); the harness drops arrows into them and the report shows both as the model's judgment. *Why:* "season → full moon" turned calendar factors into fake confounders.
 

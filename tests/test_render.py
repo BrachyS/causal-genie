@@ -6,7 +6,7 @@ import graphviz
 import pytest
 
 from causal_genie.agent.state import DagEdge
-from causal_genie.tools.render import dag_dot, render_dag
+from causal_genie.tools.render import QUESTION_COLOR, dag_dot, render_dag
 
 CITED = DagEdge(source="age", target="sore_throat", claim_ids=["c1"])
 ASSUMED = DagEdge(source="licorice_gargle", target="sore_throat", claim_ids=[])
@@ -27,10 +27,16 @@ def test_assumed_edges_are_dashed_and_cited_edges_solid() -> None:
     assert "style=dashed" in lines[1]
 
 
-def test_question_edge_is_bold_not_dashed() -> None:
+def test_question_edge_is_drawn_as_a_question_not_a_finding() -> None:
     (line,) = edge_lines(dag_dot([QUESTION]).source)
 
+    # bold, its own color and a "?": the hypothesis tested, not a cited cause
     assert "style=bold" in line and "dashed" not in line
+    assert f'color="{QUESTION_COLOR}"' in line and 'label=" ? "' in line
+
+
+def test_other_edges_get_no_question_mark() -> None:
+    assert all("label" not in line for line in edge_lines(dag_dot([CITED, ASSUMED]).source))
 
 
 def test_each_node_is_drawn_once_with_its_name() -> None:

@@ -102,7 +102,10 @@ def show(state: RunState) -> None:
 
     if state.edges:
         st.subheader("Causal graph")
-        st.caption("Bold: the question being tested · solid: cited · dashed: assumed")
+        st.caption(
+            "Purple arrow with ?: the question being tested (the answer is above, not the arrow)"
+            " · solid: backed by a cited source · dashed: assumed, no source"
+        )
         st.graphviz_chart(dag_dot(state.edges))
         with st.expander("What backs each arrow"):
             st.markdown(body(dag_section(state)))
