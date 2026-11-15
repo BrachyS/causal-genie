@@ -12,6 +12,7 @@ import time
 from collections.abc import Callable
 from typing import Literal, TypeVar
 
+import requests
 import tavily.errors
 from tavily import TavilyClient
 
@@ -23,7 +24,12 @@ R = TypeVar("R")
 
 # PRD §5.9: backoff + one retry on a timeout or rate limit (Tavily raises
 # UsageLimitExceededError on HTTP 429); anything else surfaces at once.
-TRANSIENT_ERRORS = (tavily.errors.TimeoutError, tavily.errors.UsageLimitExceededError)
+# A dropped connection: e.g. a kept-alive connection gone stale while a run sat paused.
+TRANSIENT_ERRORS = (
+    tavily.errors.TimeoutError,
+    tavily.errors.UsageLimitExceededError,
+    requests.exceptions.ConnectionError,
+)
 
 # PRD §5.3 preferred sources: PubMed, Europe PMC, Cochrane, NIH/CDC, NBER, medRxiv.
 RESEARCH_DOMAINS: tuple[str, ...] = (
@@ -68,11 +74,11 @@ class Searcher:
         return cls(tavily=None, replay=calls, replay_extracts=extracts)
 
     def _with_retry(self, request: Callable[[], R]) -> R:
-        """`request()`, retried once after a wait on a timeout or rate limit."""
+        """`request()`, retried once after a wait on a timeout, rate limit or dropped connection."""
         try:
             return request()
         except TRANSIENT_ERRORS as e:
-            log.warning("Tavily timeout or rate limit, retrying: %r", e)
+            log.warning("Tavily timeout, rate limit or dropped connection, retrying: %r", e)
             time.sleep(self.retry_wait_s)
             return request()
 

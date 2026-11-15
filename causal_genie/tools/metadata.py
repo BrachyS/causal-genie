@@ -6,6 +6,7 @@ types and retraction status. Lookups are recorded so runs replay without network
 
 import logging
 import re
+import threading
 import time
 
 import httpx
@@ -64,6 +65,8 @@ def titles_match(a: str, b: str) -> bool:
 class EuropePMC:
     """Finds a paper in Europe PMC by PMID, PMCID, DOI or title, recording each search.
 
+    Each query is searched once per run, failures included, so every source of one paper gets
+    the same answer whatever order parallel threads ask in; a run then replays the same way.
     With `http=None` it answers only from `replay`.
     """
 
@@ -75,8 +78,13 @@ class EuropePMC:
     ) -> None:
         self.http = http
         self.retry_wait_s = retry_wait_s
-        self.replay = {c.query: c for c in replay or []}
+        self.replay: dict[str, LookupCall] = {}
+        for c in replay or []:  # older runs may hold repeats; live, the first came first
+            self.replay.setdefault(c.query, c)
         self.calls: list[LookupCall] = []
+        self.answers: dict[str, PaperRecord | None] = {}
+        self.query_locks: dict[str, threading.Lock] = {}
+        self.locks_lock = threading.Lock()
 
     @classmethod
     def from_replay(cls, calls: list[LookupCall]) -> "EuropePMC":
@@ -110,6 +118,20 @@ class EuropePMC:
         return None
 
     def _search(self, query: str) -> PaperRecord | None:
+        """Top Europe PMC hit for `query`: this run's earlier answer, else one search.
+
+        A thread asking a query that another thread is searching waits for that answer.
+        """
+        with self.locks_lock:
+            query_lock = self.query_locks.setdefault(query, threading.Lock())
+        with query_lock:
+            if query in self.answers:
+                log.info("europepmc: %s answered earlier in this run", query)
+            else:
+                self.answers[query] = self._search_once(query)
+            return self.answers[query]
+
+    def _search_once(self, query: str) -> PaperRecord | None:
         """Top Europe PMC hit for `query`, live or from the recording; a replay miss raises.
 
         A lookup that still fails after `_get`'s retry (timeout, 429, 5xx) is logged as an

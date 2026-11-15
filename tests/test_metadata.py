@@ -1,10 +1,13 @@
 import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import pytest
 from conftest import D1_TITLE, epmc_result
 
-from causal_genie.tools.metadata import EuropePMC, ids_from_url, titles_match
+from causal_genie.agent.state import LookupCall
+from causal_genie.tools.metadata import EuropePMC, ids_from_url, parse_record, titles_match
 
 
 @pytest.mark.parametrize(
@@ -207,3 +210,50 @@ def test_failed_lookup_replays_as_no_record() -> None:
     replayed = EuropePMC.from_replay(live.calls)
 
     assert replayed.find(pmid="23921656") is None
+
+
+def test_each_query_is_looked_up_once_per_run(make_epmc) -> None:
+    epmc, served = make_epmc([epmc_result()])
+
+    first, second = epmc.find(pmid="23921656"), epmc.find(pmid="23921656")
+
+    assert first == second is not None
+    assert len(served) == 1 and len(epmc.calls) == 1
+
+
+def test_a_failed_lookup_is_not_retried_later_in_the_run() -> None:
+    # Live D1 (run 20261114-224708-06e803) looked one title up 3 times during an outage: hit,
+    # 503, hit. Two of those were sources of one paper in the same thread pool, so on replay
+    # either could get the failure: the run did not replay (T11.5). Once per run, every source
+    # of a paper gets the first answer, whatever the thread order.
+    epmc, served = flaky_epmc(500)
+
+    assert epmc.find(pmid="23921656") is None
+    assert epmc.find(pmid="23921656") is None
+    assert len(served) == 1
+
+
+def test_concurrent_lookups_of_one_query_share_one_request() -> None:
+    served: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        served.append(str(request.url))
+        time.sleep(0.05)  # the other threads arrive while this request is in flight
+        return httpx.Response(200, json={"resultList": {"result": [epmc_result()]}})
+
+    epmc = EuropePMC(httpx.Client(transport=httpx.MockTransport(handle)))
+    with ThreadPoolExecutor(4) as pool:
+        records = list(pool.map(lambda _: epmc.find(title=D1_TITLE), range(4)))
+
+    assert len(served) == 1
+    assert all(r == records[0] is not None for r in records)
+
+
+def test_replay_answers_a_repeated_query_from_its_first_recording() -> None:
+    # An old run may hold several recordings of one query; live, its first lookup came first.
+    hit = LookupCall(query='TITLE:"x"', record=parse_record(epmc_result()), latency_s=0.1)
+    miss = LookupCall(query='TITLE:"x"', record=None, latency_s=0.1, error="503")
+    replayed = EuropePMC.from_replay([hit, miss])
+
+    assert replayed._search('TITLE:"x"') == hit.record
+    assert replayed._search('TITLE:"x"') == hit.record

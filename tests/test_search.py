@@ -1,6 +1,7 @@
 from typing import cast
 
 import pytest
+import requests
 import tavily.errors
 from tavily import TavilyClient
 
@@ -128,9 +129,15 @@ def flaky_searcher(fake_tavily, *errors: Exception) -> tuple[Searcher, FlakyTavi
 
 @pytest.mark.parametrize(
     "error",
-    [tavily.errors.TimeoutError(60), tavily.errors.UsageLimitExceededError("429 rate limit")],
+    [
+        tavily.errors.TimeoutError(60),
+        tavily.errors.UsageLimitExceededError("429 rate limit"),
+        # Live D1 (run 20261115-173732-7323f8): after a 1 h 50 min pause, the kept-alive
+        # connection had gone stale and the next search failed the run.
+        requests.exceptions.ConnectionError("Remote end closed connection without response"),
+    ],
 )
-def test_timeout_or_rate_limit_gets_one_retry(fake_tavily, error) -> None:
+def test_timeout_rate_limit_or_dropped_connection_gets_one_retry(fake_tavily, error) -> None:
     searcher, flaky = flaky_searcher(fake_tavily, error)
 
     hits = searcher.search("licorice gargle sore throat")
