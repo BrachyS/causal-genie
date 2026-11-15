@@ -8,7 +8,7 @@ from conftest import GROUNDED, SNIPPET, epmc_result, extraction
 from causal_genie.agent.certainty import evidence_flow
 from causal_genie.agent.state import ExtractCall, Extraction, RunState, SearchCall, SearchHit
 from causal_genie.agent.steps.sources import is_variable_name, process_sources
-from causal_genie.llm.client import LLMClient
+from causal_genie.llm.client import PROMPTS_DIR, LLMClient
 from causal_genie.tools.search import Searcher
 
 PUBMED = "https://pubmed.ncbi.nlm.nih.gov/23921656/"
@@ -297,3 +297,13 @@ def test_failed_extraction_skips_the_source_not_the_run(
 def test_extraction_failed_is_never_offered_to_the_model() -> None:
     schema = json.dumps(Extraction.model_json_schema())
     assert "extraction_failed" not in schema
+
+
+def test_extract_prompt_reads_direction_from_the_interval_not_the_wording() -> None:
+    """Certainty steps down when best studies point different ways, so a non-significant
+    result the authors call "a slight reduction" must not count as `-` (live G1, run
+    20261115-053439-dc8356: HR 0.93, 95% CI 0.85-1.02 extracted as `-`)."""
+    text = (PROMPTS_DIR / "extract.md").read_text()
+
+    assert "interval includes no effect" in text
+    assert "1 for a ratio" in text and "0 for a difference" in text
