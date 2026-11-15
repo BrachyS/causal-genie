@@ -155,22 +155,26 @@ def test_output_cut_by_the_token_cap_is_logged(make_llm, caplog) -> None:
 NO_THINKING = {"chat_template_kwargs": {"thinking": False}}
 
 
-def test_report_prompt_turns_reasoning_off_and_other_prompts_keep_it(make_llm) -> None:
+def test_report_and_dag_turn_reasoning_off_and_other_prompts_keep_it(make_llm) -> None:
     # Live D0 (run 20261114-154259-6bb1d2): the report call spent all 16,000 tokens reasoning
     # and wrote nothing. A probe (Nov 14) showed only this setting stops DeepSeek-V4-Pro-0813
     # reasoning on Token Factory; `reasoning_effort` and `thinking.type` are ignored.
-    llm, fake = make_llm(['{"value": 7}', '{"value": 7}'])
+    # dag: live D5 (20261114-230639-f286ea) timed out twice at ~600 s and live D3
+    # (20261114-234555-c5e141) spent all 16,000 tokens reasoning; with reasoning off, 5 recorded
+    # DAG inputs each took under 5 s and passed the schema first time.
+    llm, fake = make_llm(['{"value": 7}', '{"value": 7}', '{"value": 7}'])
 
     llm.complete("large", "report", "q", Answer)
     llm.complete("large", "dag", "q", Answer)
+    llm.complete("large", "echo", "q", Answer)
 
-    report, dag = fake.requests
-    assert report["extra_body"] == NO_THINKING
-    assert dag["extra_body"] is None
+    report, dag, echo = fake.requests
+    assert report["extra_body"] == dag["extra_body"] == NO_THINKING
+    assert echo["extra_body"] is None
 
 
 def test_no_thinking_prompts_come_from_models_yaml() -> None:
-    assert load_no_thinking() == {"report"}
+    assert load_no_thinking() == {"report", "dag"}
 
 
 def test_extract_prompt_has_its_own_lower_cap(make_llm) -> None:

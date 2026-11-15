@@ -14,7 +14,11 @@ tiers:
 # Prompts whose calls turn reasoning off (chat_template_kwargs thinking=false). report: live D0
 # (run 20261114-154259-6bb1d2) spent all 16,000 tokens reasoning and wrote nothing; its prose
 # is linted and the verdict is the controller's, so it needs no deep reasoning.
-no_thinking: [report]
+# dag: reasoning length is unbounded (the provider ignores reasoning_effort). Live D5
+# (20261114-230639-f286ea) timed out twice at ~600 s; live D3 (20261114-234555-c5e141) spent
+# all 16,000 tokens reasoning with no output. Off on 5 recorded DAG inputs: each < 5 s, schema
+# valid first time, same structural checks; content differs both ways (T12.5 scores it).
+no_thinking: [report, dag]
 
 # Per-prompt caps overriding the tier's max_tokens. extract: live D0 outputs were 263 tokens
 # (median), 651 at most, but one runaway (likely a repetition loop; the small tier does not reason)
