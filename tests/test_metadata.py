@@ -159,12 +159,27 @@ def flaky_epmc(*failures: int | Exception) -> tuple[EuropePMC, list[str]]:
     return EuropePMC(http, retry_wait_s=0), served
 
 
-@pytest.mark.parametrize("failure", [429, httpx.ReadTimeout("slow")])
-def test_timeout_or_rate_limit_gets_one_retry(failure) -> None:
+@pytest.mark.parametrize(
+    "failure", [429, httpx.ReadTimeout("slow"), httpx.ConnectError("TLS connection closed")]
+)
+def test_timeout_rate_limit_or_dropped_connection_gets_one_retry(failure) -> None:
     epmc, served = flaky_epmc(failure)
 
     assert epmc.find(pmid="23921656") is not None
     assert len(served) == 2
+
+
+def test_connection_dropped_twice_gives_no_record_and_records_the_error(caplog) -> None:
+    # Live G1: the first lookup after a paused run found its kept-alive connection closed; the
+    # ConnectError ended the run and left no recording to replay.
+    epmc, served = flaky_epmc(httpx.ConnectError("closed"), httpx.ConnectError("closed"))
+
+    with caplog.at_level(logging.ERROR):
+        assert epmc.find(pmid="23921656") is None
+    assert len(served) == 2
+    (call,) = epmc.calls
+    assert call.record is None and call.error is not None and "ConnectError" in call.error
+    assert EuropePMC.from_replay(epmc.calls).find(pmid="23921656") is None
 
 
 def test_second_rate_limit_gives_no_record_and_records_the_error(caplog) -> None:

@@ -269,7 +269,7 @@ Sections: Verdict · What the research and analysis found (summary, ≤ 120 word
 | Failure | Behavior |
 |---|---|
 | Search finds nothing useful | Reformulate once → ❓ listing what was searched |
-| API timeout / rate limit | Backoff + one retry → partial report naming the failed step (never "no evidence exists") |
+| API timeout / dropped connection / rate limit | Backoff + one retry → partial report naming the failed step (never "no evidence exists") |
 | Model output fails schema | One repair retry → logged error and partial report naming the failed step (never "no evidence exists") |
 | One source's extraction fails schema | One repair retry → that source is excluded as `extraction_failed` (logged, counted in the evidence flow); research goes on |
 | Research plan fails schema | One repair retry → fallback plan: the preset query groups (the fixed loop) |
