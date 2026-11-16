@@ -2,7 +2,9 @@
 
 The model may only cite claims the harness shows it, and it is only shown `documented` claims
 (quote found in the source and judged to support the claim). Any other id it cites is dropped
-and logged; an edge left with no citation is "assumed". The question's own exposure → outcome
+and logged; an edge left with no citation is "assumed". A `null_result` claim ("no effect
+found") is shown to the model but never supports an edge: citing it is dropped and logged the
+same way. The question's own exposure → outcome
 edge is always in the graph, so identification has both nodes to work with. It is the
 hypothesis being tested, not a fact to cite: it is marked `question`, never cites claims (any
 the model gives are dropped and logged) and never counts as assumed. Its evidence, supporting
@@ -149,6 +151,7 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
     proposed = llm.complete("large", "dag", user, DagProposal)
 
     known = {c.id for c in citable}
+    nulls = {c.id for c in citable if c.kind == "null_result"}
     question = (exposure.name, outcome.name)
     edges: list[DagEdge] = []
     for edge in proposed.edges:
@@ -171,6 +174,15 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
                 cited,
             )
             cited = []
+        if null_cited := [i for i in cited if i in nulls]:
+            log.warning(
+                "edge %s -> %s cites null result claims %s; a null result supports no edge; "
+                "dropped",
+                edge.source,
+                edge.target,
+                null_cited,
+            )
+            cited = [i for i in cited if i not in nulls]
         edges.append(edge.model_copy(update={"claim_ids": cited, "question": is_question}))
 
     nodes = {n for e in edges for n in (e.source, e.target)}
