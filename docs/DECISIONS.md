@@ -59,3 +59,19 @@ Each entry gives the decision, why, and what it costs. Entries marked *open* are
 **Replay by recording every external call.** Model calls, Tavily searches and extracts, Europe PMC lookups and data-step HTTP requests are saved with the run; downloads are read back from the cache by checksum. A replay needs no keys and no network.
 
 **The demo shows recorded runs.** A live run takes minutes, so the web app shows a gallery by default. Gallery runs are display copies: raw page text, search snippets and model inputs/outputs are removed before they are committed; the verbatim quotes the report cites are kept. Live runs need a passcode and stop at a daily cap of runs and tokens, checked before each run starts (one run can go past it). The cap file resets when the hosted app restarts, so provider-side limits remain the hard stop.
+
+## Question of the Day
+
+**An in-app database, not GitHub issues or social platforms.** Questions and votes are kept in hosted Postgres behind the app. *Why:* asking people to sign in to GitHub (issues, Discussions) to ask or vote was too much trouble; X and Reddit APIs are paid or closed to new bots (checked Nov 15). *Cost:* a database to run (Neon free tier) and our own moderation.
+
+**One vote per browser, no login.** A random ID kept in localStorage, set by a few lines of inline JS through Streamlit's built-in component API (Streamlit can read cookies but not set them; no extra package), plus per-ID rate limits. *Why:* no account means anyone can take part. *Cost:* clearing site data or a private window gives a new ID, so votes can be stuffed within the rate limits; Google sign-in is the next step only if that happens.
+
+**A rule picks the question; the model only writes one line.** Most votes, ties to the oldest. *Why:* the pick must be predictable and explainable to voters. The Genie's announcement is gated like the aside.
+
+**A person reviews every answer before it is public.** The nightly job opens a PR; merging it publishes the answer to the gallery and Bluesky. *Why:* questions come from strangers and the answer goes out under the project's name. *Cost:* answers wait for the review; PRs opened by the Action's token don't trigger CI.
+
+**One answer a night, with one fallback.** About 250k tokens and 50 Tavily credits a run; a failed or non-causal pick gives way to the next, at most 2 tries. A manual run may answer up to 3.
+
+**Only exact repeats merge into a vote.** The planned rule (fuzzy `token_set_ratio` ≥ 85 counts as a vote) would have merged different questions: sugar vs salt and blood pressure scored 92, smoking vs vaping and lung cancer 88, and the reversed direction (coffee → headaches vs headaches → coffee) 90. So an exact repeat after normalizing counts as a vote, and a fuzzy match is shown to the asker, who chooses. *Cost:* one more click for true near-duplicates.
+
+**The harness, not the moderation model, decides what is shown.** The model returns labels (`causal`, `problem`) and has no status field; the code maps them to shown or hidden with a reason the asker sees. Moderation runs on the large model with reasoning off (about 500 tokens a question).

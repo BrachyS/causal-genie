@@ -1,0 +1,40 @@
+# Question of the Day (U18): after a pick's PR is merged into main, mark the question answered
+# on the board and post it to Bluesky with a link to the run.
+#
+# Idempotent: only picks whose question is still `running` with that run are published, so a
+# re-run never posts twice. A failed post fails this job; the question stays answered.
+#
+# Setup (once): Actions secrets BOARD_DB_URL, BLUESKY_HANDLE, BLUESKY_APP_PASSWORD; Actions
+# variable CG_APP_URL (the Streamlit app's address).
+name: Genie publish
+
+on:
+  push:
+    branches: [main]
+    paths: ["gallery/**/pick.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: genie-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Mark answered and post to Bluesky
+        env:
+          BOARD_DB_URL: ${{ secrets.BOARD_DB_URL }}
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          CG_APP_URL: ${{ vars.CG_APP_URL }}
+        run: uv run python -m causal_genie.ui.bluesky publish

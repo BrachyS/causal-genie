@@ -41,6 +41,7 @@ Models (Nebius Token Factory): a small instruct model for the many short calls a
 - **Genie mode** (off by default): a playful aside that may follow any verdict, but never on a sensitive topic (health treatments people act on, vaccines, mental health, harm, money, groups of people), never with a new fact or a number not in the question, and always ending with a useful next step. The large model (reasoning off) judges the topic; the harness decides whether to show it.
 - **Secrets** live only in `.env` (gitignored). A pre-commit secret scan runs on every commit.
 - **The web app** shows recorded runs by default. Live runs need a passcode and stop at a daily cap of runs and tokens.
+- **Question of the Day board:** question text comes from strangers and is treated as data. It reaches a model only inside the moderation call (between `<question>` tags, with the instruction to treat it as data) and as the question of a nightly run, the same as any user question. It is shown with every Markdown character escaped (never as Markdown or HTML, never in a button label), goes into the review PR inside fenced blocks (so links and @mentions do nothing), and never appears on a workflow `run:` line; values reach the shell only through `env:`. On Bluesky only our link is clickable. Question rows are sent nowhere else. The moderation model labels; the harness decides what is shown. Every answer is reviewed in a PR before it is public. Votes are one per browser with per-ID rate limits, not identity-checked.
 
 ## Reproducibility
 
