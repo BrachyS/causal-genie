@@ -344,6 +344,16 @@ def test_the_genie_lamp_heads_the_main_page(tmp_path, monkeypatch) -> None:
     assert at.title[0].value == "Causal Genie"
 
 
+def test_the_sidebar_tells_a_new_visitor_what_to_do(tmp_path, monkeypatch) -> None:
+    at = app(tmp_path, monkeypatch)
+
+    assert not at.exception
+    intro = " ".join(m.value for m in at.sidebar.markdown)
+    assert "How to use it" in intro
+    for tab in TABS:
+        assert tab in intro
+
+
 # --- the gallery lists runs, so two runs of one question can both be shown -----------------
 
 

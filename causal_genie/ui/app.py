@@ -175,10 +175,33 @@ def header() -> None:
 
 TABS = ("📚 Gallery", "🙋 Ask & vote")
 
+INTRO = f"""\
+### How to use it
+
+Ask a "does X cause Y?" question. The Genie reads the studies, draws a causal graph whose \
+arrows cite their sources, finds public data and estimates the effect, or says plainly \
+why it can't.
+
+1. **{TABS[0]}:** pick an answered question and read the verdict, the graph, the estimate \
+and the quoted sources.
+2. **{TABS[1]}:** type your own question and post it to the board, or vote for someone \
+else's. Each night the top-voted question is answered and joins the gallery.
+
+**Reading an answer:** the verdict says how far the evidence goes, from an estimate from \
+data down to "insufficient evidence". Every number traces to a tool or a quoted source, \
+never to the model.
+"""
+
+
+def intro() -> None:
+    """The sidebar note that tells a first-time visitor what the app does and where to go."""
+    st.sidebar.markdown(INTRO)
+
 
 def main() -> None:
     st.set_page_config(page_title="Causal Genie", page_icon=str(LOGO), layout="wide")
     header()
+    intro()
     runs_dir = Path(os.getenv("CG_RUNS_DIR", str(GALLERY_DIR)))
     answers, ask = st.tabs(TABS)
     with answers:
