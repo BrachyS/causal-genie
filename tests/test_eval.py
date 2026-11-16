@@ -146,7 +146,7 @@ def test_forbidden_conclusions_counts_judged_sentences_only(make_llm, sample_sta
     user = request["messages"][1]["content"]
     assert "[2] Licorice has no effect." in user and "There is no good evidence" in user
     # the small tier flipped on live D1's "likely reduces" (1 of 2 tries); large, reasoning off,
-    # flagged nothing wrong in 8 tries on the 4 scored reports (Nov 14)
+    # flagged nothing wrong in 8 tries on the 4 scored reports
     assert request["model"] == "test/large"
     assert request["extra_body"] == {"chat_template_kwargs": {"thinking": False}}
 
@@ -204,7 +204,7 @@ def test_retracted_key_papers_must_be_flagged_if_found(sample_state: RunState) -
         f"{RD}/fivethirtyeight/US_births_2000_2014.csv",
         "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv",
         "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_1994-2003_CDC_NCHS.csv",
-        f"{RD}/mosaicData/Birthdays.csv",  # daily births by US state, 1969-1988 (user OK, Nov 15)
+        f"{RD}/mosaicData/Birthdays.csv",  # daily births by US state, 1969-1988 (user OK)
     ],
 )
 def test_d0_accepts_a_daily_us_births_table(sample_state: RunState, url: str) -> None:

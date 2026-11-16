@@ -26,7 +26,7 @@ def test_any_verdict_gets_an_aside_on_a_non_sensitive_topic(
     llm, _ = make_llm([judged(whimsical=False)])
 
     assert genie_aside(sample_state, llm) == f"{ASIDE} {NEXT}"
-    # large tier: the small one labeled a clinical treatment question "not sensitive" (Nov 14)
+    # large tier: the small one labeled a clinical treatment question "not sensitive"
     assert [(c.prompt_name, c.tier) for c in llm.calls] == [("genie_gate", "large")]
 
 

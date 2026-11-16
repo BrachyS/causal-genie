@@ -111,6 +111,31 @@ def test_claims_cited_on_the_question_edge_are_dropped_and_logged(
     assert len(dropped) == 1 and "c1" in dropped[0].message
 
 
+def test_a_null_result_claim_never_supports_an_edge(
+    make_llm, sample_state: RunState, confounder_claim, step_logs
+) -> None:
+    null = confounder_claim().model_copy(update={"id": "c-null", "kind": "null_result"})
+    sample_state.claims += [confounder_claim(), null]
+    llm, fake = make_llm(
+        [
+            proposal(
+                ("smoking", "sore_throat", ["s1-adjusted_for", "c-null"]),
+                ("age", "sore_throat", ["c-null"]),
+            )
+        ]
+    )
+
+    edges = build_dag(sample_state, llm)
+
+    assert "c-null" in fake.requests[0]["messages"][1]["content"]  # still shown to the model
+    assert [(e.source, e.claim_ids, e.assumed) for e in edges if not e.question] == [
+        ("smoking", ["s1-adjusted_for"], False),
+        ("age", [], True),
+    ]
+    dropped = [r for r in step_logs.records if "null result" in r.message]
+    assert len(dropped) == 2 and all("c-null" in r.message for r in dropped)
+
+
 def test_model_cannot_mark_another_edge_as_the_question(make_llm, sample_state: RunState) -> None:
     edges = [
         {"source": "age", "target": "sore_throat", "claim_ids": [], "question": True},

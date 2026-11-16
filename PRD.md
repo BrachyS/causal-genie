@@ -1,17 +1,6 @@
 # Causal Genie — PRD v1.1 (lean MVP)
 
-> 2026-11-01 · Owner: Shuangshuang Liu · Team: **Sample Size of One** (solo)
-> Hackathon: [ODSC × Nebius](https://hackathon.odsc.ai/), **submissions close Fri Nov 20**. Required: **Nebius Token Factory** (models) and **Tavily** (search).
-> Budget: 5–10 h/week ≈ **14–27 h** total. This plan is **≈ 19 h**, leaving room for overruns.
-> Background (landscape, full v2 design, checklists, IP notes) and coding-agent rules are kept in local-only files that are not in this repo.
-
-> [!WARNING]
-> **TODO before making the repo public (by Nov 19):** this PRD contains private planning notes that must be reviewed and reworded or removed:
-> - **Job fit:** "Product analyst (job fit)" in §3, and any other mention of job targets.
-> - **Hackathon strategy:** "what judges must see" and the scoring weights in §2, "research quality is 45% of the score" in §5.3, and the "If behind, cut in order" list in §7.
-> - **Personal planning:** the time budget and hours per task (header, §7), and the owner and team-name line.
-> - **Local-only files:** remove the line above about local-only files.
-> - Keep what helps readers: pitch, design, verdicts, data contracts, demos, eval and guardrails. Consider moving them into `docs/ARCHITECTURE.md`, or drop the PRD from the public repo in favor of the README.
+> Built for the [ODSC × Nebius hackathon](https://hackathon.odsc.ai/). Uses **Nebius Token Factory** (models) and **Tavily** (search).
 
 ---
 
@@ -31,15 +20,15 @@
 
 ## 2. Success criteria
 
-| Hackathon criterion | Weight | What judges must see |
-|---|---|---|
-| Sourced, verifiable answers | 30% | Click a claim → source passage; click a number → tool result; primary sources; conflicts shown; certainty label |
-| Works end to end | 25% | Live run with real Token Factory + Tavily calls; graceful empty results and API failures |
-| Usefulness | 20% | Clear decision: "Can I trust this causal claim, and what would settle it?" |
-| Agent design | 15% | Hybrid research loop: the model plans each round (queries, `search` vs `extract`, proposed stop, a `why` per query) and the controller enforces caps and required coverage; disproving search, dedupe by study, evidence-flow counts |
-| Token Factory + Tavily | 10% | Both essential and visible in the trace |
+| Goal | What the app must show |
+|---|---|
+| Sourced, verifiable answers | Click a claim → source passage; click a number → tool result; primary sources; conflicts shown; certainty label |
+| Works end to end | Live run with real Token Factory + Tavily calls; graceful empty results and API failures |
+| Usefulness | Clear decision: "Can I trust this causal claim, and what would settle it?" |
+| Agent design | Hybrid research loop: the model plans each round (queries, `search` vs `extract`, proposed stop, a `why` per query) and the controller enforces caps and required coverage; disproving search, dedupe by study, evidence-flow counts |
+| Token Factory + Tavily | Both essential and visible in the trace |
 
-Submission: public repo · README · short demo video · no keys in the repo.
+Deliverables: public repo · README · short demo video · no keys in the repo.
 
 **Done means:**
 
@@ -60,8 +49,8 @@ Submission: public repo · README · short demo video · no keys in the repo.
 
 | User | Example question | Decision supported |
 |---|---|---|
-| Curious person / judge | "Does the full moon cause more births?" | Myth or fact, and how sure we are |
-| Product analyst (job fit) | "Did the new onboarding flow raise 7-day activation?" | Roll out, keep testing, or fix the data |
+| Curious person | "Does the full moon cause more births?" | Myth or fact, and how sure we are |
+| Product analyst | "Did the new onboarding flow raise 7-day activation?" | Roll out, keep testing, or fix the data |
 | Health / biostat analyst | "Does licorice gargling reduce post-op sore throat?" | What the evidence supports, for whom, how strongly |
 
 Not medical, legal or financial advice; every report says so.
@@ -136,7 +125,7 @@ Loops are bounded. **Research (hybrid):** each round the model returns a `Resear
 | ❓ Insufficient evidence | Sparse or contradictory search results |
 | 🚫 Not causal | Router says it's descriptive |
 
-### 5.3 Research method (the core; research quality is 45% of the score)
+### 5.3 Research method (the core)
 
 A scaled-down **systematic review**. Each step is a prompt + schema or a simple rule.
 
@@ -262,14 +251,14 @@ The **claim ledger** is the list of `Claim`s; the report may only use ledger ent
 ### 5.8 Report and Genie mode
 
 Sections: Verdict · What the research and analysis found (summary, ≤ 120 words; the UI shows its first sentence as the short answer) · Question (PECO) · DAG · Key confounders · Evidence by study design + certainty + evidence-flow counts · Data used · Estimate *or* study plan (names any recognized DiD/IV/RDD design, its key assumption, what it would estimate and the check to run) · Comparison with published · Limitations · Sources · Run ID.
-**Genie mode** (off by default): one labeled "🧞 Genie's aside", after any verdict, never on sensitive topics (health treatments people act on, vaccines, mental health, harm, money, groups of people); no new facts and no numbers except those in the question; always ends with the useful next step. The large model (reasoning off) labels the topic; the harness decides. *(Changed Nov 14: was "only for 📚/❓/🚫 or whimsical questions", judged by the small model, which called licorice gargling before surgery not sensitive; see docs/DECISIONS.md.)* In the demos, D0, D3/D4 and D5 may show an aside; D1 (a treatment) and the vaccines gate test must not.
+**Genie mode** (off by default): one labeled "🧞 Genie's aside", after any verdict, never on sensitive topics (health treatments people act on, vaccines, mental health, harm, money, groups of people); no new facts and no numbers except those in the question; always ends with the useful next step. The large model (reasoning off) labels the topic; the harness decides. *(Changed: was "only for 📚/❓/🚫 or whimsical questions", judged by the small model, which called licorice gargling before surgery not sensitive; see docs/DECISIONS.md.)* In the demos, D0, D3/D4 and D5 may show an aside; D1 (a treatment) and the vaccines gate test must not.
 
 ### 5.9 Failure handling
 
 | Failure | Behavior |
 |---|---|
 | Search finds nothing useful | Reformulate once → ❓ listing what was searched |
-| API timeout / rate limit | Backoff + one retry → partial report naming the failed step (never "no evidence exists") |
+| API timeout / dropped connection / rate limit | Backoff + one retry → partial report naming the failed step (never "no evidence exists") |
 | Model output fails schema | One repair retry → logged error and partial report naming the failed step (never "no evidence exists") |
 | One source's extraction fails schema | One repair retry → that source is excluded as `extraction_failed` (logged, counted in the evidence flow); research goes on |
 | Research plan fails schema | One repair retry → fallback plan: the preset query groups (the fixed loop) |
@@ -325,31 +314,30 @@ Gallery (replay): full moon/births, sugar/hyperactivity, knuckle cracking, shavi
 
 ---
 
-## 7. Build plan (≈ 19 h)
+## 7. Build plan
 
 Build a thin end-to-end slice first (D1 by end of week 1), then deepen research.
 
-| ID | Task | Est. | Done when |
-|---|---|---|---|
-| **Week 1 · Nov 1–8** | | **~6 h** | |
-| T1 | uv project, Ruff, ty, pytest, prek, CI, `.env.example` | 1 h | CI green on an empty test |
-| T2 | Smoke tests: Token Factory (pick small + large, check JSON output), Tavily | 0.5 h | Model IDs in `models.yaml` |
-| T3 | Dataset audit: D0 and D1 data downloadable with needed columns | 1 h | `eval/cases.yaml` drafted |
-| T4 | Schemas, run state, LLM client (tiers + repair retry), router | 1.5 h | Unit tests pass |
-| T5 | **Thin slice D1:** few queries → paper → `medicaldata` → `rct_effect` → plain report | 2 h | D1 runs end to end; RCT tests pass |
-| **Week 2 · Nov 9–15** | | **~8 h** | |
-| T6 | Research method (§5.3–5.4): hybrid loop (`ResearchPlan`, tool menu, coverage check, override, fallback plan), Europe PMC, dedupe, per-source extraction, citation checks, certainty, evidence-flow counts | 3.5 h | D0/D1 key studies found; ≥ 90% quotes grounded; trace shows each round's plan and `why`; override and fallback tested |
-| T7 | DAG step + render | 1 h | Edges cite claims; acyclic |
-| T8 | Data discovery (§5.6) | 1.5 h | D0 and D1 data found automatically |
-| T9 | Mapping, `derive`, `identify`, `detect_design` (incl. DiD/IV/RDD recognition), `backdoor_effect` | 2 h | Textbook DAG + synthetic tests pass; D4 flagged; DiD and RDD fixtures recognized |
-| **Week 3 · Nov 16–20** | | **~5 h** | |
-| T10 | Verdict logic, report writer + lint, Genie gate | 1 h | D0–D5 give expected verdicts |
-| T11 | Streamlit + replay mode | 1 h | Works with `CG_REPLAY=1` |
-| T12 | Eval + baseline + scorecard | 1 h | Per-case table in `eval/results/` |
-| T13 | README, system card, deploy, video, make repo public, submit | 2 h | Submitted by Nov 19 |
+| ID | Task | Done when |
+|---|---|---|
+| **Week 1** | | |
+| T1 | uv project, Ruff, ty, pytest, prek, CI, `.env.example` | CI green on an empty test |
+| T2 | Smoke tests: Token Factory (pick small + large, check JSON output), Tavily | Model IDs in `models.yaml` |
+| T3 | Dataset audit: D0 and D1 data downloadable with needed columns | `eval/cases.yaml` drafted |
+| T4 | Schemas, run state, LLM client (tiers + repair retry), router | Unit tests pass |
+| T5 | **Thin slice D1:** few queries → paper → `medicaldata` → `rct_effect` → plain report | D1 runs end to end; RCT tests pass |
+| **Week 2** | | |
+| T6 | Research method (§5.3–5.4): hybrid loop (`ResearchPlan`, tool menu, coverage check, override, fallback plan), Europe PMC, dedupe, per-source extraction, citation checks, certainty, evidence-flow counts | D0/D1 key studies found; ≥ 90% quotes grounded; trace shows each round's plan and `why`; override and fallback tested |
+| T7 | DAG step + render | Edges cite claims; acyclic |
+| T8 | Data discovery (§5.6) | D0 and D1 data found automatically |
+| T9 | Mapping, `derive`, `identify`, `detect_design` (incl. DiD/IV/RDD recognition), `backdoor_effect` | Textbook DAG + synthetic tests pass; D4 flagged; DiD and RDD fixtures recognized |
+| **Week 3** | | |
+| T10 | Verdict logic, report writer + lint, Genie gate | D0–D5 give expected verdicts |
+| T11 | Streamlit + replay mode | Works with `CG_REPLAY=1` |
+| T12 | Eval + baseline + scorecard | Per-case table in `eval/results/` |
+| T13 | README, system card, deploy, video, make repo public, submit | Submitted |
 
-**If behind, cut in order:** Genie polish → D3 → baseline → Streamlit (ship CLI + Markdown; video shows CLI).
-**Never cut:** disproving query group, dedupe by study, citation checks, evidence-flow counts, `identify`, verdict gate, D0, D1, D4, replay mode.
+**Core, never cut:** disproving query group, dedupe by study, citation checks, evidence-flow counts, `identify`, verdict gate, D0, D1, D4, replay mode.
 
 ---
 

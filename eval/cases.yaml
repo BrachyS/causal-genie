@@ -1,4 +1,4 @@
-# Frozen eval set (PRD §8). Drafted 2026-11-02 in T3; key studies checked on Europe PMC,
+# Frozen eval set (PRD §8). Key studies checked on Europe PMC,
 # datasets downloaded and inspected (column names, size, license, checksum).
 #
 # expected_verdict: estimated (✅) · estimated_strong_assumptions (⚠️) · published_only (📚)
@@ -74,7 +74,7 @@ cases:
       90min: {licorice: 10%, sugar: 35%, rr: "0.31 (0.14-0.68)"}  # [12/117 vs 41/116, RD -0.251, RR 0.29]
       4h: {licorice: 21%, sugar: 45%, rr: "0.48 (0.28-0.83)"}  # [24/117 vs 52/116, RD -0.243, RR 0.46]
       note: proportions match exactly; the paper's RRs are model-based, so ours differ slightly
-    dag:  # randomized trial: nothing causes the assigned gargle (user, Nov 14)
+    dag:  # randomized trial: nothing causes the assigned gargle (user's choice)
       no_edges_into_exposure: true
     key_studies:
       - {pmid: "23921656", doi: 10.1213/ANE.0b013e318299a650, first_author: Ruetzler, year: 2013,
@@ -113,7 +113,7 @@ cases:
     expected_verdict: published_only
     genie_allowed: true  # whimsical, no usable data
     data: null  # no open single-table dataset expected
-    dag:  # age drives both habit and arthritis (user, Nov 14)
+    dag:  # age drives both habit and arthritis (user's choice)
       required_nodes: [age]
     key_studies:
       - {pmid: "2344210", doi: 10.1136/ard.49.5.308, first_author: Castellanos, year: 1990,

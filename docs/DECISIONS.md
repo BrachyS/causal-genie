@@ -62,7 +62,7 @@ Each entry gives the decision, why, and what it costs. Entries marked *open* are
 
 ## Question of the Day
 
-**An in-app database, not GitHub issues or social platforms.** Questions and votes are kept in hosted Postgres behind the app. *Why:* asking people to sign in to GitHub (issues, Discussions) to ask or vote was too much trouble; X and Reddit APIs are paid or closed to new bots (checked Nov 15). *Cost:* a database to run (Neon free tier) and our own moderation.
+**An in-app database, not GitHub issues or social platforms.** Questions and votes are kept in hosted Postgres behind the app. *Why:* asking people to sign in to GitHub (issues, Discussions) to ask or vote was too much trouble; X and Reddit APIs are paid or closed to new bots. *Cost:* a database to run (Neon free tier) and our own moderation.
 
 **One vote per browser, no login.** A random ID kept in localStorage, set by a few lines of inline JS through Streamlit's built-in component API (Streamlit can read cookies but not set them; no extra package), plus per-ID rate limits. *Why:* no account means anyone can take part. *Cost:* clearing site data or a private window gives a new ID, so votes can be stuffed within the rate limits; Google sign-in is the next step only if that happens.
 

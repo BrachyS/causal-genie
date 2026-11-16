@@ -273,7 +273,7 @@ def test_failed_extraction_skips_the_source_not_the_run(
     state, searcher, make_llm, make_epmc, prompts_dir, caplog
 ) -> None:
     # Live G1 (20261115-034156-f3618c): an extract of a Wikipedia page over-quoted past its
-    # 1,500-token cap twice, and the schema failure ended the run (user chose to skip, Nov 14).
+    # 1,500-token cap twice, and the schema failure ended the run (user chose to skip).
     llm, fake = make_llm(["not json", "still not json"])
     papers, served = make_epmc([epmc_result()])
 

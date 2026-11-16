@@ -22,6 +22,13 @@ def test_run_state_round_trips_through_json(tmp_path: Path, sample_state: RunSta
     assert RunState.load(path) == sample_state
 
 
+def test_saved_state_ends_with_one_newline(tmp_path: Path, sample_state: RunState) -> None:
+    # gallery copies are committed; the end-of-file pre-commit hook rewrites a file without one
+    text = sample_state.save(tmp_path).read_text()
+
+    assert text.endswith("}\n") and not text.endswith("\n\n")
+
+
 def test_run_state_totals_tokens_and_latency(sample_state: RunState) -> None:
     sample_state.llm_calls.append(sample_state.llm_calls[0].model_copy())
 

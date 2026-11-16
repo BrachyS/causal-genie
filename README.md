@@ -7,11 +7,42 @@ A research agent for "does X cause Y?" questions (*"Does the full moon cause mor
 ```sh
 uv sync
 uv run python -m causal_genie.agent.controller "Does the full moon cause more births?"
+uv run python -m causal_genie.agent.controller "Does the full moon cause more births?" --replay   # replay that run: no keys, no network
 uv run --env-file .env streamlit run causal_genie/ui/app.py   # the web app
 uv run pytest -q                                              # tests (no keys or network)
 ```
 
 Keys go in `.env` (`NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`; the app's settings are listed below). The app needs no keys to show the saved runs in `gallery/`.
+
+## How it works
+
+The model proposes; the harness decides and computes.
+
+1. **Frame** the question as population, exposure, comparator and outcome.
+2. **Research** it: the model plans searches, the harness runs them (Tavily), looks up each study in Europe PMC, drops retracted papers and merges reports of the same study. A quote counts only if it is found in the page.
+3. **Draw the causal graph.** Each arrow cites checked claims or is marked as an assumption.
+4. **Find data** in allowlisted public repositories, or take your own table (`--data FILE`). The model sees column names, never rows.
+5. **Identify and estimate** with tested statistics tools. No number comes from a model.
+6. **Pick the verdict by rule**: estimated, estimated with strong assumptions, published evidence only, data restricted, study plan, insufficient evidence or not causal.
+7. **Write the report.** A check rejects any sentence without a citation and any number not found in a cited source or tool result.
+
+A live run takes about 2 to 5 minutes and 200k to 350k model tokens. Every run is saved to `runs/` with all its model calls, searches and downloads, so `--replay` reproduces it offline. The gallery holds display copies of eight recorded runs.
+
+## Evaluation
+
+Six frozen cases in [eval/cases.yaml](eval/cases.yaml), scored by `uv run python eval/run_eval.py`. Latest [scorecard](eval/results/scorecard.md):
+
+| Check | Result |
+|---|---|
+| Expected verdict, live runs | 6/6 |
+| Expected verdict, offline replay of the recordings | 6/6 |
+| Quotes found in their source | 451/458 (98.5%) |
+| Numbers in a report not traceable to a source or tool result | 0 |
+| Conclusions the case forbids | 0 |
+| Estimates produced when the design does not support one | 0 |
+| Synthetic A/B test with a true effect of 5 points | 5.5 (95% CI 3.1 to 7.9) |
+
+The cases cover an estimate from public data (full moon and births), a trial's own data (licorice gargle and sore throat), an uploaded A/B test, the same test with only the users who finished onboarding (the agent must decline), a question with no usable data (knuckle cracking), and a sensitive topic where the playful aside must stay off (vaccines and autism).
 
 ## The web app
 

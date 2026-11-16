@@ -172,7 +172,7 @@ def test_loop_stops_at_three_rounds(state, make_llm, make_epmc) -> None:
 
 
 def test_round_one_with_no_coverage_gaps_stops(state, make_llm, searcher, papers) -> None:
-    # Six scored eval runs (Nov 15): every key study found came from round 1, and certainty
+    # Six scored eval runs: every key study found came from round 1, and certainty
     # from round 1's studies alone matched the full run's in all six (T15.2).
     llm, _ = make_llm([plan(FULL_ROUND), READ])
 

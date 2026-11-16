@@ -134,7 +134,8 @@ class EuropePMC:
     def _search_once(self, query: str) -> PaperRecord | None:
         """Top Europe PMC hit for `query`, live or from the recording; a replay miss raises.
 
-        A lookup that still fails after `_get`'s retry (timeout, 429, 5xx) is logged as an
+        A lookup that still fails after `_get`'s retry (timeout, dropped connection, 429, 5xx)
+        is logged as an
         error, recorded with its error and returns no record: the study is kept without
         Europe PMC's ids and retraction check rather than ending the run (user's choice after
         an outage ended live D0 run 20261114-193249-8d8976).
@@ -148,7 +149,7 @@ class EuropePMC:
                 start = time.perf_counter()
                 try:
                     response = self._get(query)
-                except (httpx.TimeoutException, httpx.HTTPStatusError) as e:
+                except (httpx.TransportError, httpx.HTTPStatusError) as e:
                     log.error(
                         "Europe PMC lookup failed; study kept without its data: %s: %r", query, e
                     )
@@ -169,18 +170,19 @@ class EuropePMC:
             return call.record
 
     def _get(self, query: str) -> httpx.Response:
-        """One search request; PRD §5.9: retried once after a wait on a timeout or a 429 rate
-        limit, any other HTTP error raises at once."""
+        """One search request; PRD §5.9: retried once after a wait on a timeout, a dropped
+        connection (`httpx.TransportError` covers both) or a 429 rate limit; any other HTTP
+        error raises at once."""
         assert self.http is not None
         params = {"query": query, "format": "json", "resultType": "core", "pageSize": 1}
         try:
             first: httpx.Response | None = self.http.get(SEARCH_URL, params=params)
-        except httpx.TimeoutException as e:
-            log.warning("Europe PMC timeout: %r", e)
+        except httpx.TransportError as e:
+            log.warning("Europe PMC timeout or dropped connection: %r", e)
             first = None
         if first is not None and first.status_code != 429:
             return first.raise_for_status()
-        log.warning("Europe PMC timeout or rate limit, retrying once: %s", query)
+        log.warning("Europe PMC transport error or rate limit, retrying once: %s", query)
         time.sleep(self.retry_wait_s)
         return self.http.get(SEARCH_URL, params=params).raise_for_status()
 

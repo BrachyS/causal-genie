@@ -649,7 +649,7 @@ class RunState(Schema):
         """Write `runs_dir/<run_id>/state.json` so the run can be inspected or replayed."""
         path = runs_dir / self.run_id / "state.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self.model_dump_json(indent=2))
+        path.write_text(self.model_dump_json(indent=2) + "\n")
         return path
 
     @classmethod
