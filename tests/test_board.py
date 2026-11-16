@@ -347,3 +347,25 @@ def test_database_down_shows_board_unavailable(tmp_path) -> None:
     assert not app.exception
     assert any("Board unavailable" in w.value for w in app.warning)
     assert "rest of the app" in _texts(app)
+
+
+def test_a_question_being_answered_stays_visible_without_a_vote_button(board_app) -> None:
+    url, db, gallery = board_app
+    qid = _shown(db, "Does music while studying raise exam scores?")
+    board_db.set_status(db, qid, "running", run_id="r1")
+    app = AppTest.from_function(_board_app, args=(url, "me", gallery))
+    app.run()
+
+    assert "Being answered" in [s.value for s in app.subheader]
+    music = board.plain("Does music while studying raise exam scores?")
+    assert any(music in t for t in _texts(app))
+    assert not [b for b in app.button if b.key == f"vote-{qid}"]
+
+
+def test_no_being_answered_section_when_nothing_is_running(board_app) -> None:
+    url, db, gallery = board_app
+    _shown(db, "Does tea cause calm?")
+    app = AppTest.from_function(_board_app, args=(url, "me", gallery))
+    app.run()
+
+    assert "Being answered" not in [s.value for s in app.subheader]

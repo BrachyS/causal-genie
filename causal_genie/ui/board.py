@@ -232,7 +232,10 @@ def _vote(db: Engine, question_id: int, voter_id: str) -> None:
         _say(str(e))
 
 
-def _ask(db: Engine, text: str, voter_id: str, llm: LLMClient, force: bool = False) -> None:
+def post_question(
+    db: Engine, text: str, voter_id: str, llm: LLMClient, force: bool = False
+) -> None:
+    """Ask on the board from the app's ask box; the outcome shows at the top of the board."""
     st.session_state.pop("board_similar", None)
     try:
         asked = ask(db, text, voter_id, llm, force=force)
@@ -255,8 +258,9 @@ def render_board(
 ) -> None:
     """The board tab. A database failure shows "Board unavailable" and leaves the app running.
 
+    The ask box is the app's (one place to type); this shows what asking did, then the board.
     `voter_id` is None until the browser has reported it (voting waits); `llm` None turns the
-    ask box off.
+    "ask mine anyway" choice off.
     """
     try:
         _render(db, voter_id, llm, gallery_dir)
@@ -266,45 +270,8 @@ def render_board(
 
 
 def _render(db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir: Path) -> None:
-    latest = board_db.latest_answered(db)
-    if latest:
-        st.subheader("Today's question")
-        with st.container(border=True):
-            st.markdown(f"**{plain(latest.text)}**")
-            pick = _pick(gallery_dir, latest.run_id)
-            if pick and pick.verdict:
-                st.markdown(VERDICT_LABELS[pick.verdict])
-            if latest.announcement:
-                st.markdown(f"🧞 {plain(latest.announcement)}")
-            if link := run_link(latest.run_id):
-                st.markdown(f"[Read the Genie's answer]({link})")
-
     if message := st.session_state.pop("board_message", None):
         st.info(message)
-
-    st.subheader("Up next")
-    st.caption("The question with the most votes is answered each night.")
-    voted = board_db.voted(db, voter_id) if voter_id else set()
-    ranked = rank(board_db.board(db))
-    if not ranked:
-        st.markdown("No questions yet. Ask the first one below.")
-    for q in ranked:
-        text, button = st.columns([6, 1], vertical_alignment="center")
-        text.markdown(f"{plain(q.text)}  \n{_votes(q.votes)}")
-        mine = q.id in voted
-        button.button(
-            "✓ Voted" if mine else "Vote",
-            key=f"vote-{q.id}",
-            disabled=mine or voter_id is None,
-            on_click=_vote,
-            args=(db, q.id, voter_id),
-        )
-
-    st.subheader("Ask the Genie")
-    st.caption(
-        "Questions here are public and anyone can vote. For a private question, use a live "
-        "run with the passcode."
-    )
     if similar := st.session_state.get("board_similar"):
         text, similar_id = similar
         existing = board_db.get_question(db, similar_id).text
@@ -320,17 +287,46 @@ def _render(db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir
             ask_col.button(
                 "Ask mine anyway",
                 key="similar-ask",
-                on_click=_ask,
+                on_click=post_question,
                 args=(db, text, voter_id, llm, True),
             )
-    with st.form("board-ask", clear_on_submit=True):
-        text = st.text_input(
-            "Your cause-and-effect question", max_chars=board_db.MAX_CHARS, key="board-ask-text"
+
+    latest = board_db.latest_answered(db)
+    if latest:
+        st.subheader("Today's question")
+        with st.container(border=True):
+            st.markdown(f"**{plain(latest.text)}**")
+            pick = _pick(gallery_dir, latest.run_id)
+            if pick and pick.verdict:
+                st.markdown(VERDICT_LABELS[pick.verdict])
+            if latest.announcement:
+                st.markdown(f"🧞 {plain(latest.announcement)}")
+            if link := run_link(latest.run_id):
+                st.markdown(f"[Read the Genie's answer]({link})")
+
+    if running := board_db.questions_with_status(db, "running"):
+        st.subheader("Being answered")
+        st.caption("The Genie has answered these; each goes public after a review.")
+        for q in running:
+            st.markdown(f"{plain(q.text)}  \n{_votes(q.votes)}")
+
+    st.subheader("Up next")
+    st.caption("The question with the most votes is answered each night.")
+    voted = board_db.voted(db, voter_id) if voter_id else set()
+    ranked = rank(board_db.board(db))
+    if not ranked:
+        st.markdown("No questions waiting. Ask the first one above.")
+    for q in ranked:
+        text, button = st.columns([6, 1], vertical_alignment="center")
+        text.markdown(f"{plain(q.text)}  \n{_votes(q.votes)}")
+        mine = q.id in voted
+        button.button(
+            "✓ Voted" if mine else "Vote",
+            key=f"vote-{q.id}",
+            disabled=mine or voter_id is None,
+            on_click=_vote,
+            args=(db, q.id, voter_id),
         )
-        asked = st.form_submit_button("Ask", disabled=voter_id is None or llm is None)
-    if asked and text and voter_id and llm:
-        _ask(db, text, voter_id, llm)
-        st.rerun()
 
     archive = board_db.answered(db)[1:]
     if archive:

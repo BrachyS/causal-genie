@@ -15,9 +15,9 @@ Keys go in `.env` (`NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`; the ap
 
 ## The web app
 
-- **Ask the Genie:** pick a saved run from the gallery, or type a question. A question with no saved run can run live (about 5 minutes), behind a passcode and a daily spend cap.
-- **Questions for the Genie:** the public Question of the Day board (shown only when `BOARD_DB_URL` is set).
-- **Links:** `?run=<run_id>` opens a saved run and `?q=<question>` opens a saved question, so shared links and Bluesky posts land on the answer.
+- **📚 Gallery:** read-only. Pick an answered question and read the full answer.
+- **🙋 Ask & vote:** the one place to type a question. **Post to the board** makes it public: anyone can vote, and the top-voted question is answered each night (needs `BOARD_DB_URL`). With the passcode, **Run privately now** answers it live instead (about 5 minutes, with a daily spend cap). A question that is already in the gallery gets a link to its answer. The board to vote on is below the box.
+- **Links:** `?run=<run_id>` opens a saved run and `?q=<question>` opens a saved question in the Gallery, so shared links and Bluesky posts land on the answer.
 
 ### Deploy on Streamlit Community Cloud
 
@@ -25,7 +25,7 @@ Keys go in `.env` (`NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`; the ap
 2. **Secrets** (app settings → Secrets, TOML). Streamlit also sets top-level secrets as environment variables, which is how the app reads them:
 
    ```toml
-   BOARD_DB_URL = "postgresql://…"     # the board's database; leave out to hide the board tab
+   BOARD_DB_URL = "postgresql://…"     # the board's database; leave out to hide the board
    NEBIUS_API_KEY = "…"                # board moderation and live runs
    NEBIUS_BASE_URL = "…"
    TAVILY_API_KEY = "…"                # live runs
@@ -42,7 +42,7 @@ Without any secrets the app still serves the gallery.
 
 ## Ask the Genie (Question of the Day)
 
-In the app's "Questions for the Genie" tab, anyone can post a public "does X cause Y?" question and vote (one vote per browser, no account). Each night at 10:00 UTC a GitHub Action answers the top-voted question with the full pipeline and opens a PR. Once the PR is merged, the answer joins the gallery and is posted on Bluesky ([@causalgenie.bsky.social](https://bsky.app/profile/causalgenie.bsky.social)) with a link back. Each new question gets one moderation check: abusive, personal, spam or non-causal questions are hidden, and the asker is told why.
+In the app's "🙋 Ask & vote" tab, anyone can post a public "does X cause Y?" question and vote (one vote per browser, no account). Each night at 10:00 UTC a GitHub Action answers the top-voted question with the full pipeline and opens a PR. Once the PR is merged, the answer joins the gallery and is posted on Bluesky ([@causalgenie.bsky.social](https://bsky.app/profile/causalgenie.bsky.social)) with a link back. Each new question gets one moderation check: abusive, personal, spam or non-causal questions are hidden, and the asker is told why.
 
 Setup:
 - Actions secrets: `BOARD_DB_URL`, `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`.

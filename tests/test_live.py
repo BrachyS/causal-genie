@@ -50,6 +50,7 @@ def live_app(sample_state, tmp_path, monkeypatch) -> list[str]:
     sample_state.save(tmp_path / "gallery")
     monkeypatch.setenv("CG_RUNS_DIR", str(tmp_path / "gallery"))
     monkeypatch.setenv("CG_LIVE_PASSCODE", "sesame")
+    monkeypatch.delenv("BOARD_DB_URL", raising=False)
     monkeypatch.setenv("CG_LIVE_DIR", str(tmp_path / "live"))
     monkeypatch.setenv("CG_LIVE_RUNS_PER_DAY", "1")
     ran: list[str] = []
@@ -63,10 +64,12 @@ def live_app(sample_state, tmp_path, monkeypatch) -> list[str]:
 
 
 def ask(question: str, passcode: str) -> AppTest:
+    """Type into the app's one ask box (Ask & vote tab) and press "Run privately now"."""
     at = AppTest.from_file(str(APP), default_timeout=30).run()
-    at.text_input[0].input(question).run()
-    at.text_input[1].input(passcode)
-    at.button[0].click().run()
+    box = at.tabs[1]
+    box.text_input[0].input(question)
+    box.text_input[1].input(passcode)
+    next(b for b in box.button if b.label == "Run privately now").click().run()
     return at
 
 
@@ -93,8 +96,7 @@ def test_live_run_with_passcode_shows_the_run_and_counts_it(live_app) -> None:
 def test_live_mode_off_without_a_configured_passcode(live_app, monkeypatch) -> None:
     monkeypatch.delenv("CG_LIVE_PASSCODE")
     at = AppTest.from_file(str(APP), default_timeout=30).run()
-    at.text_input[0].input(NEW_QUESTION).run()
 
     assert not at.exception
-    assert len(at.text_input) == 1 and not at.button
-    assert any("Live runs are off" in m.value for m in at.info)
+    assert not at.tabs[1].text_input and not at.tabs[1].button
+    assert any("Asking is off" in m.value for m in at.tabs[1].info)

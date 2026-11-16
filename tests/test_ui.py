@@ -22,6 +22,7 @@ from causal_genie.ui.view import (
 )
 
 APP = Path(__file__).parents[1] / "causal_genie" / "ui" / "app.py"
+TABS = ("📚 Gallery", "🙋 Ask & vote")
 
 
 @pytest.fixture
@@ -166,8 +167,7 @@ def test_every_verdict_has_a_plain_meaning_and_the_guide_marks_the_picked_one() 
 
 
 def run_app(runs_dir: Path, monkeypatch: pytest.MonkeyPatch) -> AppTest:
-    monkeypatch.setenv("CG_RUNS_DIR", str(runs_dir))
-    return AppTest.from_file(str(APP), default_timeout=30).run()
+    return app(runs_dir, monkeypatch)
 
 
 def test_app_shows_a_saved_run(ui_state, tmp_path, monkeypatch) -> None:
@@ -183,13 +183,16 @@ def test_app_shows_a_saved_run(ui_state, tmp_path, monkeypatch) -> None:
     assert [m.value for m in at.metric][:3] == ["1", "1", "1"]  # found → deduped → included
 
 
-def test_app_says_when_a_question_has_no_saved_run(ui_state, tmp_path, monkeypatch) -> None:
+def test_the_gallery_is_read_only_and_typing_happens_in_one_place(
+    ui_state, tmp_path, monkeypatch
+) -> None:
     save(ui_state, tmp_path, "20261102-000000-bbbbbb")
     at = run_app(tmp_path, monkeypatch)
-    at.text_input[0].input("Does coffee cause gout?").run()
 
-    assert not at.exception
-    assert any("No saved run" in m.value for m in at.info)
+    gallery, ask = at.tabs
+    assert (gallery.label, ask.label) == TABS
+    assert not gallery.text_input and gallery.selectbox[0].value == ui_state.question
+    assert not at.sidebar.radio
 
 
 def test_app_with_no_saved_runs(tmp_path, monkeypatch) -> None:
@@ -202,26 +205,36 @@ def test_app_with_no_saved_runs(tmp_path, monkeypatch) -> None:
 # --- board tab (U13b) and deep links (U14) -----------------------------------------------
 
 
-def app(runs_dir: Path, monkeypatch: pytest.MonkeyPatch, board_url: str = "", **params) -> AppTest:
-    """The app on `runs_dir`, with `BOARD_DB_URL` set only if given, opened with `params`."""
+def app(
+    runs_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    board_url: str = "",
+    env: dict[str, str] | None = None,
+    **params: str,
+) -> AppTest:
+    """The app on `runs_dir`, with `BOARD_DB_URL` and `env` set only if given, opened with
+    the query `params`."""
     monkeypatch.setenv("CG_RUNS_DIR", str(runs_dir))
-    for name in ("BOARD_DB_URL", "NEBIUS_API_KEY", "CG_LIVE_PASSCODE"):
+    for name in ("BOARD_DB_URL", "NEBIUS_API_KEY", "NEBIUS_BASE_URL", "CG_LIVE_PASSCODE"):
         monkeypatch.delenv(name, raising=False)
     if board_url:
         monkeypatch.setenv("BOARD_DB_URL", board_url)
+    for name, value in (env or {}).items():
+        monkeypatch.setenv(name, value)
     at = AppTest.from_file(str(APP), default_timeout=30)
     for name, value in params.items():
         at.query_params[name] = value
     return at.run()
 
 
-def test_no_board_tab_without_a_database(ui_state, tmp_path, monkeypatch) -> None:
+def test_without_a_database_or_passcode_asking_is_off(ui_state, tmp_path, monkeypatch) -> None:
     save(ui_state, tmp_path, "20261102-000000-bbbbbb")
     at = app(tmp_path, monkeypatch)
 
     assert not at.exception
-    assert "Questions for the Genie" not in [t.label for t in at.tabs]
-    assert any("Short answer" in m.value for m in at.markdown)
+    assert not at.tabs[1].text_input
+    assert any("Asking is off" in i.value for i in at.tabs[1].info)
+    assert any("Short answer" in m.value for m in at.tabs[0].markdown)
 
 
 def test_board_tab_shows_the_questions_on_the_board(ui_state, tmp_path, monkeypatch) -> None:
@@ -234,7 +247,7 @@ def test_board_tab_shows_the_questions_on_the_board(ui_state, tmp_path, monkeypa
     at = app(tmp_path / "runs", monkeypatch, board_url=url)
 
     assert not at.exception
-    assert [t.label for t in at.tabs] == ["Ask the Genie", "Questions for the Genie"]
+    assert tuple(t.label for t in at.tabs) == TABS
     shown = " ".join(m.value for m in at.tabs[1].markdown)
     assert board.plain("Does green tea cause calm?") in shown
     assert any("Short answer" in m.value for m in at.tabs[0].markdown)  # gallery still works
@@ -263,7 +276,7 @@ def test_a_run_link_opens_that_run(ui_state, tmp_path, monkeypatch) -> None:
     at = app(tmp_path, monkeypatch, run=run_id)
 
     assert not at.exception
-    assert at.text_input[0].value == "Does coffee cause gout?"
+    assert at.selectbox[0].value == "Does coffee cause gout?"
     assert any(run_id in c.value for c in at.caption)
 
 
@@ -273,16 +286,17 @@ def test_a_question_link_opens_its_saved_run(ui_state, tmp_path, monkeypatch) ->
     at = app(tmp_path, monkeypatch, q="does coffee cause GOUT")
 
     assert not at.exception
-    assert at.text_input[0].value == "Does coffee cause gout?"
+    assert at.selectbox[0].value == "Does coffee cause gout?"
 
 
 def test_after_a_link_the_gallery_picker_still_works(ui_state, tmp_path, monkeypatch) -> None:
     run_id = _two_runs(ui_state, tmp_path)
     at = app(tmp_path, monkeypatch, run=run_id)
 
-    at.sidebar.radio[0].set_value(ui_state.question).run()
+    at.selectbox[0].set_value(ui_state.question).run()
 
-    assert at.text_input[0].value == ui_state.question
+    assert at.selectbox[0].value == ui_state.question
+    assert any("20261101-000000-aaaaaa" in c.value for c in at.caption)
 
 
 @pytest.mark.parametrize("run_id", ["../../etc", "20991231-000000-zzzzzz"])
@@ -293,7 +307,7 @@ def test_a_bad_run_link_says_so_and_shows_the_gallery(ui_state, tmp_path, monkey
 
     assert not at.exception
     assert any("isn't in the gallery" in w.value for w in at.warning)
-    assert at.text_input[0].value == ui_state.question
+    assert at.selectbox[0].value == ui_state.question
 
 
 # --- run background note and logo ----------------------------------------------------------
@@ -364,12 +378,11 @@ def test_the_picker_shows_the_exact_run_picked(ui_state, tmp_path, monkeypatch) 
     at = app(tmp_path, monkeypatch)
     q = ui_state.question
 
-    assert at.sidebar.radio[0].options == [f"{q} · full A/B data", f"{q} · completers only"]
+    assert at.selectbox[0].options == [f"{q} · full A/B data", f"{q} · completers only"]
     assert any("20261101-000000-aaaaaa" in c.value for c in at.caption)
 
-    at.sidebar.radio[0].set_value(f"{q} · completers only").run()
+    at.selectbox[0].set_value(f"{q} · completers only").run()
 
-    assert at.text_input[0].value == q
     assert any("20261102-000000-bbbbbb" in c.value for c in at.caption)
 
 
@@ -379,5 +392,52 @@ def test_a_run_link_picks_its_labelled_run(ui_state, tmp_path, monkeypatch) -> N
 
     at = app(tmp_path, monkeypatch, run="20261101-000000-aaaaaa")
 
-    assert at.sidebar.radio[0].value == f"{ui_state.question} · full A/B data"
+    assert at.selectbox[0].value == f"{ui_state.question} · full A/B data"
     assert any("20261101-000000-aaaaaa" in c.value for c in at.caption)
+
+
+# --- the one ask box (Ask & vote tab) --------------------------------------------------------
+
+
+def _ask_app(tmp_path: Path, monkeypatch, ui_state, board: bool = True, **env: str):
+    save(ui_state, tmp_path / "runs", "20261102-000000-bbbbbb")
+    url = f"sqlite:///{tmp_path / 'board.db'}" if board else ""
+    at = app(tmp_path / "runs", monkeypatch, board_url=url, env=env)
+    return at, (board_db.connect(url) if url else None)
+
+
+def test_the_ask_box_posts_to_the_board(ui_state, tmp_path, monkeypatch) -> None:
+    at, _ = _ask_app(tmp_path, monkeypatch, ui_state)
+    ask = at.tabs[1]
+
+    assert [t.label for t in ask.text_input] == ["Your cause-and-effect question"]
+    assert "Post to the board" in [b.label for b in ask.button]
+    assert "Run privately now" not in [b.label for b in ask.button]  # no passcode set
+
+
+def test_asking_a_gallery_question_points_to_its_answer(ui_state, tmp_path, monkeypatch) -> None:
+    # No run starts and no passcode is checked: the gallery already has the answer.
+    at, _ = _ask_app(tmp_path, monkeypatch, ui_state, board=False, CG_LIVE_PASSCODE="sesame")
+    ask = at.tabs[1]
+
+    ask.text_input[0].input(ui_state.question.upper())
+    next(b for b in ask.button if b.label == "Run privately now").click().run()
+
+    assert not at.exception
+    (note,) = [i.value for i in at.info if "already answered" in i.value]
+    assert "?q=" in note and not at.error
+
+
+def test_a_passcode_run_uses_the_same_box(ui_state, tmp_path, monkeypatch) -> None:
+    at, _ = _ask_app(tmp_path, monkeypatch, ui_state, board=False, CG_LIVE_PASSCODE="sesame")
+    ask = at.tabs[1]
+
+    assert [t.label for t in ask.text_input] == ["Your cause-and-effect question", "Passcode"]
+    assert "Post to the board" not in [b.label for b in ask.button]  # no board database
+
+    ask.text_input[0].input("Does coffee cause gout?")
+    ask.text_input[1].input("wrong")
+    next(b for b in ask.button if b.label == "Run privately now").click().run()
+
+    assert not at.exception
+    assert any("Wrong passcode" in e.value for e in at.error)
