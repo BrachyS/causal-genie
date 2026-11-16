@@ -2,7 +2,11 @@
 
 Shows recorded runs only (replay needs no keys); live mode comes with a passcode and spend
 cap (T11.3). Run: `uv run streamlit run causal_genie/ui/app.py`. `CG_RUNS_DIR` picks the
-folder of saved runs (default `runs/`).
+folder of saved runs (default `gallery/`).
+
+With `BOARD_DB_URL` set, a second tab holds the public Question of the Day board (U13b);
+without it the app is the gallery alone. Links `?run=<run_id>` and `?q=<question>` open a
+saved run (U14), so Bluesky posts and shared links land on the answer.
 """
 
 import logging
@@ -10,6 +14,8 @@ import os
 from pathlib import Path
 
 import streamlit as st
+from sqlalchemy import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 from causal_genie.agent.certainty import evidence_flow
 from causal_genie.agent.router import normalize
@@ -25,8 +31,9 @@ from causal_genie.agent.steps.report import (
     ledger_entries,
     question_section,
 )
+from causal_genie.llm.client import LLMClient, load_models, make_openai
 from causal_genie.tools.render import dag_dot
-from causal_genie.ui import live
+from causal_genie.ui import board, board_db, live
 from causal_genie.ui.gallery import GALLERY_DIR
 from causal_genie.ui.live import passcode_ok
 from causal_genie.ui.view import (
@@ -35,12 +42,15 @@ from causal_genie.ui.view import (
     anchor,
     citations,
     cited_html,
-    saved_runs,
+    gallery_runs,
     sources,
     verdict_guide,
 )
 
 log = logging.getLogger(__name__)
+
+LOGO = Path(__file__).parent / "assets" / "genie.png"  # the Genie's lamp, also on Bluesky
+CONTEXT = "context.md"  # a saved run's background note, written by hand for the gallery
 
 
 def body(section: list[str]) -> str:
@@ -70,6 +80,16 @@ def short_answer(state: RunState, entries: dict[str, str], cites: dict[str, Cita
             st.markdown(cited(state.prose.summary[:1], entries, cites), unsafe_allow_html=True)
         with st.expander("What the verdicts mean"):
             st.markdown(verdict_guide(state.verdict))
+
+
+def context_note(state_path: Path) -> None:
+    """A gallery run's background (`context.md` next to its `state.json`), if it has one.
+
+    Written by the repo owner, never by visitors, so it is shown as Markdown.
+    """
+    note = state_path.parent / CONTEXT
+    if note.is_file():
+        st.info(note.read_text(), icon="📋")
 
 
 def show(state: RunState) -> None:
@@ -140,29 +160,102 @@ def show(state: RunState) -> None:
         st.download_button("Download report (Markdown)", state.report, f"{state.run_id}.md")
 
 
-def main() -> None:
-    st.set_page_config(page_title="Causal Genie", page_icon="🧞", layout="wide")
-    st.title("🧞 Causal Genie")
-    st.caption(
+def header() -> None:
+    """The brand: the Genie's lamp beside the name and the one-line promise."""
+    lamp, title = st.columns([1, 9], vertical_alignment="center")
+    lamp.image(str(LOGO), width=110)
+    title.title("Causal Genie")
+    title.caption(
         "Does X cause Y? Recorded runs: every number traces to a tool, every claim to a quote."
     )
 
-    runs = saved_runs(Path(os.getenv("CG_RUNS_DIR", str(GALLERY_DIR))))
-    if not runs:
+
+def main() -> None:
+    st.set_page_config(page_title="Causal Genie", page_icon=str(LOGO), layout="wide")
+    header()
+    runs_dir = Path(os.getenv("CG_RUNS_DIR", str(GALLERY_DIR)))
+    board_url = os.getenv("BOARD_DB_URL", "")
+    if not board_url:
+        gallery(runs_dir)
+        return
+    ask, questions = st.tabs(["Ask the Genie", "Questions for the Genie"])
+    with ask:
+        gallery(runs_dir)
+    with questions:
+        board_tab(board_url, runs_dir)
+
+
+def linked_label(entries: dict[str, tuple[str, Path]], runs_dir: Path) -> str | None:
+    """The gallery entry a `?run=` or `?q=` link names, or None (with a warning if it names none).
+
+    A run id only ever selects among the runs the gallery lists; it never builds a path that
+    is read.
+    """
+    run_id, wanted = st.query_params.get("run"), st.query_params.get("q")
+    if run_id:
+        path = runs_dir / run_id / "state.json"
+        for label, (_, listed) in entries.items():
+            if board.RUN_ID.fullmatch(run_id) and listed == path:
+                return label
+        st.warning("That link's run isn't in the gallery; pick a question instead.")
+    elif wanted:
+        key = normalize(wanted[: board_db.MAX_CHARS])
+        if matches := [label for label, (q, _) in entries.items() if normalize(q) == key]:
+            return matches[-1]  # the latest run of that question
+        st.warning("That link's question isn't in the gallery; pick one or type it below.")
+    return None
+
+
+def gallery(runs_dir: Path) -> None:
+    """Pick a saved run or type a question and see its run, or offer a live run."""
+    entries = gallery_runs(runs_dir)
+    if not entries:
         st.info("No saved runs to show yet.")
         return
-    picked = st.sidebar.radio("Gallery", list(runs))
-    question = st.text_input("Your question", value=picked or "")
-    by_key = {normalize(q): path for q, path in runs.items()}
-    path = by_key.get(normalize(question))
+    # Point the picker at a link's run once, so picking another one later still works.
+    link_key = (st.query_params.get("run"), st.query_params.get("q"))
+    label = linked_label(entries, runs_dir)
+    if label and st.session_state.get("opened_link") != link_key:
+        st.session_state["opened_link"] = link_key
+        st.session_state["gallery_pick"] = label
+    picked = st.sidebar.radio("Gallery", list(entries), key="gallery_pick")
+    picked_question, picked_path = entries[picked]
+    question = st.text_input("Your question", value=picked_question)
+    if normalize(question) == normalize(picked_question):
+        path: Path | None = picked_path  # the exact run picked, of several with this question
+    else:
+        path = {normalize(q): p for q, p in entries.values()}.get(normalize(question))
     ran_live: dict[str, RunState] = st.session_state.setdefault("live_runs", {})
     if path is not None:
         log.info("showing run %s", path)
+        context_note(path)
         show(RunState.load(path))
     elif normalize(question) in ran_live:
         show(ran_live[normalize(question)])
     else:
         live_section(question, ran_live)
+
+
+@st.cache_resource(show_spinner=False)
+def board_engine(url: str) -> Engine:
+    return board_db.connect(url)
+
+
+def board_tab(url: str, runs_dir: Path) -> None:
+    """The public board; asking needs the model keys (moderation), admin needs the passcode."""
+    try:
+        db = board_engine(url)
+    except SQLAlchemyError:
+        log.exception("board: database unavailable")
+        st.warning("Board unavailable right now. The rest of the app still works.")
+        return
+    llm = None
+    if os.getenv("NEBIUS_API_KEY") and os.getenv("NEBIUS_BASE_URL"):
+        llm = LLMClient(make_openai(), load_models())
+    board.render_board(db, board.voter_id(), llm, runs_dir)
+    if os.getenv("CG_LIVE_PASSCODE"):
+        with st.expander("Admin"):
+            board.admin_panel(db)
 
 
 def live_section(question: str, ran_live: dict[str, RunState]) -> None:

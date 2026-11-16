@@ -9,11 +9,13 @@ from streamlit.testing.v1 import AppTest
 from causal_genie.agent.state import ReportDraft, Result, RunState, Sentence
 from causal_genie.agent.steps.report import VERDICT_LABELS, ledger_entries, write_report
 from causal_genie.tools.stats import risk_difference
+from causal_genie.ui import board, board_db
 from causal_genie.ui.view import (
     VERDICT_MEANINGS,
     anchor,
     citations,
     cited_html,
+    gallery_runs,
     saved_runs,
     sources,
     verdict_guide,
@@ -195,3 +197,187 @@ def test_app_with_no_saved_runs(tmp_path, monkeypatch) -> None:
 
     assert not at.exception
     assert any("No saved runs" in m.value for m in at.info)
+
+
+# --- board tab (U13b) and deep links (U14) -----------------------------------------------
+
+
+def app(runs_dir: Path, monkeypatch: pytest.MonkeyPatch, board_url: str = "", **params) -> AppTest:
+    """The app on `runs_dir`, with `BOARD_DB_URL` set only if given, opened with `params`."""
+    monkeypatch.setenv("CG_RUNS_DIR", str(runs_dir))
+    for name in ("BOARD_DB_URL", "NEBIUS_API_KEY", "CG_LIVE_PASSCODE"):
+        monkeypatch.delenv(name, raising=False)
+    if board_url:
+        monkeypatch.setenv("BOARD_DB_URL", board_url)
+    at = AppTest.from_file(str(APP), default_timeout=30)
+    for name, value in params.items():
+        at.query_params[name] = value
+    return at.run()
+
+
+def test_no_board_tab_without_a_database(ui_state, tmp_path, monkeypatch) -> None:
+    save(ui_state, tmp_path, "20261102-000000-bbbbbb")
+    at = app(tmp_path, monkeypatch)
+
+    assert not at.exception
+    assert "Questions for the Genie" not in [t.label for t in at.tabs]
+    assert any("Short answer" in m.value for m in at.markdown)
+
+
+def test_board_tab_shows_the_questions_on_the_board(ui_state, tmp_path, monkeypatch) -> None:
+    save(ui_state, tmp_path / "runs", "20261102-000000-bbbbbb")
+    url = f"sqlite:///{tmp_path / 'board.db'}"
+    db = board_db.connect(url)
+    qid = board_db.add_question(db, "Does green tea cause calm?", "asker")
+    board_db.set_status(db, qid, "shown")
+
+    at = app(tmp_path / "runs", monkeypatch, board_url=url)
+
+    assert not at.exception
+    assert [t.label for t in at.tabs] == ["Ask the Genie", "Questions for the Genie"]
+    shown = " ".join(m.value for m in at.tabs[1].markdown)
+    assert board.plain("Does green tea cause calm?") in shown
+    assert any("Short answer" in m.value for m in at.tabs[0].markdown)  # gallery still works
+
+
+def test_a_broken_database_leaves_the_gallery_working(ui_state, tmp_path, monkeypatch) -> None:
+    save(ui_state, tmp_path, "20261102-000000-bbbbbb")
+    at = app(tmp_path, monkeypatch, board_url="postgresql://nobody@127.0.0.1:1/none")
+
+    assert not at.exception
+    assert any("Board unavailable" in w.value for w in at.warning)
+    assert any("Short answer" in m.value for m in at.markdown)
+
+
+def _two_runs(ui_state: RunState, runs_dir: Path) -> str:
+    """Two saved questions; returns the run id of the second (not the default pick)."""
+    save(ui_state, runs_dir, "20261101-000000-aaaaaa")
+    other = ui_state.model_copy(update={"question": "Does coffee cause gout?"})
+    save(other, runs_dir, "20261102-000000-bbbbbb")
+    return "20261102-000000-bbbbbb"
+
+
+def test_a_run_link_opens_that_run(ui_state, tmp_path, monkeypatch) -> None:
+    run_id = _two_runs(ui_state, tmp_path)
+
+    at = app(tmp_path, monkeypatch, run=run_id)
+
+    assert not at.exception
+    assert at.text_input[0].value == "Does coffee cause gout?"
+    assert any(run_id in c.value for c in at.caption)
+
+
+def test_a_question_link_opens_its_saved_run(ui_state, tmp_path, monkeypatch) -> None:
+    _two_runs(ui_state, tmp_path)
+
+    at = app(tmp_path, monkeypatch, q="does coffee cause GOUT")
+
+    assert not at.exception
+    assert at.text_input[0].value == "Does coffee cause gout?"
+
+
+def test_after_a_link_the_gallery_picker_still_works(ui_state, tmp_path, monkeypatch) -> None:
+    run_id = _two_runs(ui_state, tmp_path)
+    at = app(tmp_path, monkeypatch, run=run_id)
+
+    at.sidebar.radio[0].set_value(ui_state.question).run()
+
+    assert at.text_input[0].value == ui_state.question
+
+
+@pytest.mark.parametrize("run_id", ["../../etc", "20991231-000000-zzzzzz"])
+def test_a_bad_run_link_says_so_and_shows_the_gallery(ui_state, tmp_path, monkeypatch, run_id):
+    save(ui_state, tmp_path, "20261102-000000-bbbbbb")
+
+    at = app(tmp_path, monkeypatch, run=run_id)
+
+    assert not at.exception
+    assert any("isn't in the gallery" in w.value for w in at.warning)
+    assert at.text_input[0].value == ui_state.question
+
+
+# --- run background note and logo ----------------------------------------------------------
+
+
+def test_a_run_with_a_context_note_shows_it(ui_state, tmp_path, monkeypatch):
+    path = save(ui_state, tmp_path, "20261102-000000-bbbbbb")
+    (path.parent / "context.md").write_text("**Demo with synthetic data.** A made-up A/B test.")
+
+    at = app(tmp_path, monkeypatch)
+
+    assert not at.exception
+    assert [i.value for i in at.info][0].startswith("**Demo with synthetic data.**")
+    assert any("Short answer" in m.value for m in at.markdown)
+
+
+def test_a_run_without_a_context_note_shows_none(ui_state, tmp_path, monkeypatch) -> None:
+    save(ui_state, tmp_path, "20261102-000000-bbbbbb")
+    at = app(tmp_path, monkeypatch)
+
+    assert not at.exception
+    assert not any("Demo with synthetic data" in i.value for i in at.info)
+
+
+def test_the_genie_lamp_heads_the_main_page(tmp_path, monkeypatch) -> None:
+    logo = APP.parent / "assets" / "genie.png"
+    assert logo.is_file() and logo.stat().st_size < 200_000
+
+    at = app(tmp_path, monkeypatch)
+
+    assert not at.exception
+    (image,) = at.get("image")
+    assert image.proto.imgs[0].url.endswith(".png")
+    assert at.title[0].value == "Causal Genie"
+
+
+# --- the gallery lists runs, so two runs of one question can both be shown -----------------
+
+
+def _labelled(state: RunState, runs_dir: Path, run_id: str, label: str = "") -> Path:
+    path = save(state, runs_dir, run_id)
+    if label:
+        (path.parent / "label.txt").write_text(f"  {label}\n")
+    return path
+
+
+def test_gallery_runs_list_each_labelled_run_of_a_question(ui_state, tmp_path) -> None:
+    full = _labelled(ui_state, tmp_path, "20261101-000000-aaaaaa", "full A/B data")
+    kept = _labelled(ui_state, tmp_path, "20261102-000000-bbbbbb", "completers only")
+
+    q = ui_state.question
+    assert gallery_runs(tmp_path) == {
+        f"{q} · full A/B data": (q, full),
+        f"{q} · completers only": (q, kept),
+    }
+
+
+def test_gallery_runs_keep_the_latest_unlabelled_run_of_a_question(ui_state, tmp_path) -> None:
+    _labelled(ui_state, tmp_path, "20261101-000000-aaaaaa")
+    latest = _labelled(ui_state, tmp_path, "20261102-000000-bbbbbb")
+
+    assert gallery_runs(tmp_path) == {ui_state.question: (ui_state.question, latest)}
+
+
+def test_the_picker_shows_the_exact_run_picked(ui_state, tmp_path, monkeypatch) -> None:
+    _labelled(ui_state, tmp_path, "20261101-000000-aaaaaa", "full A/B data")
+    _labelled(ui_state, tmp_path, "20261102-000000-bbbbbb", "completers only")
+    at = app(tmp_path, monkeypatch)
+    q = ui_state.question
+
+    assert at.sidebar.radio[0].options == [f"{q} · full A/B data", f"{q} · completers only"]
+    assert any("20261101-000000-aaaaaa" in c.value for c in at.caption)
+
+    at.sidebar.radio[0].set_value(f"{q} · completers only").run()
+
+    assert at.text_input[0].value == q
+    assert any("20261102-000000-bbbbbb" in c.value for c in at.caption)
+
+
+def test_a_run_link_picks_its_labelled_run(ui_state, tmp_path, monkeypatch) -> None:
+    _labelled(ui_state, tmp_path, "20261101-000000-aaaaaa", "full A/B data")
+    _labelled(ui_state, tmp_path, "20261102-000000-bbbbbb", "completers only")
+
+    at = app(tmp_path, monkeypatch, run="20261101-000000-aaaaaa")
+
+    assert at.sidebar.radio[0].value == f"{ui_state.question} · full A/B data"
+    assert any("20261101-000000-aaaaaa" in c.value for c in at.caption)

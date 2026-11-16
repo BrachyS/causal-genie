@@ -90,6 +90,35 @@ def saved_runs(runs_dir: Path) -> dict[str, Path]:
     return runs
 
 
+LABEL = "label.txt"  # a gallery run's short tag, written by hand, e.g. "full A/B data"
+
+
+def gallery_runs(runs_dir: Path) -> dict[str, tuple[str, Path]]:
+    """Picker label → (question, `state.json`), one entry per run the gallery offers.
+
+    Runs of one question are told apart by their `label.txt` (the demos ask the same question
+    of different data); without one, the latest run of the question stands for it, as in
+    `saved_runs`.
+    """
+    runs: dict[str, tuple[str, Path]] = {}
+    for path in sorted(runs_dir.glob("*/state.json")):  # run ids sort by time
+        try:
+            state = RunState.load(path)
+        except ValidationError as e:
+            log.warning(
+                "run %s skipped: not loadable under the current schema (%d errors)",
+                path.parent.name,
+                e.error_count(),
+            )
+            continue
+        if not state.report:
+            continue
+        tag = path.parent / LABEL
+        label = tag.read_text().strip() if tag.is_file() else ""
+        runs[f"{state.question} · {label}" if label else state.question] = (state.question, path)
+    return runs
+
+
 def verdict_guide(picked: Verdict | None) -> str:
     """A Markdown table of every verdict and what it means, marking the one this run got."""
     rows = ["| Verdict | What it means |", "|---|---|"]
