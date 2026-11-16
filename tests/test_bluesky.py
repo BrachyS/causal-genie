@@ -173,3 +173,19 @@ def test_main_exits_1_when_a_post_fails(db, tmp_path, monkeypatch) -> None:
         bluesky.main(["publish", "--gallery", str(tmp_path / "g")])
 
     assert exit_.value.code == 1
+
+
+def test_main_refuses_to_publish_without_the_app_address(tmp_path, monkeypatch) -> None:
+    url = f"sqlite:///{tmp_path / 'board.db'}"
+    board = board_db.connect(url)
+    qid = _running(board, tmp_path / "g", "Does tea cause calm?", "r1")
+    monkeypatch.setenv("BOARD_DB_URL", url)
+    monkeypatch.setenv("BLUESKY_HANDLE", "genie.bsky.social")
+    monkeypatch.setenv("BLUESKY_APP_PASSWORD", "pw")
+    monkeypatch.setenv("CG_APP_URL", "")  # an unset Actions variable arrives as ""
+
+    with pytest.raises(SystemExit) as exit_:
+        bluesky.main(["publish", "--gallery", str(tmp_path / "g")])
+
+    assert exit_.value.code == 1
+    assert board_db.get_question(board, qid).status == "running"

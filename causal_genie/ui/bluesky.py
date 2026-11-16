@@ -127,6 +127,11 @@ def main(argv: list[str] | None = None) -> None:
     pub.add_argument("--gallery", type=Path, default=GALLERY_DIR)
     args = parser.parse_args(argv)
     setup_logging()
+    app_url = os.environ.get("CG_APP_URL", "")
+    if not app_url:
+        # Checked before anything is marked answered, so the pick waits for a re-run.
+        log.error("bluesky: CG_APP_URL is not set; nothing published")
+        sys.exit(1)
     db = board_db.connect(os.environ["BOARD_DB_URL"])
     with httpx.Client(transport=transport(), timeout=30) as http:
         failed = publish(
@@ -135,7 +140,7 @@ def main(argv: list[str] | None = None) -> None:
             http,
             os.environ["BLUESKY_HANDLE"],
             os.environ["BLUESKY_APP_PASSWORD"],
-            os.environ["CG_APP_URL"],
+            app_url,
         )
     if failed:
         sys.exit(1)
