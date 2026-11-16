@@ -62,7 +62,7 @@ def load_no_thinking(path: Path = MODELS_YAML) -> set[str]:
     return set(yaml.safe_load(path.read_text()).get("no_thinking", []))
 
 
-# The only setting that stops DeepSeek-V4-Pro-0813 reasoning on Token Factory (probe, Nov 14);
+# The only setting that stops DeepSeek-V4-Pro-0813 reasoning on Token Factory (probe);
 # `reasoning_effort` and `thinking: {type: disabled}` are accepted but ignored.
 NO_THINKING = {"chat_template_kwargs": {"thinking": False}}
 

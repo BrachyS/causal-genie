@@ -185,7 +185,7 @@ def test_connection_dropped_twice_gives_no_record_and_records_the_error(caplog) 
 def test_second_rate_limit_gives_no_record_and_records_the_error(caplog) -> None:
     # Live D0 (run 20261114-193249-8d8976): a Europe PMC outage failed 4 of 42 lookups and the
     # first one ended the whole run. A study without Europe PMC data is kept instead (user's
-    # choice, Nov 14): it misses its ids and retraction check, and the error is logged.
+    # choice): it misses its ids and retraction check, and the error is logged.
     epmc, served = flaky_epmc(429, 429)
 
     with caplog.at_level(logging.ERROR):
