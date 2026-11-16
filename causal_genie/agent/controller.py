@@ -110,27 +110,27 @@ def run(
 
     try:
         try:
-            state.step = "route"
-            state.route = route(question, llm, cached={}, gallery={})
+            with state.timed("route"):
+                state.route = route(question, llm, cached={}, gallery={})
             if state.route.kind == "causal":
-                state.step = "frame"
-                state.query = frame(question, llm, ask_and_record if ask else None)
-                state.step = "research"
-                research(state, llm, searcher, papers)
+                with state.timed("frame"):
+                    state.query = frame(question, llm, ask_and_record if ask else None)
+                with state.timed("research"):
+                    research(state, llm, searcher, papers)
                 if any(s.included for s in state.studies):
-                    state.step = "dag"
-                    run_dag(state, llm, searcher, papers)
-                    render_dag(state.edges, runs_dir / state.run_id)
+                    with state.timed("dag"):
+                        run_dag(state, llm, searcher, papers)
+                        render_dag(state.edges, runs_dir / state.run_id)
                 analyze(
                     state, llm, searcher, fetcher, cache_dir, ask_and_record if ask else None, data
                 )
             state.verdict = pick_verdict(state)
             if state.verdict != "not_causal":
-                state.step = "report"
-                state.prose = draft_report(state, llm)
+                with state.timed("report"):
+                    state.prose = draft_report(state, llm)
             if genie:
-                state.step = "genie"
-                state.genie = genie_aside(state, llm)
+                with state.timed("genie"):
+                    state.genie = genie_aside(state, llm)
             state.step = None
         except STEP_FAILURES as e:
             log.exception(
@@ -168,68 +168,76 @@ def analyze(
     Every decision here is a rule, never a model's call."""
     assert state.query is not None
     exposure, outcome = state.query.exposure.name, state.query.outcome.name
-    state.step = "data"
-    if data is not None:
-        accepted = use_table(state, data)
-    else:
-        accepted = find_data(state, llm, searcher, fetcher, cache_dir)
+    with state.timed("data"):
+        if data is not None:
+            accepted = use_table(state, data)
+        else:
+            accepted = find_data(state, llm, searcher, fetcher, cache_dir)
     if accepted is None:
         return
-    state.step = "map"
-    mapping = map_columns(state, llm, ask)
+    with state.timed("map"):
+        mapping = map_columns(state, llm, ask)
     by_node = {m.node: m for m in mapping.nodes if m.columns} if mapping else {}
     if exposure not in by_node or outcome not in by_node:
         log.info("no estimate: exposure or outcome not mapped (mapping=%s)", mapping)
         return
     assert mapping is not None
-    state.step = "estimate"
-    table_file = state.downloads[-1]
-    table = node_table(read_table(Path(table_file.path)), mapping)
-    trial = source_trial(state, accepted)
-    randomized = trial is not None or user_says_randomized(by_node[exposure], accepted, ask)
-    roster = trial.n if trial is not None and documented(state, f"{trial.id}-n") else None
-    state.design = detect_design(
-        table,
-        exposure,
-        outcome,
-        state.edges,
-        randomized,
-        roster=roster,
-        unit=mapping.unit,
-        time=mapping.time,
-    )
-    if not state.design.estimable:
-        return
-    binary = set(table[outcome].dropna().unique()) <= {0, 1}
-    scale = "risk_difference" if binary else "mean_difference"
-    if state.design.design == "randomized":
-        state.adjustment = Adjustment(adjust_for=[], missing=[], randomized=True)
-        mapped_from = {n: source(by_node[n]) for n in (exposure, outcome)}
-        state.results.append(
-            estimate_rct(table, table_file.sha256, exposure, outcome, scale, mapped_from)
-        )
-        return
-    observed = [c for c in table.columns if c not in (mapping.unit, mapping.time)]
-    adjustment = identify(state.edges, exposure, outcome, observed, randomized=False)
-    assert adjustment.adjust_for is not None, "detect_design said estimable"
-    precision = precision_set(state.edges, exposure, outcome, adjustment.adjust_for, observed)
-    state.adjustment = adjustment.model_copy(update={"precision": precision})
-    if binary and state.query.effect_scale == "odds_ratio":
-        scale = "odds_ratio"
-    used = [exposure, outcome, *adjustment.adjust_for, *precision]
-    state.results.append(
-        estimate_backdoor(
+    with state.timed("estimate"):
+        table_file = state.downloads[-1]
+        table = node_table(read_table(Path(table_file.path)), mapping)
+        # A node with no values at all (e.g. a date rule applied to a weekday-name column)
+        # would drop every row: leave it out, as if unmapped.
+        empty = [node for node in by_node if table[node].isna().all()]
+        if empty:
+            log.warning("mapped nodes with no values, left out as unmapped: %s", empty)
+            table = table.drop(columns=empty)
+        if exposure in empty or outcome in empty:
+            return
+        trial = source_trial(state, accepted)
+        randomized = trial is not None or user_says_randomized(by_node[exposure], accepted, ask)
+        roster = trial.n if trial is not None and documented(state, f"{trial.id}-n") else None
+        state.design = detect_design(
             table,
-            table_file.sha256,
             exposure,
             outcome,
-            adjustment.adjust_for,
-            scale,
-            precision,
-            {n: source(by_node[n]) for n in used},
-            cluster_column(table, mapping.time),
+            state.edges,
+            randomized,
+            roster=roster,
+            unit=mapping.unit,
+            time=mapping.time,
         )
-    )
+        if not state.design.estimable:
+            return
+        binary = set(table[outcome].dropna().unique()) <= {0, 1}
+        scale = "risk_difference" if binary else "mean_difference"
+        if state.design.design == "randomized":
+            state.adjustment = Adjustment(adjust_for=[], missing=[], randomized=True)
+            mapped_from = {n: source(by_node[n]) for n in (exposure, outcome)}
+            state.results.append(
+                estimate_rct(table, table_file.sha256, exposure, outcome, scale, mapped_from)
+            )
+            return
+        observed = [c for c in table.columns if c not in (mapping.unit, mapping.time)]
+        adjustment = identify(state.edges, exposure, outcome, observed, randomized=False)
+        assert adjustment.adjust_for is not None, "detect_design said estimable"
+        precision = precision_set(state.edges, exposure, outcome, adjustment.adjust_for, observed)
+        state.adjustment = adjustment.model_copy(update={"precision": precision})
+        if binary and state.query.effect_scale == "odds_ratio":
+            scale = "odds_ratio"
+        used = [exposure, outcome, *adjustment.adjust_for, *precision]
+        state.results.append(
+            estimate_backdoor(
+                table,
+                table_file.sha256,
+                exposure,
+                outcome,
+                adjustment.adjust_for,
+                scale,
+                precision,
+                {n: source(by_node[n]) for n in used},
+                cluster_column(table, mapping.time),
+            )
+        )
 
 
 def documented(state: RunState, claim_id: str) -> bool:

@@ -55,6 +55,8 @@ def papers(make_epmc) -> EuropePMC:
 
 # The fake Tavily returns one page for every query, so only round 1 has a new source to read.
 READ = extraction(quotes=[])
+# Round 1 reads only an off-topic page: "no included study yet" is a gap, so round 2 runs.
+OFF_TOPIC = extraction(included=False, quotes=[])
 
 
 @pytest.fixture
@@ -126,8 +128,9 @@ def test_round_one_missing_a_group_falls_back_to_preset_plan(
 
 
 def test_loop_continues_until_model_says_done(state, make_llm, searcher, papers) -> None:
+    news = extraction(quotes=[], source_kind="secondary")  # a gap: no primary source yet
     round_2 = [q("mechanism", "licorice glycyrrhizin anti-inflammatory")]
-    llm, fake = make_llm([plan(FULL_ROUND), READ, plan(round_2, done=True)])
+    llm, fake = make_llm([plan(FULL_ROUND), news, plan(round_2, done=True)])
 
     research(state, llm, searcher, papers)
 
@@ -156,25 +159,39 @@ def distinct_studies(n: int, start: int) -> list[str]:
 
 def test_loop_stops_at_three_rounds(state, make_llm, make_epmc) -> None:
     searcher = Searcher(cast(TavilyClient, OnePagePerQuery()))
-    round_2 = [q("confounders", f"c {i}") for i in range(2)]
-    round_3 = [q("mechanism", f"m {i}") for i in range(2)]
-    outcomes = [plan(FULL_ROUND), *distinct_studies(len(GROUPS), 0)]
-    outcomes += [plan(round_2), *distinct_studies(2, 10), plan(round_3), *distinct_studies(2, 20)]
+    round_2 = [q("confounders", f"c {i}") for i in range(5)]
+    round_3 = [q("mechanism", f"m {i}") for i in range(5)]
+    outcomes = [plan(FULL_ROUND), *[OFF_TOPIC] * len(GROUPS)]
+    outcomes += [plan(round_2), *distinct_studies(5, 10), plan(round_3), *distinct_studies(5, 20)]
     llm, _ = make_llm(outcomes)
 
     research(state, llm, searcher, make_epmc([])[0])
 
-    assert [r.new_studies for r in state.rounds] == [len(GROUPS), 2, 2]
+    assert [r.new_studies for r in state.rounds] == [0, 5, 5]
     assert state.rounds[-1].stop_reason == "reached 3 rounds"
 
 
-def test_round_adding_fewer_than_two_studies_stops(state, make_llm, searcher, papers) -> None:
-    llm, _ = make_llm([plan(FULL_ROUND), READ, plan([q("mechanism", "licorice mechanism")])])
+def test_round_one_with_no_coverage_gaps_stops(state, make_llm, searcher, papers) -> None:
+    # Six scored eval runs (Nov 15): every key study found came from round 1, and certainty
+    # from round 1's studies alone matched the full run's in all six (T15.2).
+    llm, _ = make_llm([plan(FULL_ROUND), READ])
 
     research(state, llm, searcher, papers)
 
-    assert [r.new_studies for r in state.rounds] == [1, 0]
-    assert state.rounds[-1].stop_reason == "round 2 added 0 new studies (< 2)"
+    (only,) = state.rounds
+    assert only.missing == [] and only.stop_reason == "round 1 left no coverage gaps"
+
+
+def test_later_round_adding_fewer_than_five_studies_stops(state, make_llm, make_epmc) -> None:
+    searcher = Searcher(cast(TavilyClient, OnePagePerQuery()))
+    round_2 = [q("confounders", f"c {i}") for i in range(4)]
+    outcomes = [plan(FULL_ROUND), *[OFF_TOPIC] * len(GROUPS), plan(round_2)]
+    llm, _ = make_llm(outcomes + distinct_studies(4, 10))
+
+    research(state, llm, searcher, make_epmc([])[0])
+
+    assert [r.new_studies for r in state.rounds] == [0, 4]
+    assert state.rounds[-1].stop_reason == "round 2 added 4 new studies (< 5)"
 
 
 def test_done_with_coverage_met_stops(state, make_llm, searcher, papers) -> None:
@@ -201,20 +218,19 @@ def test_done_too_early_is_overridden_and_names_the_gap(state, make_llm, searche
 
 
 def test_nothing_found_reformulates_once_then_stops(state, make_llm, searcher, papers) -> None:
-    off_topic = extraction(included=False, quotes=[])
     round_2 = [q("mechanism", "licorice root throat inflammation")]
-    llm, fake = make_llm([plan(FULL_ROUND, done=True), off_topic, plan(round_2)])
+    llm, fake = make_llm([plan(FULL_ROUND, done=True), OFF_TOPIC, plan(round_2)])
 
     research(state, llm, searcher, papers)
 
     assert len(state.rounds) == 2
     assert "reformulate" in fake.requests[2]["messages"][1]["content"]
-    assert state.rounds[-1].stop_reason == "round 2 added 0 new studies (< 2)"
+    assert state.rounds[-1].stop_reason == "round 2 added 0 new studies (< 5)"
     assert state.certainty is None
 
 
 def test_repeated_queries_are_not_rerun_and_end_the_loop(state, make_llm, searcher, papers) -> None:
-    llm, _ = make_llm([plan(FULL_ROUND), READ, plan([FULL_ROUND[0]])])
+    llm, _ = make_llm([plan(FULL_ROUND), OFF_TOPIC, plan([FULL_ROUND[0]])])
 
     research(state, llm, searcher, papers)
 
@@ -262,14 +278,17 @@ def test_research_gaps_runs_one_round_aimed_at_the_gaps(
 def test_done_plan_with_no_gaps_left_runs_no_queries(state, make_llm, searcher, papers) -> None:
     # Live D0 (run 20261114-154259-6bb1d2): round 3's plan said done with no gaps, but its
     # 6 queries still ran: 19 extract calls, ~39k tokens, nothing the report used.
-    round_2 = [q("mechanism", "licorice glycyrrhizin anti-inflammatory")]
-    llm, _ = make_llm([plan(FULL_ROUND), READ, plan(round_2, done=True)])
+    searcher = Searcher(cast(TavilyClient, OnePagePerQuery()))
+    round_2 = [q("confounders", f"c {i}") for i in range(5)]
+    round_3 = [q("mechanism", "licorice glycyrrhizin anti-inflammatory")]
+    outcomes = [plan(FULL_ROUND), *[OFF_TOPIC] * len(GROUPS), plan(round_2)]
+    llm, _ = make_llm([*outcomes, *distinct_studies(5, 10), plan(round_3, done=True)])
 
     research(state, llm, searcher, papers)
 
-    assert len(searcher.calls) == len(GROUPS)  # round 2's query never ran
+    assert len(searcher.calls) == len(GROUPS) + 5  # round 3's query never ran
     last = state.rounds[-1]
-    assert (last.number, last.new_studies, last.missing) == (2, 0, [])
+    assert (last.number, last.new_studies, last.missing) == (3, 0, [])
     assert last.stop_reason == "model said done before running; coverage met"
 
 

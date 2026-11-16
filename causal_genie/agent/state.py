@@ -4,11 +4,22 @@ Model outputs are validated against these schemas; unknown fields are rejected s
 cannot slip in fields (e.g. a verdict) that only the controller may set.
 """
 
+import logging
+from collections.abc import Generator
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal, Self, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.json_schema import SkipJsonSchema
+
+log = logging.getLogger(__name__)
+
+
+def now() -> datetime:
+    """The clock step timings read; tests replace it with a fake one."""
+    return datetime.now(UTC)
 
 
 class Schema(BaseModel):
@@ -560,6 +571,14 @@ class LLMCall(Schema):
     finish_reasons: list[str] = Field(default_factory=list)
 
 
+class StepTiming(Schema):
+    """Wall time of one step, or of one research round inside the research step."""
+
+    name: str  # "route", "research", "research round 2", ...
+    started_at: datetime
+    seconds: float | None = None  # None: the step never finished (the process was killed)
+
+
 class RunState(Schema):
     run_id: str
     question: str
@@ -596,6 +615,22 @@ class RunState(Schema):
     report: str | None = None
     llm_calls: list[LLMCall] = Field(default_factory=list)
     versions: dict[str, str] = Field(default_factory=dict)  # models, tools, package
+    timings: list[StepTiming] = Field(default_factory=list)  # in start order
+
+    @contextmanager
+    def timed(self, name: str, step: bool = True) -> Generator[None]:
+        """Time the block as `name`, even when it fails. With `step`, it is also the step
+        now running, so a failure names it; a research round passes False, so a failure
+        inside it still names the step that ran it."""
+        if step:
+            self.step = name
+        timing = StepTiming(name=name, started_at=now())
+        self.timings.append(timing)
+        try:
+            yield
+        finally:
+            timing.seconds = (now() - timing.started_at).total_seconds()
+            log.info("run_id=%s step=%s seconds=%.1f", self.run_id, name, timing.seconds)
 
     @property
     def tokens(self) -> dict[str, int]:

@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
@@ -11,6 +12,7 @@ from conftest import FIXTURES, FakeTavily, epmc_result, extraction, proposal
 from tavily import TavilyClient
 
 from causal_genie.agent import controller
+from causal_genie.agent import state as state_module
 from causal_genie.agent.state import RunState
 from causal_genie.agent.steps.data import RDATASETS, RDATASETS_INDEX
 from causal_genie.llm.client import LLMClient
@@ -214,6 +216,32 @@ def test_trial_data_without_a_documented_design_is_analyzed_as_observational(
     assert state.adjustment is not None and state.adjustment.adjust_for == []
 
 
+def test_a_mapped_column_that_is_all_missing_is_left_out_of_the_estimate(
+    run_live, framed, round_plan, served
+) -> None:
+    # Live D0 (run 20261115-221659-ff7ee1): `day_of_week` derived from a weekday-name column
+    # ("Wed") gave no dates, so every row was missing and the estimate had no rows at all.
+    served[LICORICE] = b"rownames,treat,pacu30min_throatPain,wday\n" + b"".join(
+        row + b",Wed\n" for row in CSV.splitlines()[1:]
+    )
+    undocumented = extraction(quotes=[], data_link=LICORICE_DOCS)
+    dag = proposal(("licorice_gargle", "sore_throat", []), ("weekday", "sore_throat", []))
+    weekday = {"node": "weekday", "columns": ["wday"], "derive": "day_of_week"}
+    mapped = json.loads(MAPPED)
+    mapped["nodes"].append({"cutoff": None, "categorical": True} | weekday)
+
+    state = run_live(
+        D1,
+        [routed(True), framed, round_plan, undocumented, dag, COVERED, json.dumps(mapped), PROSE],
+    )
+
+    assert state.verdict == "estimated"
+    (result,) = state.results
+    assert result.tool == "backdoor_effect"
+    assert state.adjustment is not None and "weekday" not in state.adjustment.precision
+    assert result.outputs["n"] == 7  # the one row without an outcome is the only one excluded
+
+
 def test_user_can_say_assignment_was_random(run_live, framed, round_plan) -> None:
     undocumented = extraction(quotes=[], data_link=LICORICE_DOCS)
     asked: list[str] = []
@@ -319,6 +347,49 @@ def test_no_included_study_and_no_data_is_insufficient(
     assert state.verdict == "insufficient"
     assert state.edges == []  # no evidence to build a graph from
     assert state.report is not None and "No included studies" in state.report
+
+
+@pytest.fixture
+def fake_clock(monkeypatch):
+    """Each reading of the clock is one second after the last."""
+    ticks = (datetime(2026, 11, 15, tzinfo=UTC) + timedelta(seconds=s) for s in range(1000))
+    monkeypatch.setattr(state_module, "now", lambda: next(ticks))
+
+
+def test_each_step_and_research_round_is_timed_in_order(
+    run_live, framed, round_plan, fake_clock, tmp_path: Path
+) -> None:
+    state = run_live(D1, [routed(True), framed, round_plan, *D1_CALLS])
+
+    assert [t.name for t in state.timings] == [
+        "route",
+        "frame",
+        "research",
+        "research round 1",
+        "dag",
+        "data",
+        "map",
+        "estimate",
+        "report",
+    ]
+    starts = [t.started_at for t in state.timings]
+    assert starts == sorted(starts)
+    assert all(t.seconds is not None and t.seconds > 0 for t in state.timings)
+    research, round_1 = state.timings[2:4]
+    assert round_1.seconds is not None and research.seconds is not None
+    assert round_1.seconds < research.seconds  # the round runs inside the research step
+    saved = RunState.load(tmp_path / "runs" / state.run_id / "state.json")
+    assert saved.timings == state.timings
+
+
+def test_a_failed_step_is_still_timed_and_named(run_live, framed, fake_clock) -> None:
+    timeout = openai.APITimeoutError(request=httpx2.Request("POST", "https://api.test"))
+
+    state = run_live(D1, [routed(True), framed, timeout, timeout])
+
+    assert state.step == "research"  # a round's timing does not rename the failed step
+    assert [t.name for t in state.timings] == ["route", "frame", "research", "research round 1"]
+    assert all(t.seconds is not None for t in state.timings)
 
 
 def test_failed_step_still_saves_the_run(run_live, tmp_path: Path) -> None:

@@ -25,10 +25,11 @@ cases:
         A second file (US_births_1994-2003_CDC_NCHS.csv, same columns, CDC source) overlaps
         2000–2003; use one table only (MVP). File names say "births", not "moon": discovery
         must search for the outcome, and the treatment comes from `derive`.
-      also_accept:  # T12.7: either FiveThirtyEight births table counts, from GitHub or Rdatasets
+      also_accept:  # T12.7: either FiveThirtyEight births table (GitHub or Rdatasets), or mosaicData Birthdays
         - https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_1994-2003_CDC_NCHS.csv
         - https://vincentarelbundock.github.io/Rdatasets/csv/fivethirtyeight/US_births_1994_2003.csv
         - https://vincentarelbundock.github.io/Rdatasets/csv/fivethirtyeight/US_births_2000_2014.csv
+        - https://vincentarelbundock.github.io/Rdatasets/csv/mosaicData/Birthdays.csv  # daily births by US state, 1969-1988; has a date column (user OK)
     dag:  # T12.5; every case also forbids edges out of the outcome
       required_nodes: [day_of_week]
       no_edges_into_exposure: true  # moon phase is exogenous

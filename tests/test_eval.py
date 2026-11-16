@@ -204,9 +204,10 @@ def test_retracted_key_papers_must_be_flagged_if_found(sample_state: RunState) -
         f"{RD}/fivethirtyeight/US_births_2000_2014.csv",
         "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv",
         "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_1994-2003_CDC_NCHS.csv",
+        f"{RD}/mosaicData/Birthdays.csv",  # daily births by US state, 1969-1988 (user OK, Nov 15)
     ],
 )
-def test_d0_accepts_either_fivethirtyeight_births_table(sample_state: RunState, url: str) -> None:
+def test_d0_accepts_a_daily_us_births_table(sample_state: RunState, url: str) -> None:
     sample_state.datasets = [accepted(url, rank=2)]
     assert run_eval.data_check(sample_state, CASES["D0"]) == {"ok": True, "rank": 2, "url": url}
 

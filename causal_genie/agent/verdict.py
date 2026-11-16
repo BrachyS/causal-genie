@@ -12,6 +12,9 @@ from causal_genie.agent.state import RunState, Verdict
 
 log = logging.getLogger(__name__)
 
+# Exposures computed from the date: nothing about the people studied can change them.
+CALENDAR_RULES = {"full_moon", "day_of_week", "weekend", "holiday", "season"}
+
 
 def pick_verdict(state: RunState) -> Verdict:
     """The verdict for a finished run; the report only renders it."""
@@ -45,12 +48,18 @@ def unmeasured_confounders(state: RunState) -> list[str]:
     the citation checks) matching no mapped node or column. A name matches when one's words
     contain the other's (e.g. `smoking status` ~ `smoking`); unmatched names are kept, since
     missing a confounder is the error this check guards against.
+
+    An exposure read off the calendar (moon phase, weekday, holiday, season) has none:
+    studies may adjust for parity or age, but nothing about the people studied changes a date.
     """
     observational = state.results and state.results[-1].tool == "backdoor_effect"
     if not observational or state.query is None or state.mapping is None:
         return []
     exposure, outcome = state.query.exposure.name, state.query.outcome.name
     mapped = [m for m in state.mapping.nodes if m.columns]
+    if any(m.node == exposure and m.derive in CALENDAR_RULES for m in mapped):
+        log.info("unmeasured confounders: none, %s is read off the calendar", exposure)
+        return []
     names = [words(n) for m in mapped for n in (m.node, *m.columns)]
 
     def covered(name: str) -> bool:

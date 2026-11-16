@@ -113,6 +113,30 @@ def test_dag_confounder_left_unmapped_is_strong_assumptions(observational: RunSt
     assert pick_verdict(observational) == "estimated_strong_assumptions"
 
 
+@pytest.mark.parametrize("rule", ["full_moon", "day_of_week", "weekend", "holiday", "season"])
+def test_an_exposure_read_off_the_calendar_has_no_confounders(observational, rule: str) -> None:
+    # Live D0 (run 20261116-034032-d7d345): studies of full-moon births adjusted for parity and
+    # gestational age, which cannot change the moon's phase; they made the verdict ⚠️.
+    assert observational.mapping is not None
+    observational.mapping.nodes[0] = node("licorice_gargle", "date").model_copy(
+        update={"derive": rule}
+    )
+    observational.studies[0].adjusted_for = ["parity", "gestational age"]
+
+    assert unmeasured_confounders(observational) == []
+    assert pick_verdict(observational) == "estimated"
+
+
+def test_an_exposure_from_a_cutoff_can_still_be_confounded(observational: RunState) -> None:
+    assert observational.mapping is not None
+    observational.mapping.nodes[0] = node("licorice_gargle", "dose").model_copy(
+        update={"derive": "cutoff", "cutoff": 0}
+    )
+    observational.studies[0].adjusted_for = ["body mass index"]
+
+    assert unmeasured_confounders(observational) == ["body mass index"]
+
+
 def test_randomized_estimate_ignores_unmeasured_confounders(observational) -> None:
     observational.studies[0].adjusted_for = ["body mass index"]
     observational.results = [estimate("rct_effect")]

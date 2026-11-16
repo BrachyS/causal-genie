@@ -6,12 +6,13 @@ repeated queries, turns new sources into checked studies (`sources.process_sourc
 the stop decision. A plan that still fails its schema after the one repair retry is replaced by
 the preset query groups, so research never depends on the model planning well.
 
-Stop rule: stop when a round has nothing new to run, after 3 rounds, when a round after the
-first adds < 2 new studies, or when the model says done **and** no coverage is missing (a
-later round whose plan says done with no gaps left is not run at all). A
-`done` with coverage missing is overridden, and every summary names what is missing. "No
-included study yet" is one of those gaps, so empty results get exactly one reformulated round
-before the "< 2 new studies" rule ends the loop.
+Stop rule: stop when a round has nothing new to run, after 3 rounds, when round 1 leaves no
+coverage missing, when a later round adds < 5 new studies, or when the model says done **and**
+no coverage is missing (a later round whose plan says done with no gaps left is not run at
+all). A `done` with coverage missing is overridden, and every summary names what is missing.
+"No included study yet" is one of those gaps, so empty results get exactly one reformulated
+round before the "< 5 new studies" rule ends the loop. Round 1 is most of research's cost and,
+on the eval cases, found every key study research found (docs/DECISIONS.md).
 """
 
 import logging
@@ -37,6 +38,7 @@ from causal_genie.tools.search import RESEARCH_DOMAINS, Searcher
 log = logging.getLogger(__name__)
 
 MAX_ROUNDS = 3
+MIN_NEW_STUDIES = 5  # a later round adding fewer ends research
 
 
 def research(
@@ -81,45 +83,46 @@ def run_round(
     number: int,
     max_rounds: int,
 ) -> ResearchRound:
-    """Plan and run one round, skipping queries earlier rounds already ran.
+    """Plan and run one round (timed), skipping queries earlier rounds already ran.
 
     A plan that says done when the last round left no gaps is not run: its queries would
     only add cost. Gaps from `research_gaps` sit in that `missing` list, so a gap round runs.
     """
-    ran = {(query.tool, query.text) for r in state.rounds for query in r.plan.queries}
-    gaps_before = state.rounds[-1].missing if state.rounds else None
-    plan, planned_by = plan_round(state, llm, searcher, number, max_rounds)
-    # Stored as a plain ResearchPlan: the round-specific checks already ran, and the saved
-    # run must load back equal to the live one.
-    stored = ResearchPlan.model_validate(plan.model_dump())
-    current = ResearchRound(number=number, plan=stored, planned_by=planned_by)
-    state.rounds.append(current)
-    if plan.done and gaps_before == []:
-        current.stop_reason = "model said done before running; coverage met"
-        log.info("round=%d not run: %s (%s)", number, current.stop_reason, plan.done_reason)
+    with state.timed(f"research round {number}", step=False):
+        ran = {(query.tool, query.text) for r in state.rounds for query in r.plan.queries}
+        gaps_before = state.rounds[-1].missing if state.rounds else None
+        plan, planned_by = plan_round(state, llm, searcher, number, max_rounds)
+        # Stored as a plain ResearchPlan: the round-specific checks already ran, and the saved
+        # run must load back equal to the live one.
+        stored = ResearchPlan.model_validate(plan.model_dump())
+        current = ResearchRound(number=number, plan=stored, planned_by=planned_by)
+        state.rounds.append(current)
+        if plan.done and gaps_before == []:
+            current.stop_reason = "model said done before running; coverage met"
+            log.info("round=%d not run: %s (%s)", number, current.stop_reason, plan.done_reason)
+            return current
+        new = [query for query in plan.queries if (query.tool, query.text) not in ran]
+        for query in new:
+            run_query(query, number, searcher)
+        before = included_ids(state)
+        process_sources(state, llm, searcher, papers)
+        current.new_studies = len(included_ids(state) - before)
+        current.missing = missing_coverage(state)
+        current.stop_reason = stop_reason(current, plan, bool(new), max_rounds)
+        log.info(
+            "round=%d planned_by=%s queries=%d skipped_repeats=%d new_studies=%d done=%s "
+            "done_reason=%r missing=%s stop=%s",
+            number,
+            planned_by,
+            len(new),
+            len(plan.queries) - len(new),
+            current.new_studies,
+            plan.done,
+            plan.done_reason,
+            current.missing,
+            current.stop_reason,
+        )
         return current
-    new = [query for query in plan.queries if (query.tool, query.text) not in ran]
-    for query in new:
-        run_query(query, number, searcher)
-    before = included_ids(state)
-    process_sources(state, llm, searcher, papers)
-    current.new_studies = len(included_ids(state) - before)
-    current.missing = missing_coverage(state)
-    current.stop_reason = stop_reason(current, plan, bool(new), max_rounds)
-    log.info(
-        "round=%d planned_by=%s queries=%d skipped_repeats=%d new_studies=%d done=%s "
-        "done_reason=%r missing=%s stop=%s",
-        number,
-        planned_by,
-        len(new),
-        len(plan.queries) - len(new),
-        current.new_studies,
-        plan.done,
-        plan.done_reason,
-        current.missing,
-        current.stop_reason,
-    )
-    return current
 
 
 def included_ids(state: RunState) -> set[str]:
@@ -158,10 +161,14 @@ def stop_reason(
         return "no new queries to run"
     if current.number >= max_rounds:
         return f"reached {max_rounds} rounds"
-    if current.number >= 2 and current.new_studies < 2:
-        return f"round {current.number} added {current.new_studies} new studies (< 2)"
+    if current.number >= 2 and current.new_studies < MIN_NEW_STUDIES:
+        return (
+            f"round {current.number} added {current.new_studies} new studies (< {MIN_NEW_STUDIES})"
+        )
     if plan.done and not current.missing:
         return "model said done; coverage met"
+    if current.number == 1 and not current.missing:
+        return "round 1 left no coverage gaps"
     if plan.done:
         log.info("override: model said done but coverage is missing: %s", current.missing)
     return None
