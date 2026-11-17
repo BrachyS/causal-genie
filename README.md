@@ -1,5 +1,7 @@
 # 🧞 Causal Genie
 
+**Try it: [causalgenie.streamlit.app](https://causalgenie.streamlit.app)**. Read answered questions in the gallery, or post your own and vote.
+
 A research agent for "does X cause Y?" questions (*"Does the full moon cause more births?"*). It researches the question like a small systematic review, draws a causal graph (DAG) whose arrows cite checked source passages, looks for a public dataset with the treatment, outcome and confounders, and estimates the effect, or declines and says what is missing. Every number in a report traces to a tool call, and every claim to a quoted source. Models run on Nebius Token Factory and search runs on Tavily.
 
 ## Run it
@@ -67,7 +69,7 @@ The cases cover an estimate from public data (full moon and births), a trial's o
    # GENIE_MODE = "1"                  # the Genie's one-line aside on live runs
    ```
 
-3. **After the first deploy:** put the app's address (for example `https://<name>.streamlit.app`) in the GitHub Actions variable `CG_APP_URL`, so Bluesky posts link back to the app.
+3. **After the first deploy:** put the app's address (here `https://causalgenie.streamlit.app`) in the GitHub Actions variable `CG_APP_URL`, so Bluesky posts link back to the app.
 
 Without any secrets the app still serves the gallery.
 
