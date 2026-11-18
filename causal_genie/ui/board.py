@@ -253,23 +253,18 @@ def _vote_for_similar(db: Engine, question_id: int, voter_id: str) -> None:
     _say("Counted as your vote.")
 
 
-def render_board(
-    db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir: Path = GALLERY_DIR
-) -> None:
-    """The board tab. A database failure shows "Board unavailable" and leaves the app running.
-
-    The ask box is the app's (one place to type); this shows what asking did, then the board.
-    `voter_id` is None until the browser has reported it (voting waits); `llm` None turns the
-    "ask mine anyway" choice off.
-    """
+def ask_outcome(db: Engine, voter_id: str | None, llm: LLMClient | None) -> None:
+    """What posting did, shown under the app's ask box: the message, and for a question like
+    one already on the board, the choice to vote for that one or ask anyway. `llm` None turns
+    the choices off."""
     try:
-        _render(db, voter_id, llm, gallery_dir)
+        _outcome(db, voter_id, llm)
     except SQLAlchemyError:
         log.exception("board: database unavailable")
         st.warning("Board unavailable right now. The rest of the app still works.")
 
 
-def _render(db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir: Path) -> None:
+def _outcome(db: Engine, voter_id: str | None, llm: LLMClient | None) -> None:
     if message := st.session_state.pop("board_message", None):
         st.info(message)
     if similar := st.session_state.get("board_similar"):
@@ -291,6 +286,21 @@ def _render(db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir
                 args=(db, text, voter_id, llm, True),
             )
 
+
+def render_board(
+    db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir: Path = GALLERY_DIR
+) -> None:
+    """The board to vote on (the app's sidebar). A database failure shows "Board unavailable"
+    and leaves the app running. `voter_id` is None until the browser has reported it (voting
+    waits). The ask box and its outcome are the app's (`ask_outcome`)."""
+    try:
+        _render(db, voter_id, gallery_dir)
+    except SQLAlchemyError:
+        log.exception("board: database unavailable")
+        st.warning("Board unavailable right now. The rest of the app still works.")
+
+
+def _render(db: Engine, voter_id: str | None, gallery_dir: Path) -> None:
     latest = board_db.latest_answered(db)
     if latest:
         st.subheader("Today's question")
@@ -315,9 +325,9 @@ def _render(db: Engine, voter_id: str | None, llm: LLMClient | None, gallery_dir
     voted = board_db.voted(db, voter_id) if voter_id else set()
     ranked = rank(board_db.board(db))
     if not ranked:
-        st.markdown("No questions waiting. Ask the first one above.")
+        st.markdown("No questions waiting. Ask the first one at the top of the page.")
     for q in ranked:
-        text, button = st.columns([6, 1], vertical_alignment="center")
+        text, button = st.columns([3, 1], vertical_alignment="center")  # fits the sidebar
         text.markdown(f"{plain(q.text)}  \n{_votes(q.votes)}")
         mine = q.id in voted
         button.button(

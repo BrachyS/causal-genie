@@ -66,7 +66,7 @@ def live_app(sample_state, tmp_path, monkeypatch) -> list[str]:
 def ask(question: str, passcode: str) -> AppTest:
     """Type into the app's one ask box (Ask & vote tab) and press "Run privately now"."""
     at = AppTest.from_file(str(APP), default_timeout=30).run()
-    box = at.tabs[1]
+    box = at.main
     box.text_input[0].input(question)
     box.text_input[1].input(passcode)
     next(b for b in box.button if b.label == "Run privately now").click().run()
@@ -98,5 +98,6 @@ def test_live_mode_off_without_a_configured_passcode(live_app, monkeypatch) -> N
     at = AppTest.from_file(str(APP), default_timeout=30).run()
 
     assert not at.exception
-    assert not at.tabs[1].text_input and not at.tabs[1].button
-    assert any("Asking is off" in m.value for m in at.tabs[1].info)
+    assert [t.key for t in at.main.text_input] == ["search"]
+    assert not {"Post to the board", "Run privately now"} & {b.label for b in at.main.button}
+    assert any("Asking is off" in m.value for m in at.main.info)

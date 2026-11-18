@@ -10,14 +10,24 @@ import html
 import json
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 from urllib.parse import quote
 
 from pydantic import ValidationError
 
-from causal_genie.agent.state import RunState, Sentence, Verdict
-from causal_genie.agent.steps.report import NUMBER, VERDICT_LABELS, byline, numbers
+from causal_genie.agent.router import normalize
+from causal_genie.agent.state import RunState, Schema, Sentence, Verdict
+from causal_genie.agent.steps.report import (
+    NUMBER,
+    VERDICT_LABELS,
+    byline,
+    dag_section,
+    numbers,
+)
+from causal_genie.llm.client import LLMClient, ModelOutputError
 
 log = logging.getLogger(__name__)
 
@@ -97,14 +107,14 @@ def saved_runs(runs_dir: Path) -> dict[str, Path]:
 LABEL = "label.txt"  # a gallery run's short tag, written by hand, e.g. "full A/B data"
 
 
-def gallery_runs(runs_dir: Path) -> dict[str, tuple[str, Path]]:
-    """Picker label → (question, `state.json`), one entry per run the gallery offers.
+def _gallery(runs_dir: Path) -> dict[str, tuple[RunState, str]]:
+    """Picker label → (run, its `label.txt` tag) for each run the gallery offers.
 
     Runs of one question are told apart by their `label.txt` (the demos ask the same question
     of different data); without one, the latest run of the question stands for it, as in
     `saved_runs`.
     """
-    runs: dict[str, tuple[str, Path]] = {}
+    runs: dict[str, tuple[RunState, str]] = {}
     for path in sorted(runs_dir.glob("*/state.json")):  # run ids sort by time
         try:
             state = RunState.load(path)
@@ -119,8 +129,143 @@ def gallery_runs(runs_dir: Path) -> dict[str, tuple[str, Path]]:
             continue
         tag = path.parent / LABEL
         label = tag.read_text().strip() if tag.is_file() else ""
-        runs[f"{state.question} · {label}" if label else state.question] = (state.question, path)
+        runs[f"{state.question} · {label}" if label else state.question] = (state, label)
     return runs
+
+
+def gallery_runs(runs_dir: Path) -> dict[str, tuple[str, Path]]:
+    """Picker label → (question, `state.json`), one entry per run the gallery offers."""
+    return {
+        key: (state.question, runs_dir / state.run_id / "state.json")
+        for key, (state, _) in _gallery(runs_dir).items()
+    }
+
+
+PARTIAL = "Partial run: no verdict reached"  # a card's verdict when the run stopped early
+ANSWER_CHARS, GENIE_CHARS = 220, 160  # what fits on a card; the full text is one click away
+PER_PAGE = 3  # cards in a band's row; the arrows page through the rest
+
+
+@dataclass
+class Card:
+    """A gallery run at a glance. Model text is already escaped for `st.markdown`."""
+
+    run_id: str
+    question: str
+    tag: str  # the run's `label.txt`, e.g. "full A/B data", or ""
+    verdict: str  # the verdict's label, or why there is none
+    answer: str  # the summary's first sentence, which states the answer
+    genie: str  # the Genie's aside, or ""
+
+
+def clip(text: str, limit: int) -> str:
+    """`text` cut at a word before `limit` characters, with an ellipsis if anything was cut."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0].rstrip(",;:.") + "…"
+
+
+def card(state: RunState, tag: str = "") -> Card:
+    if state.failure is None and state.verdict is not None:
+        verdict = VERDICT_LABELS[state.verdict]
+    else:
+        verdict = PARTIAL
+    summary = state.prose.summary if state.prose is not None else []
+    answer = escape(clip(summary[0].text, ANSWER_CHARS)) if summary else ""
+    genie = escape(clip(state.genie, GENIE_CHARS)) if state.genie else ""
+    return Card(state.run_id, state.question, tag, verdict, answer, genie)
+
+
+def gallery_cards(runs_dir: Path) -> list[Card]:
+    """A card for each run the gallery offers, oldest first."""
+    return [card(state, tag) for state, tag in _gallery(runs_dir).values()]
+
+
+def matching(cards: list[Card], query: str) -> list[Card]:
+    """The cards whose question or tag has every word of `query`, ignoring case and order."""
+    words = query.lower().split()
+    return [c for c in cards if all(w in f"{c.question} {c.tag}".lower() for w in words)]
+
+
+def verdict_choices(cards: list[Card]) -> list[str]:
+    """The verdicts the cards have, in the usual verdict order, partial runs last."""
+    have = {c.verdict for c in cards}
+    return [v for v in [*VERDICT_LABELS.values(), PARTIAL] if v in have]
+
+
+def with_verdicts(cards: list[Card], verdicts: list[str]) -> list[Card]:
+    """The cards with one of `verdicts`; all of them when none is picked."""
+    return [c for c in cards if not verdicts or c.verdict in verdicts]
+
+
+# Gallery bands, in the order they are shown, and the questions in each (any case and
+# punctuation). A question not listed here goes in the last band, `OTHER`.
+CATEGORIES: dict[str, tuple[str, ...]] = {
+    "🏠 Daily life": (
+        "Does listening to music while studying improve exam scores?",
+        "Does shaving make hair grow back thicker?",
+        "Does cracking your knuckles cause arthritis?",
+    ),
+    "🩺 Health": (
+        "Does licorice gargling reduce post-op sore throat?",
+        "Does sugar cause hyperactivity in children?",
+        "Do carrots improve night vision?",
+    ),
+    "🎈 Silly & fun": (
+        "Does the full moon cause more births?",
+        "Do ice cream sales at beaches cause shark attacks to occur?",
+    ),
+    "📈 Business (A/B tests)": ("Did the new onboarding flow raise 7-day activation?",),
+}
+OTHER = "🗂️ Miscellaneous"
+_CATEGORY_OF = {normalize(q): name for name, qs in CATEGORIES.items() for q in qs}
+
+Topic = Literal["daily_life", "health", "fun", "business", "misc"]
+TOPICS: dict[Topic, str] = {
+    "daily_life": "🏠 Daily life",
+    "health": "🩺 Health",
+    "fun": "🎈 Silly & fun",
+    "business": "📈 Business (A/B tests)",
+    "misc": OTHER,
+}
+
+
+class TopicLabel(Schema):
+    """The model's pick of a gallery band for a question off the `CATEGORIES` list."""
+
+    topic: Topic
+
+
+def listed(question: str) -> str:
+    """The question's band from the `CATEGORIES` list, or `OTHER`."""
+    return _CATEGORY_OF.get(normalize(question), OTHER)
+
+
+def category(question: str, llm: LLMClient | None) -> str:
+    """The question's gallery band: from the `CATEGORIES` list if it is there, else the small
+    model's pick. Without a model, or if its answer fails the schema twice, `OTHER`: a band
+    is only where a card is shown, so a failed pick never stops the gallery."""
+    if (band := listed(question)) != OTHER or llm is None:
+        return band
+    try:
+        label = llm.complete("small", "topic", f"<question>\n{question}\n</question>", TopicLabel)
+    except ModelOutputError:
+        log.exception("topic: no valid pick for %r", question)
+        return OTHER
+    log.info("topic: %r → %s", question, label.topic)
+    return TOPICS[label.topic]
+
+
+def bands(
+    cards: list[Card], category_of: Callable[[str], str] = listed
+) -> list[tuple[str, list[Card]]]:
+    """The cards grouped by `category_of` their question, in `CATEGORIES` order with `OTHER`
+    last; no empty band."""
+    grouped: dict[str, list[Card]] = {name: [] for name in [*CATEGORIES, OTHER]}
+    for c in cards:
+        grouped[category_of(c.question)].append(c)
+    return [(name, cs) for name, cs in grouped.items() if cs]
 
 
 def verdict_guide(picked: Verdict | None) -> str:
@@ -132,13 +277,22 @@ def verdict_guide(picked: Verdict | None) -> str:
     return "\n".join(rows)
 
 
+def verdict_list() -> str:
+    """Every verdict's name, each opening on a click to what it means (HTML `<details>`, since
+    Streamlit can't nest expanders). Labels and meanings are the app's own text."""
+    return "\n".join(
+        f"<details><summary>{label}</summary>{VERDICT_MEANINGS[verdict]}</details>"
+        for verdict, label in VERDICT_LABELS.items()
+    )
+
+
 def cited_ids(state: RunState) -> list[str]:
-    """Every id the prose cites, in order of first citation."""
+    """Every id the prose cites, in order of first citation, then the claims backing the
+    graph's arrows, so a study that backs only an arrow still gets a number and a card."""
     prose = state.prose
-    if prose is None:
-        return []
-    sentences = prose.summary + prose.comparison + prose.limitations
-    return list(dict.fromkeys(c for s in sentences for c in s.cites))
+    sentences = prose.summary + prose.comparison + prose.limitations if prose else []
+    in_prose = [c for s in sentences for c in s.cites]
+    return list(dict.fromkeys([*in_prose, *(c for e in state.edges for c in e.claim_ids)]))
 
 
 def citations(state: RunState) -> dict[str, Citation]:
@@ -197,6 +351,30 @@ def cited_html(s: Sentence, entries: dict[str, str], cites: dict[str, Citation])
             links = ", ".join(f'<a href="#{anchor(c.key)}">{c.n}</a>' for c in group)
             brackets.append(f"[{PLURAL[kind]} {links}]")
     return "".join(parts) + "".join(f" {b}" for b in brackets)
+
+
+def dag_backing(state: RunState) -> str:
+    """Markdown list of each arrow with what backs it, the studies as links to their source
+    cards (`[Study 1]`), then the report's note on exogenous nodes. Node names are model text."""
+    cites = citations(state)
+    lines = []
+    for e in state.edges:
+        if e.question:
+            backing = "the question being tested"
+        elif e.assumed:
+            backing = "assumed (no source)"
+        else:
+            refs = [cites.get(c, c) for c in e.claim_ids]
+            unique = {r.key if isinstance(r, Citation) else r: r for r in refs}.values()
+            backing = " ".join(
+                f'[<a href="#{anchor(r.key)}">{r.label}</a>]'
+                if isinstance(r, Citation)
+                else escape(r)
+                for r in unique
+            )
+        lines.append(f"- {escape(e.source)} → {escape(e.target)}: {backing}")
+    note = [line for line in dag_section(state) if line.startswith("Treated as exogenous")]
+    return "\n".join(lines + ["", *note] if note else lines)
 
 
 def text_fragment(url: str, quote_text: str) -> str:

@@ -1,17 +1,18 @@
-"""Causal Genie in the browser: pick or type a question and see its saved run.
+"""Causal Genie in the browser: ask a question, vote, and browse the answered ones.
 
 Shows recorded runs only (replay needs no keys); live mode comes with a passcode and spend
 cap (T11.3). Run: `uv run streamlit run causal_genie/ui/app.py`. `CG_RUNS_DIR` picks the
 folder of saved runs (default `gallery/`).
 
-Two tabs: the Gallery is read-only (pick an answered question); "Ask & vote" is the one
-place to type. There a question goes to the public board (`BOARD_DB_URL`, U13b) or, with
-the passcode, gets a private live run now; the board to vote on is below. Links
-`?run=<run_id>` and `?q=<question>` open a saved run in the Gallery (U14), so Bluesky posts
-and shared links land on the answer.
+One page. On top, the one place to type: a question goes to the public board
+(`BOARD_DB_URL`, U13b) or, with the passcode, gets a private live run now. Below, the
+gallery: a card per answered question, in a band per topic. The board to vote on is in the
+sidebar. A card opens its full answer on its own page, `?run=<run_id>`; that link and
+`?q=<question>` are also how Bluesky posts and shared links land on an answer (U14).
 """
 
 import logging
+import math
 import os
 from pathlib import Path
 from urllib.parse import quote
@@ -27,7 +28,6 @@ from causal_genie.agent.steps.report import (
     DISCLAIMER,
     FINDINGS,
     VERDICT_LABELS,
-    dag_section,
     data_section,
     estimate_section,
     evidence_section,
@@ -39,21 +39,34 @@ from causal_genie.tools.render import dag_dot
 from causal_genie.ui import board, board_db, live
 from causal_genie.ui.gallery import GALLERY_DIR
 from causal_genie.ui.live import passcode_ok
+from causal_genie.ui.pdf import report_pdf
 from causal_genie.ui.view import (
+    PER_PAGE,
     VERDICT_MEANINGS,
+    Card,
     Citation,
     anchor,
+    bands,
+    category,
     citations,
     cited_html,
+    dag_backing,
+    escape,
+    gallery_cards,
     gallery_runs,
+    matching,
     sources,
+    verdict_choices,
     verdict_guide,
+    verdict_list,
+    with_verdicts,
 )
 
 log = logging.getLogger(__name__)
 
 LOGO = Path(__file__).parent / "assets" / "genie.png"  # the Genie's lamp, also on Bluesky
 CONTEXT = "context.md"  # a saved run's background note, written by hand for the gallery
+CARD_HEIGHT = 330  # px: every card in a band the same size; a long one scrolls inside
 
 
 def body(section: list[str]) -> str:
@@ -131,7 +144,7 @@ def show(state: RunState) -> None:
         )
         st.graphviz_chart(dag_dot(state.edges))
         with st.expander("What backs each arrow"):
-            st.markdown(body(dag_section(state)))
+            st.markdown(dag_backing(state), unsafe_allow_html=True)
 
     if state.verdict != "not_causal" and (state.results or state.design is not None):
         st.subheader("Estimate")
@@ -160,32 +173,47 @@ def show(state: RunState) -> None:
     tokens = state.tokens
     st.caption(f"Run `{state.run_id}` · {tokens['in']:,} tokens in / {tokens['out']:,} out")
     if state.report:
-        st.download_button("Download report (Markdown)", state.report, f"{state.run_id}.md")
+        st.download_button(
+            "Download report (PDF)",
+            pdf_of(state.report),
+            f"{state.run_id}.pdf",
+            mime="application/pdf",
+        )
+
+
+@st.cache_data(show_spinner=False, max_entries=50)
+def pdf_of(report: str) -> bytes:
+    """The report's PDF, built once per report while the app runs."""
+    return report_pdf(report)
+
+
+TAGLINE = (
+    "**Does X really cause Y?** The Genie reads the studies, maps what else could explain "
+    "the link, and runs the numbers on real data, then tells you plainly how sure anyone "
+    "can be."
+)
+PROOF = "Every number traces to a tested tool, every claim to a quote from its source."
 
 
 def header() -> None:
     """The brand: the Genie's lamp beside the name and the one-line promise."""
-    lamp, title = st.columns([1, 9], vertical_alignment="center")
-    lamp.image(str(LOGO), width=110)
+    # The lamp spans the whole text block: title, tagline and proof line (~170 px tall).
+    lamp, title = st.columns([2, 11], vertical_alignment="center")
+    lamp.image(str(LOGO), width=170)
     title.title("Causal Genie")
-    title.caption(
-        "Does X cause Y? Recorded runs: every number traces to a tool, every claim to a quote."
-    )
+    title.markdown(TAGLINE)
+    title.caption(PROOF)
 
 
-TABS = ("📚 Gallery", "🙋 Ask & vote")
-
-INTRO = f"""\
+INTRO = """\
 ### How to use it
 
-Ask a "does X cause Y?" question. The Genie reads the studies, draws a causal graph whose \
-arrows cite their sources, finds public data and estimates the effect, or says plainly \
-why it can't.
-
-1. **{TABS[0]}:** pick an answered question and read the verdict, the graph, the estimate \
-and the quoted sources.
-2. **{TABS[1]}:** type your own question and post it to the board, or vote for someone \
-else's. Each night the top-voted question is answered and joins the gallery.
+1. **Ask** a "does X cause Y?" question in the box at the top of the page. It goes on the \
+public board below, where anyone can vote.
+2. **Vote** for the question you want answered next. Each night the Genie answers the \
+top-voted one and it joins the gallery.
+3. **Browse** the answered questions by topic, and open any card for the full answer: the \
+graph, the estimate and the quoted sources.
 
 **Reading an answer:** the verdict says how far the evidence goes, from an estimate from \
 data down to "insufficient evidence". Every number traces to a tool or a quoted source, \
@@ -193,24 +221,58 @@ never to the model.
 """
 
 
+VOTE_BANNER = """\
+<div style="background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff;
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 4px;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);">
+  <div style="font-size: 1.25rem; font-weight: 700;">🗳️ Vote on what's next</div>
+  <div style="font-size: 0.9rem; opacity: 0.92; margin-top: 2px;">
+    The top-voted question gets answered tonight. One tap, no sign-up.
+  </div>
+</div>
+"""
+
+
 def intro() -> None:
-    """The sidebar note that tells a first-time visitor what the app does and where to go."""
-    st.sidebar.markdown(INTRO)
+    """The sidebar's reference notes, below the vote: how to use the app (folded) and every
+    verdict's name, each opening to what it means."""
+    with st.sidebar.expander("How to use it"):
+        st.markdown(INTRO)
+    st.sidebar.markdown("#### What the verdicts mean")
+    st.sidebar.markdown(verdict_list(), unsafe_allow_html=True)
 
 
 def main() -> None:
     st.set_page_config(page_title="Causal Genie", page_icon=str(LOGO), layout="wide")
     header()
+    vote_slot = st.sidebar.container()  # on top of the sidebar, filled last (see below)
     intro()
     runs_dir = Path(os.getenv("CG_RUNS_DIR", str(GALLERY_DIR)))
-    answers, ask = st.tabs(TABS)
-    with answers:
+    db = board_or_none(os.getenv("BOARD_DB_URL", ""))
+    llm = None
+    if db is not None and os.getenv("NEBIUS_API_KEY") and os.getenv("NEBIUS_BASE_URL"):
+        llm = LLMClient(make_openai(), load_models())
+    voter = board.voter_id() if db is not None else None
+    passcode = os.getenv("CG_LIVE_PASSCODE", "")
+
+    entries = gallery_runs(runs_dir)
+    if label := linked_label(entries):
+        answer_page(*entries[label])
+    else:
+        ask_box(db, voter, llm, passcode, runs_dir)
+        st.divider()
         gallery(runs_dir)
-    with ask:
-        ask_and_vote(os.getenv("BOARD_DB_URL", ""), runs_dir)
+
+    if db is not None:  # after the ask box, so a question posted on this click is listed
+        with vote_slot:
+            st.markdown(VOTE_BANNER, unsafe_allow_html=True)
+            board.render_board(db, voter, llm, runs_dir)
+            if passcode:
+                with st.expander("Admin"):
+                    board.admin_panel(db)
 
 
-def linked_label(entries: dict[str, tuple[str, Path]], runs_dir: Path) -> str | None:
+def linked_label(entries: dict[str, tuple[str, Path]]) -> str | None:
     """The gallery entry a `?run=` or `?q=` link names, or None (with a warning if it names none).
 
     A run id only ever selects among the runs the gallery lists; it never builds a path that
@@ -218,42 +280,135 @@ def linked_label(entries: dict[str, tuple[str, Path]], runs_dir: Path) -> str | 
     """
     run_id, wanted = st.query_params.get("run"), st.query_params.get("q")
     if run_id:
-        path = runs_dir / run_id / "state.json"
         for label, (_, listed) in entries.items():
-            if board.RUN_ID.fullmatch(run_id) and listed == path:
+            if board.RUN_ID.fullmatch(run_id) and listed.parent.name == run_id:
                 return label
-        st.warning("That link's run isn't in the gallery; pick a question instead.")
+        st.warning("That link's run isn't in the gallery; pick a question below instead.")
     elif wanted:
         key = normalize(wanted[: board_db.MAX_CHARS])
         if matches := [label for label, (q, _) in entries.items() if normalize(q) == key]:
             return matches[-1]  # the latest run of that question
-        st.warning("That link's question isn't in the gallery yet; ask it in the Ask & vote tab.")
+        st.warning("That link's question isn't in the gallery yet; ask it in the box below.")
     return None
 
 
-def gallery(runs_dir: Path) -> None:
-    """Read-only: pick an answered question and read the Genie's full answer."""
-    st.caption("Questions the Genie has answered. Pick one to read the full answer.")
-    entries = gallery_runs(runs_dir)
-    if not entries:
-        st.info("No saved runs to show yet.")
-        return
-    # Point the picker at a link's run once, so picking another one later still works.
-    link_key = (st.query_params.get("run"), st.query_params.get("q"))
-    label = linked_label(entries, runs_dir)
-    if label and st.session_state.get("opened_link") != link_key:
-        st.session_state["opened_link"] = link_key
-        st.session_state["gallery_pick"] = label
-    picked = st.selectbox("Answered question", list(entries), key="gallery_pick")
-    path = entries[picked][1]
+def open_run(run_id: str) -> None:
+    """Show the full answer of `run_id` on its own page, a link that can be shared."""
+    st.query_params.clear()
+    st.query_params["run"] = run_id
+
+
+def answer_page(question: str, path: Path) -> None:
+    """One run's full answer, with the way back to the gallery."""
+    st.button("← All questions", key="back", on_click=st.query_params.clear)
+    st.header(escape(question))
     log.info("showing run %s", path)
     context_note(path)
     show(RunState.load(path))
+    st.button("← All questions", key="back-bottom", on_click=st.query_params.clear)
+
+
+def turn(key: str, step: int) -> None:
+    st.session_state[key] = st.session_state.get(key, 0) + step
+
+
+def card_view(c: Card) -> None:
+    """A run at a glance: question, verdict, short answer, the Genie's aside, and the way in."""
+    with st.container(border=True, height=CARD_HEIGHT):
+        st.markdown(f"**{escape(c.question)}**")
+        if c.tag:
+            st.caption(escape(c.tag))
+        st.markdown(c.verdict)
+        if c.answer:
+            st.markdown(c.answer)
+        if c.genie:
+            st.markdown(f"🧞 *{c.genie}*")
+    st.button(
+        "Read full answer →",
+        key=f"open-{c.run_id}",
+        on_click=open_run,
+        args=(c.run_id,),
+        use_container_width=True,
+    )
+
+
+def band(name: str, cards: list[Card]) -> None:
+    """One category: a row of cards, with arrows to page left and right when there are more."""
+    key = f"page-{name}"
+    pages = math.ceil(len(cards) / PER_PAGE)
+    page = min(st.session_state.get(key, 0), pages - 1)
+    heading, back, forward = st.columns([12, 1, 1], vertical_alignment="bottom")
+    heading.subheader(name)
+    if pages > 1:
+        back.button("◀", key=f"prev-{name}", disabled=page == 0, on_click=turn, args=(key, -1))
+        forward.button(
+            "▶", key=f"next-{name}", disabled=page == pages - 1, on_click=turn, args=(key, 1)
+        )
+    shown = cards[page * PER_PAGE :][:PER_PAGE]
+    for column, c in zip(st.columns(PER_PAGE)[: len(shown)], shown, strict=True):
+        with column:
+            card_view(c)
+
+
+def gallery(runs_dir: Path) -> None:
+    """Read-only: the answered questions as cards, one band per topic."""
+    heading, search, verdicts = st.columns([3, 2, 2], vertical_alignment="bottom")
+    heading.subheader("📚 Answered questions")
+    query = search.text_input(
+        "Search answered questions",
+        key="search",
+        placeholder="🔍 Search answered questions",
+        label_visibility="collapsed",
+    )
+    cards = gallery_cards(runs_dir)
+    picked = verdicts.multiselect(
+        "Filter by verdict",
+        verdict_choices(cards),
+        key="verdicts",
+        placeholder="Filter by verdict",
+        label_visibility="collapsed",
+    )
+    if not cards:
+        st.info("No saved runs to show yet.")
+        return
+    cards = with_verdicts(matching(cards, query), picked)
+    if not cards:
+        st.info("No answered question matches. Ask it in the box above!")
+        return
+    llm = topic_llm()
+    for name, in_band in bands(cards, lambda q: topic_of(q, llm)):
+        band(name, in_band)
+
+
+@st.cache_resource(show_spinner=False)
+def topic_llm() -> LLMClient | None:
+    """The small model that files new gallery questions into a band, if keys are set."""
+    if os.getenv("NEBIUS_API_KEY") and os.getenv("NEBIUS_BASE_URL"):
+        return LLMClient(make_openai(), load_models())
+    return None
+
+
+@st.cache_data(show_spinner=False)
+def topic_of(question: str, _llm: LLMClient | None) -> str:
+    """A question's band, picked once per question while the app runs (one small call)."""
+    return category(question, _llm)
 
 
 @st.cache_resource(show_spinner=False)
 def board_engine(url: str) -> Engine:
     return board_db.connect(url)
+
+
+def board_or_none(url: str) -> Engine | None:
+    """The board's database, or None if there is none or it is down (the gallery still works)."""
+    if not url:
+        return None
+    try:
+        return board_engine(url)
+    except SQLAlchemyError:
+        log.exception("board: database unavailable")
+        st.warning("Board unavailable right now. The gallery still works.")
+        return None
 
 
 def answered_link(question: str, runs_dir: Path) -> str | None:
@@ -264,64 +419,52 @@ def answered_link(question: str, runs_dir: Path) -> str | None:
     return None
 
 
-def ask_and_vote(board_url: str, runs_dir: Path) -> None:
-    """The one place to type a question: post it to the public board, or (with the passcode)
-    get a private answer now. Below it, the board to vote on."""
-    db: Engine | None = None
-    if board_url:
-        try:
-            db = board_engine(board_url)
-        except SQLAlchemyError:
-            log.exception("board: database unavailable")
-            st.warning("Board unavailable right now. The gallery still works.")
-    passcode = os.getenv("CG_LIVE_PASSCODE", "")
+def ask_box(
+    db: Engine | None, voter: str | None, llm: LLMClient | None, passcode: str, runs_dir: Path
+) -> None:
+    """The one place to type a question, on top of the page: post it to the public board, or
+    (with the passcode) get a private answer now."""
+    st.subheader("Ask the Genie 🧞")
     if db is None and not passcode:
-        st.info("Asking is off in this demo. Read the answered questions in the Gallery tab.")
+        st.info("Asking is off in this demo. Browse the answered questions below.")
         return
-    llm = None
-    if db is not None and os.getenv("NEBIUS_API_KEY") and os.getenv("NEBIUS_BASE_URL"):
-        llm = LLMClient(make_openai(), load_models())
-    voter = board.voter_id() if db is not None else None
-
-    st.subheader("Ask the Genie")
     if db is not None:
         st.caption(
-            "Questions are public: anyone can vote, and the top-voted one is answered each "
-            "night, then added to the Gallery."
+            "Questions are public: anyone can vote in the sidebar, and the top-voted one is "
+            "answered each night, then added to the gallery below."
         )
-    with st.form("ask", clear_on_submit=True):
-        text = st.text_input(
+    with st.form("ask", clear_on_submit=True, border=False):
+        field, submit = st.columns([5, 1], vertical_alignment="bottom")
+        text = field.text_input(
             "Your cause-and-effect question",
             max_chars=board_db.MAX_CHARS,
-            placeholder="Does X cause Y?",
+            placeholder="Does X cause Y? e.g. Does coffee make you live longer?",
         )
         post = False
         if db is not None:
-            post = st.form_submit_button(
-                "Post to the board", type="primary", disabled=llm is None or voter is None
+            post = submit.form_submit_button(
+                "Post to the board",
+                type="primary",
+                disabled=llm is None or voter is None,
+                use_container_width=True,
             )
         run, entered = False, ""
         if passcode:
-            st.caption("Have a passcode? Get a private answer now instead (about 5 minutes).")
-            entered = st.text_input("Passcode", type="password")
-            run = st.form_submit_button("Run privately now")
+            with st.expander("Have a passcode? Get a private answer now (about 5 minutes)"):
+                entered = st.text_input("Passcode", type="password")
+                run = st.form_submit_button("Run privately now")
     text = text.strip()
     if text and (post or run) and (link := answered_link(text, runs_dir)):
-        st.info(f"That question is already answered: [read it in the Gallery]({link}).")
+        st.info(f"That question is already answered: [read the answer]({link}).")
     elif text and post and db is not None and voter and llm:
         board.post_question(db, text, voter, llm)
     elif text and run:
         live_run(text, entered, passcode)
+    if db is not None:
+        board.ask_outcome(db, voter, llm)
     if shown := st.session_state.get("live_shown"):
         with st.expander(f"Your private answer: {shown.question}", expanded=True):
             show(shown)
-
-    if db is not None:
-        st.divider()
-        board.render_board(db, voter, llm, runs_dir)
-        if passcode:
-            with st.expander("Admin"):
-                board.admin_panel(db)
 
 
 def live_run(question: str, entered: str, expected: str) -> None:
