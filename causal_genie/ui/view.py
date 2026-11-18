@@ -193,8 +193,10 @@ def card(state: RunState, tag: str = "") -> Card:
 
 
 def gallery_cards(runs_dir: Path) -> list[Card]:
-    """A card for each run the gallery offers, oldest first."""
-    return [card(state, tag) for state, tag in _gallery(runs_dir).values()]
+    """A card for each run the gallery offers, most recently answered first (run ids sort by
+    time, so a rerun moves its question to the front)."""
+    runs = sorted(_gallery(runs_dir).values(), key=lambda run: run[0].run_id, reverse=True)
+    return [card(state, tag) for state, tag in runs]
 
 
 def matching(cards: list[Card], query: str) -> list[Card]:

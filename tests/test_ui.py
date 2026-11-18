@@ -392,7 +392,7 @@ def test_arrows_page_through_a_band(ui_state, tmp_path, monkeypatch) -> None:
     assert at.button(key=f"prev-{OTHER}").disabled
     at.button(key=f"next-{OTHER}").click().run()
 
-    assert opened() == [f"open-2026110{PER_PAGE}-000000-aaaaaa"]
+    assert opened() == ["open-20261100-000000-aaaaaa"]  # newest first, so the oldest is last
     assert at.button(key=f"next-{OTHER}").disabled
     at.button(key=f"prev-{OTHER}").click().run()
     assert len(opened()) == PER_PAGE
@@ -591,7 +591,7 @@ def test_each_labelled_run_gets_its_own_card(ui_state, tmp_path, monkeypatch) ->
     _labelled(ui_state, tmp_path, "20261101-000000-aaaaaa", "full A/B data")
     _labelled(ui_state, tmp_path, "20261102-000000-bbbbbb", "completers only")
 
-    assert [c.tag for c in gallery_cards(tmp_path)] == ["full A/B data", "completers only"]
+    assert [c.tag for c in gallery_cards(tmp_path)] == ["completers only", "full A/B data"]
     at = app(tmp_path, monkeypatch)
     assert at.button(key="open-20261101-000000-aaaaaa")
     assert at.button(key="open-20261102-000000-bbbbbb")
@@ -814,3 +814,30 @@ def test_the_pdf_is_dated(ui_state, tmp_path, monkeypatch) -> None:
 
     assert not at.exception
     assert calls and calls[-1][1] == "Nov 17, 2026"
+
+
+def test_the_most_recently_answered_question_comes_first(ui_state, tmp_path, monkeypatch) -> None:
+    save(
+        ui_state.model_copy(update={"question": "Does tea cause gout?"}),
+        tmp_path,
+        "20261101-000000-aaaaaa",
+    )
+    save(
+        ui_state.model_copy(update={"question": "Does beer cause gout?"}),
+        tmp_path,
+        "20261103-000000-cccccc",
+    )
+    save(
+        ui_state.model_copy(update={"question": "Does wine cause gout?"}),
+        tmp_path,
+        "20261102-000000-bbbbbb",
+    )
+
+    assert [c.run_id[:8] for c in gallery_cards(tmp_path)] == ["20261103", "20261102", "20261101"]
+    at = app(tmp_path, monkeypatch)
+    opened = [b.key for b in at.button if (b.key or "").startswith("open-")]
+    assert opened == [
+        "open-20261103-000000-cccccc",
+        "open-20261102-000000-bbbbbb",
+        "open-20261101-000000-aaaaaa",
+    ]
