@@ -111,7 +111,7 @@ flowchart TD
     W --> OUT[Brief + DAG + sources]
 ```
 
-Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, after round 1 when no required coverage is missing, when a later round adds < 5 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim). Edges don't exist until the DAG step, so "a source for each DAG edge" is checked there: an uncited edge sends research back for one more round if rounds are left, otherwise the edge is marked "assumed". If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
+Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, after round 1 when no required coverage is missing, when a later round adds < 5 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim, and, when sources were found but none studies the link itself, a round that searches each side on its own: what causes the outcome, what drives the exposure). Edges don't exist until the DAG step, so "a source for each DAG edge" is checked there: an uncited edge sends research back for one more round if rounds are left, otherwise the edge is marked "assumed". If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
 
 ### 5.2 Verdicts (picked by the controller, never by the model)
 
@@ -122,6 +122,7 @@ Loops are bounded. **Research (hybrid):** each round the model returns a `Resear
 | 📚 Published evidence only | Studies found and checked; no usable data |
 | 🔒 Data restricted | Dataset sits in Vivli, YODA, BioLINCC, MIMIC, etc. |
 | 🧪 Not estimated — study plan | Key confounder missing, selection after assignment, outcome mismatch, or a DiD/IV/RDD setup the MVP recognizes but doesn't estimate |
+| 🔀 Explained by a common cause | No included trial or observational study of the exposure and outcome, and the DAG has a node with paths of checked citations to both (a link nobody studies because it is spurious, e.g. ice cream sales and shark bites) |
 | ❓ Insufficient evidence | Sparse or contradictory search results |
 | 🚫 Not causal | Router says it's descriptive |
 

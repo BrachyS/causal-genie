@@ -11,7 +11,7 @@ from causal_genie.agent.state import (
     Route,
     RunState,
 )
-from causal_genie.agent.verdict import pick_verdict, unmeasured_confounders
+from causal_genie.agent.verdict import common_causes, pick_verdict, unmeasured_confounders
 
 
 def node(name: str, *columns: str) -> NodeMapping:
@@ -190,6 +190,91 @@ def test_very_low_certainty_is_insufficient(researched: RunState) -> None:
 
     assert researched.certainty is not None and researched.certainty.level == "very_low"
     assert pick_verdict(researched) == "insufficient"
+
+
+@pytest.fixture
+def spurious(researched: RunState) -> RunState:
+    """Ice cream and shark bites: no study tests the link itself; a blog post (checked
+    quote) says hot weather drives both."""
+    blog = researched.studies[0]
+    blog.design, blog.strategy, blog.peco_match = "other", "other", "indirect"
+    blog.secondary_only = True
+    researched.certainty = certainty(researched.studies)
+    researched.edges += [
+        DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
+        DagEdge(source="temperature", target="sore_throat", claim_ids=["c1"]),
+    ]
+    return researched
+
+
+def test_a_link_no_study_tests_but_a_cited_common_cause_explains_is_common_cause(
+    spurious: RunState,
+) -> None:
+    assert spurious.certainty is not None and spurious.certainty.level == "very_low"
+    assert common_causes(spurious) == ["temperature"]
+    assert pick_verdict(spurious) == "common_cause"
+
+
+def test_an_assumed_common_cause_does_not_count(spurious: RunState) -> None:
+    for e in spurious.edges:
+        if e.source == "temperature":
+            e.claim_ids = []
+
+    assert common_causes(spurious) == []
+    assert pick_verdict(spurious) == "insufficient"
+
+
+def test_a_common_cause_cited_only_by_unchecked_claims_does_not_count(spurious) -> None:
+    spurious.claims[0].status = "unresolved"
+
+    assert pick_verdict(spurious) == "insufficient"
+
+
+def test_a_common_cause_needs_edges_into_both_exposure_and_outcome(spurious) -> None:
+    spurious.edges = [e for e in spurious.edges if e.target != "sore_throat"]
+
+    assert pick_verdict(spurious) == "insufficient"
+
+
+def test_a_common_cause_can_act_through_a_chain_of_cited_edges(spurious: RunState) -> None:
+    """Live run: hot weather -> ice cream sales, and hot weather -> beach attendance ->
+    shark bites; the common cause is one step back from the outcome."""
+    spurious.edges = [e for e in spurious.edges if e.source != "temperature"] + [
+        DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
+        DagEdge(source="temperature", target="crowds", claim_ids=["c1"]),
+        DagEdge(source="crowds", target="sore_throat", claim_ids=["c1"]),
+    ]
+
+    assert common_causes(spurious) == ["temperature"]
+    assert pick_verdict(spurious) == "common_cause"
+
+
+def test_a_chain_with_an_assumed_link_does_not_count(spurious: RunState) -> None:
+    spurious.edges = [e for e in spurious.edges if e.source != "temperature"] + [
+        DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
+        DagEdge(source="temperature", target="crowds", claim_ids=[]),
+        DagEdge(source="crowds", target="sore_throat", claim_ids=["c1"]),
+    ]
+
+    assert common_causes(spurious) == []
+
+
+@pytest.mark.parametrize("design", ["RCT", "cohort"])
+def test_a_direct_study_of_the_link_rules_out_common_cause(spurious, design: str) -> None:
+    """Confounders exist for real effects too: once a trial or an observational study of
+    this exposure and outcome is in, the evidence speaks for itself."""
+    study = spurious.studies[0]
+    study.design, study.peco_match, study.secondary_only = design, "direct", False
+    spurious.certainty = certainty(spurious.studies)
+
+    assert common_causes(spurious) == []
+    assert pick_verdict(spurious) == "published_only"
+
+
+def test_an_estimate_beats_common_cause(spurious: RunState) -> None:
+    spurious.results = [estimate("rct_effect")]
+
+    assert pick_verdict(spurious) == "estimated"
 
 
 def test_unmeasured_confounders_only_matter_for_an_observational_estimate(observational):

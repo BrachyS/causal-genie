@@ -27,6 +27,17 @@ def design_tier(study: Study) -> int:
     return 0
 
 
+def studies_the_link(study: Study) -> bool:
+    """An included trial or observational study of this exposure and outcome, read from the
+    paper itself (not news of it and not a study of a nearby exposure)."""
+    return (
+        study.included
+        and not study.secondary_only
+        and study.peco_match == "direct"
+        and design_tier(study) > 0
+    )
+
+
 def certainty(studies: list[Study]) -> Certainty | None:
     """Certainty of the included evidence, with a reason for each step; None if none included."""
     included = [s for s in studies if s.included]

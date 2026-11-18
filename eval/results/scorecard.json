@@ -194,6 +194,46 @@
       "replay_error": null
     },
     {
+      "case": "D6",
+      "expected": "common_cause",
+      "run_id": "20261117-172931-b755cb",
+      "verdict": "common_cause",
+      "verdict_ok": true,
+      "failure": null,
+      "key_studies": "2/3",
+      "key_studies_missing": [
+        "Sprivulis 2014"
+      ],
+      "grounding": {
+        "quoted": 102,
+        "quote_found": 96,
+        "checked": 96,
+        "supports": 52,
+        "partial": 16
+      },
+      "unsupported_numbers": [],
+      "forbidden": [],
+      "disproving_search": true,
+      "genie_ok": true,
+      "unflagged_retractions": [],
+      "data": {
+        "ok": true,
+        "rank": null,
+        "url": null
+      },
+      "dag_problems": [],
+      "cost": {
+        "tokens_in": 323607,
+        "tokens_out": 39801,
+        "calls": 243,
+        "llm_s": 1286.8,
+        "wall_s": 423
+      },
+      "replay_verdict": "common_cause",
+      "replay_ok": true,
+      "replay_error": null
+    },
+    {
       "case": "G1",
       "expected": "published_only",
       "run_id": "20261116-042914-72c267",
@@ -233,8 +273,8 @@
     }
   ],
   "counts": {
-    "live": "6/6",
-    "replay": "6/6"
+    "live": "7/7",
+    "replay": "7/7"
   },
-  "judge_tokens": 2960
+  "judge_tokens": 3530
 }

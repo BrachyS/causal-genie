@@ -32,7 +32,7 @@ A live run takes about 2 to 5 minutes and 200k to 350k model tokens. Every run i
 
 ## Evaluation
 
-Six frozen cases in [eval/cases.yaml](eval/cases.yaml), scored by `uv run python eval/run_eval.py`. Latest [scorecard](eval/results/scorecard.md):
+Seven frozen cases in [eval/cases.yaml](eval/cases.yaml), scored by `uv run python eval/run_eval.py`. Latest [scorecard](eval/results/scorecard.md):
 
 | Check | Result |
 |---|---|

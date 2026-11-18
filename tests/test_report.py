@@ -508,3 +508,33 @@ def test_evidence_section_has_no_lookup_note_when_none_failed(sample_state) -> N
     sample_state.verdict = "published_only"
 
     assert "Europe PMC lookups failed" not in write_report(sample_state)
+
+
+def test_comparison_is_dropped_when_no_estimate_was_computed(sample_state, make_llm) -> None:
+    """With no result of ours, a "comparison" can only misdescribe a published one as ours."""
+    out = draft(
+        [sentence("Licorice gargle reduces post-op sore throat.", "c1")],
+        comparison=[sentence("Our meta-analysis estimate was null.", "c1")],
+    )
+    llm, _ = make_llm([out])
+
+    prose = draft_report(sample_state, llm)
+
+    assert prose.comparison == [] and len(prose.summary) == 1
+
+
+def test_common_cause_verdict_gives_the_report_its_shared_causes(sample_state) -> None:
+    sample_state.studies[0].secondary_only = True
+    sample_state.edges += [
+        DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
+        DagEdge(source="temperature", target="sore_throat", claim_ids=["c1"]),
+    ]
+    sample_state.verdict = "common_cause"
+
+    entries = ledger_entries(sample_state)
+
+    assert "🔀" in entries["F-verdict"]
+    assert "temperature" in entries["F-common-cause"]
+    assert "Causes of both, from checked sources (no study tests the link): temperature." in (
+        write_report(sample_state)
+    )

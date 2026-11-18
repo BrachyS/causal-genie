@@ -19,7 +19,7 @@ import logging
 from collections import Counter
 from typing import Literal
 
-from causal_genie.agent.certainty import certainty, design_tier
+from causal_genie.agent.certainty import certainty, design_tier, studies_the_link
 from causal_genie.agent.state import (
     CausalQuery,
     FirstRoundPlan,
@@ -140,6 +140,15 @@ def missing_coverage(state: RunState) -> list[str]:
         gaps.append(
             "no included study yet: reformulate the searches (synonyms, broader terms, "
             "technical names)"
+        )
+    if included and not any(studies_the_link(s) for s in included) and state.query:
+        # A spurious link (ice cream sales and shark bites) has no studies of its own; the
+        # evidence is on each side, and it can show a common cause (verdict `common_cause`).
+        x, y = state.query.exposure.name, state.query.outcome.name
+        gaps.append(
+            f"no study of the link itself yet: search each side on its own for peer-reviewed "
+            f"studies of what causes {y}, of what drives {x}, and of any mechanism from {x} "
+            f"to {y}"
         )
     # A news story or summary page is a gap only if no paper we read is at least as strong:
     # news of an RCT needs an RCT paper; a page summarizing reviews doesn't block a done.

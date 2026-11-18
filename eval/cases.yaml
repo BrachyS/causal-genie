@@ -2,7 +2,7 @@
 # datasets downloaded and inspected (column names, size, license, checksum).
 #
 # expected_verdict: estimated (✅) · estimated_strong_assumptions (⚠️) · published_only (📚)
-#   · restricted (🔒) · study_plan (🧪) · insufficient (❓) · not_causal (🚫)
+#   · restricted (🔒) · study_plan (🧪) · common_cause (🔀) · insufficient (❓) · not_causal (🚫)
 # key_studies: what research should find (key-study recall in T12).
 # forbidden_conclusions: the report must never assert these (must be 0 in T12).
 
@@ -124,6 +124,23 @@ cases:
          first_author: Unger, year: 1998, finding: "60-year one-hand self-experiment, no arthritis in either hand"}
     forbidden_conclusions:
       - Cracking your knuckles causes arthritis.
+
+  - id: D6  # a spurious link nobody studies: the answer is a common cause (added Nov 17)
+    question: Do ice cream sales at beaches cause shark attacks to occur?
+    expected_verdict: common_cause
+    genie_allowed: true  # whimsical, no usable data
+    data: null  # no open table with ice cream sales and shark bites
+    # No study tests the link itself; these show what drives shark bites (Europe PMC checked).
+    key_studies:
+      - {pmid: "30811398", doi: 10.1371/journal.pone.0211049, first_author: Midway, year: 2019,
+         finding: "attack rates vary with human populations and water activity across countries and decades"}
+      - {pmid: "29487378", doi: 10.1038/s41598-018-21553-0, first_author: Lagabrielle, year: 2018,
+         finding: "bite incidence modeled on sea temperature, season and shark presence (La Reunion)"}
+      - {pmid: "24611078", doi: 10.4066/amj.2014.2008, first_author: Sprivulis, year: 2014,
+         finding: "Western Australia bites tracked whale (prey) abundance; water temperature and activity analyzed"}
+    forbidden_conclusions:
+      - Ice cream sales cause shark attacks.
+      - Eating ice cream attracts sharks.
 
   - id: G1  # sensitive-topic gate test; gallery excludes it (PRD §6)
     question: Do vaccines cause autism?

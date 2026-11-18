@@ -11,7 +11,9 @@ still fails its schema after the repair retry skips that source (excluded as
 """
 
 import hashlib
+import html
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
@@ -147,7 +149,7 @@ def extract(state: RunState, llm: LLMClient, source: Source) -> Study:
         url=source.url,
         doi=None,
         pmid=None,
-        title=e.title,
+        title=plain_title(e.title),
         first_author=e.first_author,
         year=e.year,
         design=e.design,
@@ -169,6 +171,12 @@ def extract(state: RunState, llm: LLMClient, source: Source) -> Study:
         full_text=source.full_text,
         also_at=[],
     )
+
+
+def plain_title(title: str) -> str:
+    """A title as plain text: page titles arrive HTML-escaped (`&lt;i&gt;`), sometimes
+    with markup inside."""
+    return re.sub(r"<[^>]+>", "", html.unescape(title))
 
 
 def failed_study(source: Source) -> Study:

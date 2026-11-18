@@ -1,13 +1,21 @@
 """Pick the run's verdict (PRD §5.2) from what the run found. Rules only, never a model.
 
 The verdict reads the run state after every step has run: an estimate beats a study plan,
-a study plan beats "no data", and "no data" splits into restricted, published-only or
-insufficient by what research and data discovery found.
+a study plan beats "no data", and "no data" splits into restricted, common cause,
+published-only or insufficient by what research and data discovery found.
+
+"Common cause" is for a link nobody studies because it is spurious (ice cream sales and
+shark bites): no trial or observational study of this exposure and outcome is included, and
+the DAG has a node with checked citations into both. Without this, such a question could only
+be "insufficient", although the sources do explain the link.
 """
 
 import logging
 import re
 
+import networkx as nx
+
+from causal_genie.agent.certainty import studies_the_link
 from causal_genie.agent.state import RunState, Verdict
 
 log = logging.getLogger(__name__)
@@ -29,9 +37,39 @@ def pick_verdict(state: RunState) -> Verdict:
     accepted = any(c.accepted for c in state.datasets)
     if not accepted and any(c.access == "restricted" for c in state.datasets):
         return "restricted"
+    if common_causes(state):
+        return "common_cause"
     if state.certainty is None or state.certainty.level == "very_low":
         return "insufficient"  # nothing included, or only sparse or conflicting evidence
     return "published_only"
+
+
+def common_causes(state: RunState) -> list[str]:
+    """Nodes that checked sources say drive both the exposure and the outcome, directly or
+    through other nodes (hot weather -> beach crowds -> shark bites), when no included study
+    (trial or observational, not news of one) tests the link itself.
+
+    Paths use only cited edges and never pass through the exposure. An
+    edge counts only if it cites a `documented` claim (quote found and judged to support):
+    an assumed edge is the model's guess, not evidence. Any direct study rules this out, since
+    real effects have confounders too and then the studies speak for themselves."""
+    if state.query is None:
+        return []
+    if any(studies_the_link(s) for s in state.studies):
+        return []
+    documented = {c.id for c in state.claims if c.status == "documented"}
+    x, y = state.query.exposure.name, state.query.outcome.name
+    cited = nx.DiGraph()
+    cited.add_edges_from(
+        (e.source, e.target)
+        for e in state.edges
+        if documented & {*e.claim_ids} and e.source != x  # a path through x is not a backdoor
+    )
+    if x not in cited or y not in cited:
+        return []
+    both = sorted(nx.ancestors(cited, x) & nx.ancestors(cited, y))
+    log.info("common causes: %s", both)
+    return both
 
 
 def words(text: str) -> set[str]:

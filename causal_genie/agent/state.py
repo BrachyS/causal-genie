@@ -550,6 +550,7 @@ Verdict = Literal[
     "published_only",
     "restricted",
     "study_plan",
+    "common_cause",
     "insufficient",
     "not_causal",
 ]

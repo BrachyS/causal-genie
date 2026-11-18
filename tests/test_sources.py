@@ -307,3 +307,13 @@ def test_extract_prompt_reads_direction_from_the_interval_not_the_wording() -> N
 
     assert "interval includes no effect" in text
     assert "1 for a ratio" in text and "0 for a difference" in text
+
+
+def test_html_in_a_title_is_decoded_to_plain_text(state, searcher, make_llm, make_epmc) -> None:
+    """Page titles arrive HTML-escaped ("&lt;i&gt;"); the report and app show plain text."""
+    title = "Improving the teaching of &lt;i&gt;correlation&lt;/i&gt; &amp; causation"
+    llm, _ = make_llm([extraction(included=False, quotes=[], title=title)])
+
+    process_sources(state, llm, searcher, make_epmc([])[0])
+
+    assert state.studies[0].title == "Improving the teaching of correlation & causation"

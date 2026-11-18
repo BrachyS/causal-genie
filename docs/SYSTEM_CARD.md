@@ -49,9 +49,9 @@ Each run saves its full state as JSON: model IDs, every model call (prompt name,
 
 ## Evaluation
 
-Six frozen cases: full moon and births, the licorice-gargle trial, a synthetic A/B test with a known effect, the same A/B test exported for completers only (must refuse), knuckle cracking (no usable data), and a sensitive-topic gate test. Metrics: verdict match, key-study recall, quotes found in the source, quotes judged supporting, unsupported numbers and forbidden conclusions (must be 0), whether the disproving search ran, rank of the accepted dataset, DAG checks, tokens and wall time. Results: [`eval/results/`](../eval/results/).
+Seven frozen cases: full moon and births, the licorice-gargle trial, a synthetic A/B test with a known effect, the same A/B test exported for completers only (must refuse), knuckle cracking (no usable data), ice cream sales and shark attacks (a spurious link no study tests; the answer is a common cause), and a sensitive-topic gate test. Metrics: verdict match, key-study recall, quotes found in the source, quotes judged supporting, unsupported numbers and forbidden conclusions (must be 0), whether the disproving search ran, rank of the accepted dataset, DAG checks, tokens and wall time. Results: [`eval/results/`](../eval/results/).
 
-Targets: expected verdict on ≥ 5 of 6 cases; ≥ 90% of quotes found in their source; 0 untraceable numbers; 0 estimates on the completers-only case; RCT tool within 1e-4 of an independent calculation (including a zero-event arm); the synthetic true effect inside the 95% CI; 0 humor where the gate forbids it.
+Targets: expected verdict on ≥ 6 of 7 cases; ≥ 90% of quotes found in their source; 0 untraceable numbers; 0 estimates on the completers-only case; RCT tool within 1e-4 of an independent calculation (including a zero-event arm); the synthetic true effect inside the 95% CI; 0 humor where the gate forbids it.
 
 The statistics tools are unit-tested against independent calculations (Newcombe's published table, statsmodels, scipy, hand-computed sandwich SEs), textbook DAGs (confounder, mediator, collider, M-bias) and synthetic data with known effects.
 

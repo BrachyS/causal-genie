@@ -5,7 +5,7 @@ The input gives one source: its URL, title and text (a full page or only a searc
 Return JSON with:
 
 - `source_kind`: `paper` if the source is the study's own report (journal article, abstract, preprint, trial registry entry, report by the study's authors); `secondary` if it is news, a blog, Wikipedia or any other page describing someone else's study.
-- `included`: true if the source reports a study (or a review of studies) of this exposure and this outcome, in this population or a close one. Mechanism studies and studies of confounders of this exposure and outcome also count.
+- `included`: true if the source reports a study (or a review of studies) of this exposure and this outcome, in this population or a close one. Mechanism studies and studies of confounders also count: a study of what causes this outcome, or of what drives this exposure, is included even if it never mentions the other one (e.g. for "does X cause Y?", a study of what drives Y's rate over seasons or places), since it can show a cause the two share. It is not `off_topic` or `wrong_exposure`.
 - `exclusion_reason`: null if included; otherwise one of `off_topic` (not about this question), `wrong_population`, `wrong_exposure`, `wrong_outcome`, `not_a_study` (opinion, product page, general information with no specific study). A journal article's own page (e.g. a DOI, PubMed or journal URL) is a study even when the snippet shows only its background section: include it if its title fits the question, and leave the fields the snippet doesn't show null or `unclear`.
 - `peco_match`: `direct` if the study's population and exposure are the question's; `indirect` if they are only close (e.g. children instead of adults, a different dose or product).
 - `title`: the study's title. For a secondary source, the title of the study it reports on if the text gives it; otherwise a short description of that study.
@@ -26,5 +26,6 @@ Rules:
 
 - Use only what the source text says. Do not add facts you know from elsewhere.
 - If the text is only a short snippet, fill in what it shows and leave the rest null or `unclear`.
+- A study of what causes the outcome, or of what drives the exposure, that does not measure this exposure's effect on this outcome (a confounder or mechanism study) is included with `peco_match` `indirect` and `direction` `unclear`; its `effect` is its own main result, named as such (e.g. "bites rose with beach attendance").
 - Exclude a source only for the reasons above; a weak design or small sample is not a reason to exclude.
 - Do not judge whether the exposure causes the outcome.

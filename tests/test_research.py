@@ -211,8 +211,7 @@ def test_done_too_early_is_overridden_and_names_the_gap(state, make_llm, searche
     research(state, llm, searcher, papers)
 
     assert len(state.rounds) == 2  # the model's first `done` was overridden
-    (gap,) = state.rounds[0].missing
-    assert "primary source" in gap
+    gap = next(g for g in state.rounds[0].missing if "primary source" in g)
     summary = fake.requests[2]["messages"][1]["content"]
     assert "Coverage still missing" in summary and gap in summary
 
@@ -252,6 +251,21 @@ def test_secondary_source_is_a_gap_only_without_an_equally_strong_paper(
     state.studies = [news_rct, cohort]
     (gap,) = missing_coverage(state)
     assert "primary source" in gap and "https://news" in gap
+
+
+def test_sources_with_no_study_of_the_link_send_research_to_each_side(state, sample_state):
+    """Nobody studies ice cream and shark bites: the evidence is on what drives each one."""
+    blog = sample_state.studies[0].model_copy(
+        update={"design": "other", "secondary_only": True, "peco_match": "indirect"}
+    )
+    state.rounds = [ResearchRound(number=1, plan=fallback_plan(state.query), planned_by="fallback")]
+
+    state.studies = [blog]
+    gap = next(g for g in missing_coverage(state) if "no study of the link" in g)
+    assert "what causes sore_throat" in gap and "what drives licorice_gargle" in gap
+
+    state.studies = [blog, sample_state.studies[0]]  # the trial tests the link itself
+    assert not [g for g in missing_coverage(state) if "no study of the link" in g]
 
 
 def test_research_gaps_runs_one_round_aimed_at_the_gaps(

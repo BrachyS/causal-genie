@@ -13,7 +13,7 @@ import re
 
 from causal_genie.agent.certainty import design_tier, evidence_flow
 from causal_genie.agent.state import ReportDraft, RunState, Sentence, Verdict
-from causal_genie.agent.verdict import unmeasured_confounders
+from causal_genie.agent.verdict import common_causes, unmeasured_confounders
 from causal_genie.llm.client import LLMClient
 
 log = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ VERDICT_LABELS: dict[Verdict, str] = {
     "published_only": "📚 Published evidence only",
     "restricted": "🔒 Data restricted",
     "study_plan": "🧪 Not estimated — study plan",
+    "common_cause": "🔀 Explained by a common cause",
     "insufficient": "❓ Insufficient evidence",
     "not_causal": "🚫 Not causal",
 }
@@ -131,6 +132,9 @@ def confounders_section(state: RunState) -> list[str]:
         ]
     elif a is not None and a.adjust_for is not None:
         lines += ["", f"Adjusted for: {', '.join(a.adjust_for) or 'nothing'}."]
+    if state.verdict == "common_cause":
+        shared = ", ".join(common_causes(state))
+        lines += ["", f"Causes of both, from checked sources (no study tests the link): {shared}."]
     if lacking := unmeasured_confounders(state):
         lines += ["", f"Named in the literature but not in the data: {', '.join(lacking)}."]
     return [*lines, ""]
@@ -385,6 +389,11 @@ def ledger_entries(state: RunState) -> dict[str, str]:
             f"key assumption: {d.key_assumption}; estimand: {d.estimand}; next check: "
             f"{d.check}; because: {'; '.join(d.reasons)}"
         )
+    if state.verdict == "common_cause":
+        entries["F-common-cause"] = (
+            "No included trial or observational study tests this link; checked sources name "
+            f"causes of both the exposure and the outcome: {', '.join(common_causes(state))}"
+        )
     if lacking := unmeasured_confounders(state):
         entries["F-unmeasured"] = (
             f"Confounders named in the literature but not in the data: {', '.join(lacking)}"
@@ -497,4 +506,9 @@ def draft_report(state: RunState, llm: LLMClient) -> ReportDraft:
             "sentences fixed or removed."
         )
         draft = llm.complete("large", "report", retry, ReportDraft)
+    if draft.comparison and not state.results:
+        # The prompt asks for [] without a result of ours; models still write one and call a
+        # published estimate "ours", so the harness enforces it.
+        log.warning("report: dropped the comparison, no estimate was computed: %s", draft)
+        draft = draft.model_copy(update={"comparison": []})
     return keep_passing(draft, entries, free)

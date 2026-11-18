@@ -42,6 +42,10 @@ VERDICT_MEANINGS: dict[Verdict, str] = {
         "The data we found can't answer this fairly, so instead of a number we describe "
         "the study that could."
     ),
+    "common_cause": (
+        "No study tests this link directly. The sources we found explain it by something that "
+        "drives both (see the graph), not by one causing the other."
+    ),
     "insufficient": "The studies we found were too few or too conflicting to say either way.",
     "not_causal": "This asks what is, not what causes what, so there is no effect to estimate.",
 }
