@@ -26,18 +26,33 @@ def pick(question: str = "Does tea cause calm?", genie: bool = True, run_id: str
     )
 
 
-def test_post_has_the_question_verdict_genie_line_and_a_clickable_link() -> None:
+def test_post_has_the_question_votes_verdict_and_a_clickable_link() -> None:
     text, facets = bluesky.compose(pick(), APP)
 
     link = f"{APP}/?run=r1"
     assert "Does tea cause calm?" in text and "4 votes" in text
     assert "📚 Published evidence only" in text
-    assert LINE in text
     assert text.endswith(link)
     (facet,) = facets
     start, end = facet["index"]["byteStart"], facet["index"]["byteEnd"]
     assert text.encode()[start:end] == link.encode()
     assert facet["features"] == [{"$type": "app.bsky.richtext.facet#link", "uri": link}]
+
+
+def test_the_pre_run_teaser_is_not_posted_with_the_answer() -> None:
+    """The announcement was written before the answer ("Tonight the Genie…"), so it reads
+    backwards next to a verdict."""
+    for genie in (True, False):
+        text, _ = bluesky.compose(pick(genie=genie), APP)
+
+        assert LINE not in text and "Tonight" not in text
+
+
+def test_zero_votes_are_not_mentioned() -> None:
+    text, _ = bluesky.compose(pick().model_copy(update={"votes": 0}), APP)
+
+    assert "vote" not in text
+    assert text.startswith("Question of the Day: Does tea cause calm?")
 
 
 def test_a_long_question_with_emoji_is_cut_but_the_link_never_is() -> None:
@@ -51,13 +66,6 @@ def test_a_long_question_with_emoji_is_cut_but_the_link_never_is() -> None:
     start, end = facets[0]["index"]["byteStart"], facets[0]["index"]["byteEnd"]
     assert text.encode()[start:end].decode() == f"{APP}/?run=r1"
     assert start == len(text.encode()) - len(f"{APP}/?run=r1".encode())
-
-
-def test_no_genie_line_on_a_sensitive_topic() -> None:
-    text, _ = bluesky.compose(pick("Do vaccines cause autism?", genie=False), APP)
-
-    assert "Tonight's question:" not in text
-    assert text.count("Do vaccines cause autism?") == 1
 
 
 def test_stranger_text_gets_no_facets() -> None:

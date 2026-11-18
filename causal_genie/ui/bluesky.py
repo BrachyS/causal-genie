@@ -6,9 +6,10 @@ merged. It is marked `answered` first, then posted, so a failed post leaves the 
 published on the board and fails the job for a retry by hand; a re-run never posts twice.
 
 The post (at most 300 characters) has the question (cut if needed, never the link), the vote
-count, the verdict label, the Genie's line (not on a sensitive topic) and a deep link to the
-run. Only our link gets a facet, so links or @mentions inside a stranger's question stay plain
-text. Plain httpx: log in with the app password, then create the record.
+count (left out at 0), the verdict label and a deep link to the run. The pick's announcement
+is not posted: it was written before the answer ("Tonight the Genie…") and reads backwards
+next to a verdict. Only our link gets a facet, so links or @mentions inside a stranger's
+question stay plain text. Plain httpx: log in with the app password, then create the record.
 """
 
 import argparse
@@ -32,7 +33,6 @@ log = logging.getLogger(__name__)
 XRPC = "https://bsky.social/xrpc"
 # Bluesky counts graphemes; code points are never fewer, so this count is on the safe side.
 MAX_CHARS = 300
-MIN_QUESTION = 40  # below this, the Genie's line is dropped to leave room for the question
 
 
 def run_link(app_url: str, run_id: str) -> str:
@@ -43,15 +43,11 @@ def run_link(app_url: str, run_id: str) -> str:
 def compose(pick: Pick, app_url: str) -> tuple[str, list[dict]]:
     """The post text and its facets (the link's UTF-8 byte range, so it is clickable)."""
     link = run_link(app_url, pick.run_id)
-    votes = f"{pick.votes} vote" + ("" if pick.votes == 1 else "s")
-    head = f"Question of the Day ({votes}): "
-    verdict = VERDICT_LABELS[pick.verdict] if pick.verdict else ""
-    lines = [verdict] + ([pick.announcement] if pick.genie else [])
-    tail = "".join(f"\n{line}" for line in lines if line) + f"\n{link}"
+    votes = f" ({pick.votes} vote" + ("" if pick.votes == 1 else "s") + ")" if pick.votes else ""
+    head = f"Question of the Day{votes}: "
+    verdict = f"\n{VERDICT_LABELS[pick.verdict]}" if pick.verdict else ""
+    tail = f"{verdict}\n{link}"
     room = MAX_CHARS - len(head) - len(tail)
-    if room < MIN_QUESTION and pick.genie:
-        tail = (f"\n{verdict}" if verdict else "") + f"\n{link}"
-        room = MAX_CHARS - len(head) - len(tail)
     question = pick.question
     if len(question) > room:
         question = question[: room - 1].rstrip() + "…"

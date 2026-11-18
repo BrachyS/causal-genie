@@ -295,7 +295,7 @@ Anyone can post a public "does X cause Y?" question in the app and vote, with no
 - **Fallback:** a partial run or a non-causal route marks the question `skipped` with the reason and the next candidate is tried, at most 2 tries per slot; a slot with no answer fails the job visibly.
 - **Review:** the answers are exported to `gallery/` with a `pick.json` (question, votes, verdict, the Genie's one-line announcement) and opened as **one PR**. Nothing is public until it is merged.
 - **Announcement:** one playful line (large model, `genie_pick`), gated like the aside: on a sensitive topic, or with a number not in the question, the plain "Tonight's question: …" is used.
-- **Bluesky:** after the merge, `genie-publish.yml` marks the question answered and posts the question, vote count, verdict label, the Genie's line (not on sensitive topics) and a link to the run (≤ 300 characters; the question is cut, never the link). A failed post fails the job; the answer stays published. X and Reddit are shared by hand (their APIs are paid or closed to new bots).
+- **Bluesky:** after the merge, `genie-publish.yml` marks the question answered and posts the question, vote count (left out at 0), verdict label and a link to the run (not the pre-run announcement, which reads backwards next to an answer) (≤ 300 characters; the question is cut, never the link). A failed post fails the job; the answer stays published. X and Reddit are shared by hand (their APIs are paid or closed to new bots).
 - **Budget:** about 250k model tokens and 50 Tavily credits per answer (a local check used 259k in, 42k out), at most 2 runs a night with the fallback, plus about 500 tokens of moderation per question asked.
 
 ---
