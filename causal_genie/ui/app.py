@@ -46,6 +46,7 @@ from causal_genie.ui.view import (
     Card,
     Citation,
     anchor,
+    answered_on,
     bands,
     category,
     citations,
@@ -175,16 +176,16 @@ def show(state: RunState) -> None:
     if state.report:
         st.download_button(
             "Download report (PDF)",
-            pdf_of(state.report),
+            pdf_of(state.report, answered_on(state.run_id)),
             f"{state.run_id}.pdf",
             mime="application/pdf",
         )
 
 
 @st.cache_data(show_spinner=False, max_entries=50)
-def pdf_of(report: str) -> bytes:
-    """The report's PDF, built once per report while the app runs."""
-    return report_pdf(report)
+def pdf_of(report: str, answered: str) -> bytes:
+    """The report's PDF, dated, built once per report while the app runs."""
+    return report_pdf(report, answered)
 
 
 TAGLINE = (
@@ -302,6 +303,11 @@ def answer_page(question: str, path: Path) -> None:
     """One run's full answer, with the way back to the gallery."""
     st.button("← All questions", key="back", on_click=st.query_params.clear)
     st.header(escape(question))
+    if day := answered_on(path.parent.name):
+        st.caption(
+            f"Answered {day}, from the evidence found then. If new evidence comes out, the "
+            "question can be re-run, and the newest answer replaces this one."
+        )
     log.info("showing run %s", path)
     context_note(path)
     show(RunState.load(path))
@@ -316,8 +322,11 @@ def card_view(c: Card) -> None:
     """A run at a glance: question, verdict, short answer, the Genie's aside, and the way in."""
     with st.container(border=True, height=CARD_HEIGHT):
         st.markdown(f"**{escape(c.question)}**")
-        if c.tag:
-            st.caption(escape(c.tag))
+        details = [escape(c.tag)] if c.tag else []
+        if c.answered:
+            details.append(f"Answered {c.answered}")
+        if details:
+            st.caption(" · ".join(details))
         st.markdown(c.verdict)
         if c.answer:
             st.markdown(c.answer)

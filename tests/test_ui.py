@@ -5,6 +5,7 @@ network)."""
 from pathlib import Path
 
 import pytest
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from causal_genie.agent.state import DagEdge, ReportDraft, Result, RunState, Sentence
@@ -20,6 +21,7 @@ from causal_genie.ui.view import (
     VERDICT_MEANINGS,
     Card,
     anchor,
+    answered_on,
     bands,
     card,
     category,
@@ -764,3 +766,51 @@ def test_the_header_says_what_the_genie_does_and_why_to_trust_it(tmp_path, monke
     assert not at.exception
     assert any(m.value.startswith("**Does X really cause Y?**") for m in at.markdown)
     assert any("traces to a tested tool" in c.value for c in at.caption)
+
+
+# --- when each question was answered -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("run_id", "shown"),
+    [("20261117-172931-b755cb", "Nov 17, 2026"), ("20260105-000000-aaaaaa", "Jan 5, 2026")],
+)
+def test_the_answer_date_comes_from_the_run_id(run_id, shown) -> None:
+    assert answered_on(run_id) == shown
+
+
+@pytest.mark.parametrize("run_id", ["live-run", "20261399-000000-aaaaaa", ""])
+def test_a_run_id_without_a_date_shows_none(run_id) -> None:
+    assert answered_on(run_id) == ""
+
+
+def test_a_rerun_replaces_the_card_and_its_date(ui_state, tmp_path) -> None:
+    save(ui_state, tmp_path, "20261101-000000-aaaaaa")
+    save(ui_state, tmp_path, "20270301-000000-bbbbbb")  # new evidence, same question
+
+    (only,) = gallery_cards(tmp_path)
+    assert (only.run_id, only.answered) == ("20270301-000000-bbbbbb", "Mar 1, 2027")
+
+
+def test_cards_and_the_answer_page_show_when_it_was_answered(ui_state, tmp_path, monkeypatch):
+    save(ui_state, tmp_path, "20261117-172931-b755cb")
+    at = app(tmp_path, monkeypatch)
+
+    assert any("Answered Nov 17, 2026" in c.value for c in at.caption)
+
+    at.button(key="open-20261117-172931-b755cb").click().run()
+
+    (note,) = [c.value for c in at.caption if c.value.startswith("Answered")]
+    assert "Nov 17, 2026" in note and "re-run" in note
+
+
+def test_the_pdf_is_dated(ui_state, tmp_path, monkeypatch) -> None:
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr("causal_genie.ui.pdf.dated", lambda md, day: calls.append((md, day)) or md)
+    save(ui_state, tmp_path, "20261117-172931-b755cb")
+    st.cache_data.clear()  # the app keeps each report's PDF
+
+    at = app(tmp_path, monkeypatch, run="20261117-172931-b755cb")
+
+    assert not at.exception
+    assert calls and calls[-1][1] == "Nov 17, 2026"

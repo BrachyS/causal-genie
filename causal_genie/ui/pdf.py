@@ -44,9 +44,23 @@ def printable(text: str) -> str:
     return "".join(c for c in text if c in "\n\t" or ord(c) in glyphs)
 
 
-def report_pdf(markdown: str) -> bytes:
-    """The report as an A4 PDF. Raw HTML in the Markdown is shown as text, never rendered."""
-    html = MarkdownIt("commonmark", {"html": False}).enable("table").render(printable(markdown))
+def dated(markdown: str, answered: str) -> str:
+    """The report with "Answered <day>" under its `# ` title, so a printed copy says how
+    current its evidence is; unchanged without a day."""
+    if not answered:
+        return markdown
+    line = f"*Answered {answered}*\n\n"
+    title, sep, rest = markdown.partition("\n\n")
+    if title.startswith("# ") and sep:
+        return f"{title}\n\n{line}{rest}"
+    return line + markdown
+
+
+def report_pdf(markdown: str, answered: str = "") -> bytes:
+    """The report as an A4 PDF, dated if `answered` is given. Raw HTML in the Markdown is
+    shown as text, never rendered."""
+    md = printable(dated(markdown, answered))
+    html = MarkdownIt("commonmark", {"html": False}).enable("table").render(md)
     pdf = FPDF(format="A4")
     for style, name in STYLES.items():
         pdf.add_font("dejavu", style, FONTS / name)

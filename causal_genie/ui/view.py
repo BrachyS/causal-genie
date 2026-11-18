@@ -12,6 +12,7 @@ import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import quote
@@ -156,6 +157,18 @@ class Card:
     verdict: str  # the verdict's label, or why there is none
     answer: str  # the summary's first sentence, which states the answer
     genie: str  # the Genie's aside, or ""
+    answered: str = ""  # the day the run was made, e.g. "Nov 17, 2026" (see `answered_on`)
+
+
+def answered_on(run_id: str) -> str:
+    """The day a run was made, e.g. "Nov 17, 2026", from the UTC time its id starts with
+    (`YYYYMMDD-HHMMSS-…`); "" for an id without one. A rerun of a question gets a new id, so
+    the gallery's card shows the date of the evidence it shows."""
+    try:
+        day = datetime.strptime(run_id[:8], "%Y%m%d")
+    except ValueError:
+        return ""
+    return f"{day:%b} {day.day}, {day.year}"
 
 
 def clip(text: str, limit: int) -> str:
@@ -174,7 +187,9 @@ def card(state: RunState, tag: str = "") -> Card:
     summary = state.prose.summary if state.prose is not None else []
     answer = escape(clip(summary[0].text, ANSWER_CHARS)) if summary else ""
     genie = escape(clip(state.genie, GENIE_CHARS)) if state.genie else ""
-    return Card(state.run_id, state.question, tag, verdict, answer, genie)
+    return Card(
+        state.run_id, state.question, tag, verdict, answer, genie, answered_on(state.run_id)
+    )
 
 
 def gallery_cards(runs_dir: Path) -> list[Card]:
