@@ -150,3 +150,12 @@ def test_thirty_votes_an_hour_per_voter(db, monkeypatch) -> None:
 )
 def test_postgres_urls_use_the_installed_driver(url, expected) -> None:
     assert board_db.driver_url(url) == expected
+
+
+def test_the_engine_replaces_connections_the_server_dropped(tmp_path) -> None:
+    # A hosted Postgres closes idle connections (e.g. during a 10-minute live run); without a
+    # pre-ping the next board query fails and the app shows "Board unavailable".
+    engine = board_db.connect(f"sqlite:///{tmp_path / 'board.db'}")
+
+    assert engine.pool._pre_ping
+    assert 0 < engine.pool._recycle <= 600

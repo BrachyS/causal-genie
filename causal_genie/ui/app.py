@@ -459,7 +459,7 @@ def ask_box(
             )
         run, entered = False, ""
         if passcode:
-            with st.expander("Have a passcode? Get a private answer now (about 5 minutes)"):
+            with st.expander("Have a passcode? Get a private answer now (about 5 to 10 minutes)"):
                 entered = st.text_input("Passcode", type="password")
                 run = st.form_submit_button("Run privately now")
     text = text.strip()

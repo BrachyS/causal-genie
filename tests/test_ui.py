@@ -841,3 +841,10 @@ def test_the_most_recently_answered_question_comes_first(ui_state, tmp_path, mon
         "open-20261102-000000-bbbbbb",
         "open-20261101-000000-aaaaaa",
     ]
+
+
+def test_the_passcode_option_gives_the_real_run_time(ui_state, tmp_path, monkeypatch) -> None:
+    at, _ = _ask_app(tmp_path, monkeypatch, ui_state, board=False, CG_LIVE_PASSCODE="sesame")
+
+    (box,) = [e for e in at.expander if e.label.startswith("Have a passcode?")]
+    assert "about 5 to 10 minutes" in box.label  # a live run on the site took 10 min 42 s

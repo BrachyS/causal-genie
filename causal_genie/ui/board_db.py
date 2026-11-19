@@ -102,8 +102,13 @@ def driver_url(url: str) -> str:
 
 
 def connect(url: str) -> Engine:
-    """An engine for `url` (e.g. `BOARD_DB_URL`) with the tables in place."""
-    engine = create_engine(driver_url(url))
+    """An engine for `url` (e.g. `BOARD_DB_URL`) with the tables in place.
+
+    The app keeps one engine for its lifetime, and a hosted Postgres closes connections left
+    idle (e.g. while a 10-minute live run holds the script), so each connection is checked
+    before use and renewed after 5 minutes rather than failing the next board query.
+    """
+    engine = create_engine(driver_url(url), pool_pre_ping=True, pool_recycle=300)
     create_tables(engine)
     return engine
 
