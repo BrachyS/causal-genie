@@ -64,6 +64,10 @@ Each entry gives the decision, why, and what it costs. Entries marked *open* are
 
 **The demo shows recorded runs.** A live run takes minutes, so the web app shows a gallery by default. Gallery runs are display copies: raw page text, search snippets and model inputs/outputs are removed before they are committed; the verbatim quotes the report cites are kept. Live runs need a passcode and stop at a daily cap of runs and tokens, checked before each run starts (one run can go past it). The cap file resets when the hosted app restarts, so provider-side limits remain the hard stop.
 
+**Gallery topics: a hand list, then one small-model pick.** The questions in the gallery at launch are filed into topic bands by hand (`CATEGORIES` in `causal_genie/ui/view.py`). Any other question, such as a new Question of the Day, gets its band from one small-model call (`topic.md`), cached per question while the app runs; with no keys or an answer outside the list it goes to Miscellaneous. *Why:* new answers land in the gallery without anyone editing code, and a wrong band only misplaces a card, so one cheap label is enough. *Cost:* a question can sit in an odd band until someone pins it in the hand list.
+
+**The report downloads as a PDF.** The app renders the run's Markdown report with fpdf2 in DejaVu (shipped with matplotlib), dated with the day the question was answered. *Why:* a PDF opens anywhere and reads as a finished report; raw Markdown did not. *Cost:* DejaVu has no colour emoji, so the verdict and Genie icons are dropped, and claim IDs such as `[s0777deef-effect]` still show as in the Markdown.
+
 ## Question of the Day
 
 **An in-app database, not GitHub issues or social platforms.** Questions and votes are kept in hosted Postgres behind the app. *Why:* asking people to sign in to GitHub (issues, Discussions) to ask or vote was too much trouble; X and Reddit APIs are paid or closed to new bots. *Cost:* a database to run (Neon free tier) and our own moderation.
