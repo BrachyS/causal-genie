@@ -1,6 +1,6 @@
 # Design decisions
 
-Each entry gives the decision, why, and what it costs. Entries marked *open* are still being measured.
+Each entry gives the decision, why, and what it costs.
 
 ## Agent design
 
