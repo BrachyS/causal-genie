@@ -65,4 +65,4 @@ The statistics tools are unit-tested against independent calculations (Newcombe'
 - **Extraction noise.** The small model sometimes over-quotes or mislabels a study's design; quote checks catch invented passages, not a misread design.
 - **Metadata outages.** If a Europe PMC lookup fails after a retry, the study is kept but not checked for retraction, and the report says so.
 - **No clarifying questions in batch or web runs.** Without a person to answer, the first framing is kept and its ambiguities are listed. Data is treated as observational unless randomization is documented.
-- **Cost and time.** A live run takes a few minutes and roughly 200–300k model tokens, mostly from reading each source separately.
+- **Cost and time.** A live run takes about 2 to 11 minutes and roughly 200–450k model tokens, mostly from reading each source separately.
