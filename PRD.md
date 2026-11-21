@@ -68,7 +68,7 @@ Not medical, legal or financial advice; every report says so.
 | M5 | Data | Paper → data links + allowlisted search → rule filter → score top 10 → download top 1 (try next, ≤ 3) |
 | M6 | Map + identify | Model suggests column ↔ node mapping, user confirms; derived variables (calendar, moon phase); DoWhy backdoor set; RCT detection; selection-after-assignment check; **recognizes DiD, IV and RDD setups** (named and explained, not estimated) |
 | M7 | Estimate | **RCT:** risk difference + Newcombe CI, or mean difference + Welch CI. **Observational:** OLS/logistic adjustment, naive vs adjusted side by side |
-| M8 | Verdict + report | Controller picks the verdict; report written only from ledger claims and tool results; lint; Genie aside behind the gate |
+| M8 | Verdict + report | Controller picks the verdict; report written only from checked evidence and tool results; lint; Genie aside behind the gate |
 | M9 | Serve | Streamlit Community Cloud, replay by default; live mode behind a passcode and spend cap |
 | M10 | Eval | 6 frozen cases + a no-tools baseline |
 
@@ -82,36 +82,40 @@ Not medical, legal or financial advice; every report says so.
 
 | Part | What it is |
 |---|---|
-| **Model** | Token Factory: a small model for routing, per-source extraction, mapping; a large one for the DAG, the report and the humor gate |
+| **Model** | Token Factory: a small model for routing, per-source extraction, mapping; a large one for the DAG, the report and the humor gate; a `draft` tier for the draft hypotheses (set to the large model; switchable in `models.yaml` if a different model wins the draft test in §8) |
 | **Controller** (harness) | Runs steps and loops, validates outputs against schemas, enforces budgets, picks the verdict, logs everything |
 | **Tools** (harness) | Tested deterministic functions: search, metadata, download, profile, derive, identify, estimate, render |
 
 ```mermaid
 flowchart TD
     Q[Question] --> RT{Router}
-    RT -->|cache or gallery| OUT
-    RT -->|not causal| NC[Short answer + causal rewrite]
+    RT -->|cached| SAVED[Saved report]
+    RT -->|not causal| NC[Short answer +<br/>causal rewrite]
     RT -->|causal| F[Frame as PECO]
 
-    F --> P
+    F --> DR[Draft hypotheses · model knowledge, no search<br/>sub-questions, claims to check, practical rule<br/>never evidence, never a finding]
+    DR -->|draft held back until round 2| RL[Research loop · max 3 rounds<br/>plan → Tavily → metadata → dedupe → extract → check quotes<br/>Round 1: PECO only, no draft<br/>Rounds 2–3: fill gaps + test the draft hypotheses<br/>Controller decides when to stop]
+    RL --> L[(Checked evidence:<br/>claims with verified quotes)]
 
-    subgraph RL [Research loop · max 3 rounds]
-        P[Model plans round:<br/>queries, search or extract, done?] --> T[Harness runs Tavily<br/>+ auto metadata → dedupe →<br/>extract records → check quotes]
-        T --> C{Controller:<br/>caps hit, saturated, or<br/>done + coverage met?}
-        C -->|no: hint missing coverage| P
-    end
-    C -->|yes| G[DAG from cited claims]
-    G --> D[Data: find candidates → score → download]
-    D -->|no usable data| VD
+    L --> G[DAG from cited claims]
+    G --> D[Data: find → score → download]
     D -->|dataset| I[Map columns → identify]
-    I -->|identifiable| E[Estimate + compare with published]
+    I -->|identifiable| E[Estimate + compare<br/>with published]
+    D -->|no usable data| VD
     I -->|not identifiable| VD
     E --> VD[Controller picks verdict]
-    VD --> W[Write report from ledger → lint]
+
+    L --> DC[Check each draft hypothesis<br/>against the checked evidence:<br/>confirmed / contradicted / unverified]
+
+    VD --> W[Write report from checked evidence → lint]
+    DC -.->|outline + labels only| W
     W --> OUT[Brief + DAG + sources]
+
+    classDef draft stroke-dasharray: 5 5
+    class DR,DC draft
 ```
 
-Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, after round 1 when no required coverage is missing, when a later round adds < 5 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim, and, when sources were found but none studies the link itself, a round that searches each side on its own: what causes the outcome, what drives the exposure). Edges don't exist until the DAG step, so "a source for each DAG edge" is checked there: an uncited edge sends research back for one more round if rounds are left, otherwise the edge is marked "assumed". If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
+Loops are bounded. **Research (hybrid):** each round the model returns a `ResearchPlan`: queries, a tool per query (`search` or `extract`), a `why` for each, and whether it thinks it's done. The harness runs the tools, adds metadata automatically, and decides: stop at 3 rounds, after round 1 when no required coverage is missing, when a later round adds < 5 new studies, or when the model says done **and** required coverage is met (disproving search run, a primary source for each key claim, and, when sources were found but none studies the link itself, a round that searches each side on its own: what causes the outcome, what drives the exposure; and, with a draft, every draft sub-question covered by at least one included study, judged by word overlap between the sub-question and the study's title and effect, no model call. An uncovered sub-question forces one more round, within the 3-round cap). Edges don't exist until the DAG step, so "a source for each DAG edge" is checked there: an uncited edge sends research back for one more round if rounds are left, otherwise the edge is marked "assumed". If the model says done too early, the controller overrides and names what's missing in the next prompt. **Data:** try the next candidate, or re-search once naming the missing variable; ≤ 3 downloads. **Report:** one rewrite if lint fails, then the sentence is dropped.
 
 ### 5.2 Verdicts (picked by the controller, never by the model)
 
@@ -133,12 +137,14 @@ A scaled-down **systematic review**. Each step is a prompt + schema or a simple 
 | Step | Lean MVP |
 |---|---|
 | **Frame** | PECO from `CausalQuery` drives every query and every include/exclude decision |
-| **Plan each round** (model) | Round 1 covers every group: best existing answer (reviews first) · primary studies, incl. natural experiments (policy changes, staggered launches, thresholds) · mechanism · confounders · **evidence against the leading answer** · data availability. Lay + technical terms. ≤ 12 queries in round 1, ≤ 6 in later rounds (Tavily credit budget). Later rounds target what's missing, using the state summary (included studies, snippet-only sources, gaps, rounds left). Controller rejects a round-1 plan missing a group |
+| **Draft hypotheses** (`draft` tier, no search) | **Hypotheses only.** The model writes down what it already believes, as a `DraftAnswer`: the sub-questions the question really contains (e.g. "does each item cost less?" vs "do you spend less in total?"), short claims to check, tagged `main` / `exception` / `mechanism` / `caveat` (with any numbers it believes), and a candidate practical rule. These are things to test, like a review protocol's hypotheses, not evidence: a draft claim is not a checked-evidence `Claim`, is never cited, never counts toward certainty, the DAG or the verdict, and never appears in the findings in its own words or with its own numbers. It only shapes which searches run (from round 2) and how the summary is organized. **Bias guards:** (1) the draft never reaches extraction, quote checks, `check_support` on checked claims, the DAG, certainty or the verdict (tested on their prompt inputs); (2) round 1 is planned from PECO only, as without a draft, so research finds at least what it found before; the draft adds targeted queries from round 2 on, worded neutrally (the topic, not the draft's conclusion); (3) a wrong-draft test (main claim negated) must leave the verdict and the set of confirmed checked claims unchanged |
+| **Plan each round** (model) | Round 1 covers every group: best existing answer (reviews first) · primary studies, incl. natural experiments (policy changes, staggered launches, thresholds) · mechanism · confounders · **evidence against the leading answer** · data availability. Round 1 does not see the draft. From round 2, the plan also sees the draft's sub-questions and claims: it covers each sub-question no included study covers yet and runs at least one query against the draft's `main` claim, so research cannot just confirm the draft. An uncovered sub-question is missing coverage (§5.1), so research cannot stop after round 1 while one remains. Lay + technical terms. ≤ 12 queries in round 1, ≤ 6 in later rounds (Tavily credit budget). Later rounds target what's missing, using the state summary (included studies, snippet-only sources, gaps, rounds left). Controller rejects a round-1 plan missing a group |
 | **Search** | Tavily `search` (advanced) + `extract`, preferring PubMed, Europe PMC, Cochrane, NIH/CDC, NBER, medRxiv. News, blogs and Wikipedia are leads only: follow them to the paper or mark the claim "secondary only" |
 | **Enrich** | Europe PMC: DOI, publication type, **retraction status** |
 | **Dedupe by study** | Group by DOI/PMID, then fuzzy title + first author + year. Ten news stories about one paper = one study |
 | **Extract (one call per source)** | Include/exclude with a reason code, plus a `Study` record with a verbatim quote for each key field |
 | **Check citations** | Tool: fuzzy match confirms the quote is in the fetched text. Model: does the quote support the claim? Failures are dropped or marked unresolved |
+| **Check draft** | Tests each hypothesis against the evidence; the evidence, not the hypothesis, is what the report states. Model proposes, for each draft claim, which checked claims bear on it; the harness keeps only `documented` checked claims, runs `check_support` on each (draft claim, quote) pair, one pair per call and without saying the claim came from a draft (a quote on a related point is not support), and sets the status: `confirmed` (a quote supports it), `contradicted` (a quote contradicts it; contradiction wins over support) or `unverified` (nothing checked bears on it) |
 | **Certainty** | Rule-based label, inspired by GRADE (§5.4) |
 | **Evidence flow** | Counts shown in the report: found → after dedupe → included, with exclusion reasons (PRISMA-style) |
 
@@ -211,6 +217,18 @@ class Claim(BaseModel):
     grounding: Literal["quote_found", "quote_not_found", "n/a"]
     support: Literal["supports", "partial", "contradicts", "irrelevant", "unchecked"]
 
+class DraftClaim(BaseModel):          # a hypothesis to check, NOT part of the checked evidence; model output, status and cites set by the harness
+    id: str; text: str
+    role: Literal["main", "exception", "mechanism", "caveat"]
+    sub_question: int                  # index into DraftAnswer.sub_questions
+    status: Literal["confirmed", "contradicted", "unverified", "unchecked"]
+    claim_ids: list[str]               # documented claims in the checked evidence that confirm or contradict it
+
+class DraftAnswer(BaseModel):         # hypotheses only: `draft` tier, from model knowledge, before research
+    sub_questions: list[str]           # 1–3; the report is organized by these
+    claims: list[DraftClaim]           # ≤ 8
+    practical_rule: str | None         # shown only if every claim it rests on is confirmed
+
 class Certainty(BaseModel):            # set by the controller (§5.4), never by a model
     level: Literal["very_low", "low", "moderate", "high"]; reasons: list[str]
 
@@ -227,7 +245,7 @@ class Result(BaseModel):
     id: str; tool: str; tool_version: str; inputs_hash: str; outputs: dict
 ```
 
-The **claim ledger** is the list of `Claim`s; the report may only use ledger entries and `Result`s. `RunState` holds everything plus routing, token/cost/latency counters and versions, saved as JSON per run so any run can be replayed.
+The **checked evidence** is the list of `Claim`s: statements from sources, each with a quote verified on the source page (the code calls it the claim ledger). The report may only use checked evidence and `Result`s. `RunState` holds everything plus routing, token/cost/latency counters and versions, saved as JSON per run so any run can be replayed.
 
 ### 5.6 Data discovery
 
@@ -251,7 +269,7 @@ The **claim ledger** is the list of `Claim`s; the report may only use ledger ent
 
 ### 5.8 Report and Genie mode
 
-Sections: Verdict · What the research and analysis found (summary, ≤ 120 words; the UI shows its first sentence as the short answer) · Question (PECO) · DAG · Key confounders · Evidence by study design + certainty + evidence-flow counts · Data used · Estimate *or* study plan (names any recognized DiD/IV/RDD design, its key assumption, what it would estimate and the check to run) · Comparison with published · Limitations · Sources · Run ID.
+Sections: Verdict · What the research and analysis found (summary, ≤ 120 words; the UI shows its first sentence as the short answer; organized by the draft's sub-questions; for a `confirmed` hypothesis it states what the cited checked claims found, in their words and numbers, not the draft's; a `contradicted` one becomes a correction ("A common belief is X; the sources found Y", Y from the checked evidence); the practical rule only when it qualifies; then **Other findings**: included studies whose claims bear on no hypothesis, so evidence on an angle the draft missed still reaches the reader; at most 2 sentences, picked by study design rank, then direct PECO match before indirect, the rest stays in the Evidence section; the summary keeps its 120-word limit) · Not confirmed by sources (the `unverified` hypotheses, labeled "the model's hypotheses, not checked against sources", with no numbers) · Question (PECO) · DAG · Key confounders · Evidence by study design + certainty + evidence-flow counts · Data used · Estimate *or* study plan (names any recognized DiD/IV/RDD design, its key assumption, what it would estimate and the check to run) · Comparison with published · Limitations · Sources · Run ID.
 **Genie mode** (off by default): one labeled "🧞 Genie's aside", after any verdict, never on sensitive topics (health treatments people act on, vaccines, mental health, harm, money, groups of people); no new facts and no numbers except those in the question; always ends with the useful next step. The large model (reasoning off) labels the topic; the harness decides. *(Changed: was "only for 📚/❓/🚫 or whimsical questions", judged by the small model, which called licorice gargling before surgery not sensitive; see docs/DECISIONS.md.)* In the demos, D0, D3/D4 and D5 may show an aside; D1 (a treatment) and the vaccines gate test must not.
 
 ### 5.9 Failure handling
@@ -356,6 +374,9 @@ Build a thin end-to-end slice first (D1 by end of week 1), then deepen research.
 | Design recognition | `detect_design` labels the DiD, IV and RDD fixtures correctly (unit tests) |
 | Fixed vs hybrid loop | Key-study recall on the 6 cases, fallback plan only vs model-planned rounds. Keep whichever wins |
 | Data rank | Rank of the accepted dataset among scored candidates |
+| Draft check | Per run: confirmed / contradicted / unverified hypotheses; any draft hypothesis stated as a finding without a checked claim behind it (or a contradicted one stated as true) counts as a forbidden conclusion |
+| Draft vs no draft | Paired test on the frozen cases, three arms: no draft, draft by the large model (DeepSeek-V4-Pro), draft by a second large model (Kimi-K3.1-Pro, if Token Factory still offers it). Verdict match, key-study recall, unsupported numbers, plus a blind judge of usefulness (answers the real question, names exceptions, gives a next step) |
+| Draft bias | Wrong-draft test: the same cases with the draft's `main` claim negated. Verdict and confirmed checked claims must not change; key-study recall must not drop below the no-draft arm |
 | Cost and latency | Per run and per route |
 
 **Baseline:** the same Token Factory model + Tavily, no tools ("answer with sources"). Compare verdicts, unsupported causal claims, invented numbers and key-study recall. This is the headline: what the research method and harness add. Report counts (5/6), not percentages; live and replay results reported separately.
