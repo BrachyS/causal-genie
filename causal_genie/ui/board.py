@@ -321,7 +321,10 @@ def _render(db: Engine, voter_id: str | None, gallery_dir: Path) -> None:
             st.markdown(f"{plain(q.text)}  \n{_votes(q.votes)}")
 
     st.subheader("Up next")
-    st.caption("The question with the most votes is answered each night.")
+    st.caption(
+        "Each night the Genie answers the question with the most votes"
+        " among those asked at least a day ago."
+    )
     voted = board_db.voted(db, voter_id) if voter_id else set()
     ranked = rank(board_db.board(db))
     if not ranked:

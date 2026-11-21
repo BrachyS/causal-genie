@@ -56,9 +56,15 @@ def db() -> Engine:
     return board_db.connect("sqlite://")
 
 
-def _shown(db: Engine, text: str, votes: int = 0) -> int:
+def _shown(db: Engine, text: str, votes: int = 0, age: timedelta = timedelta(days=2)) -> int:
     qid = board_db.add_question(db, text, f"asker of {text}")
     board_db.set_status(db, qid, "shown")
+    with db.begin() as conn:
+        conn.execute(
+            board_db.questions.update()
+            .where(board_db.questions.c.id == qid)
+            .values(created_at=board_db.now() - age)
+        )
     for i in range(votes):
         board_db.vote(db, qid, f"voter {i}")
     return qid
@@ -102,6 +108,24 @@ def test_one_pick_is_answered_exported_and_described(db, tmp_path) -> None:
     q = board_db.get_question(db, top)
     assert (q.status, q.run_id) == ("running", "run-1")
     assert not night.failed
+
+
+def test_questions_younger_than_a_day_wait(db, tmp_path) -> None:
+    _shown(db, "Does ashwagandha ease stress?", votes=5, age=timedelta(hours=3))
+    old = _shown(db, "Does tea cause calm?", votes=0, age=timedelta(hours=25))
+
+    night = _nightly(db, tmp_path, FakeRuns({}))
+
+    assert [p.question_id for p in night.picks] == [old]
+
+
+def test_no_pick_when_every_question_is_fresh(db, tmp_path) -> None:
+    fresh = _shown(db, "Does ashwagandha ease stress?", votes=5, age=timedelta(hours=23))
+
+    night = _nightly(db, tmp_path, FakeRuns({}))
+
+    assert night.picks == [] and not night.failed
+    assert board_db.get_question(db, fresh).status == "shown"
 
 
 def test_a_failed_pick_falls_back_to_the_next(db, tmp_path) -> None:

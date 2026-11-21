@@ -1,11 +1,12 @@
 """The nightly Question of the Day pick (U15, U16).
 
 A rule picks the question, not a model: the shown question with the most votes, ties to the
-oldest. Each night the GitHub Action runs `python -m causal_genie.ui.picks run`: it answers up
-to `n` questions, exports each answer to `gallery/` with a `pick.json`, and writes a PR body
-for the user to review. A partial or non-causal run marks the question `skipped` and the next
-candidate gets a try, at most 2 tries per slot. The question stays `running` until its PR is
-merged (U18 marks it answered).
+oldest, among those on the board for at least a day (`MIN_AGE`), so every question gets a full
+day of votes however late GitHub starts the job. Each night the GitHub Action runs
+`python -m causal_genie.ui.picks run`: it answers up to `n` questions, exports each answer to
+`gallery/` with a `pick.json`, and writes a PR body for the user to review. A partial or
+non-causal run marks the question `skipped` and the next candidate gets a try, at most 2 tries
+per slot. The question stays `running` until its PR is merged (U18 marks it answered).
 
 Question text comes from strangers. It only travels through Python and files here; the
 workflow never puts it on a shell line.
@@ -16,6 +17,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable
+from datetime import timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -33,6 +35,7 @@ from causal_genie.ui.live import run_live
 log = logging.getLogger(__name__)
 
 TRIES_PER_SLOT = 2
+MIN_AGE = timedelta(hours=24)  # a question waits this long on the board before it can be picked
 MAX_N = 3
 
 Answer = Callable[[str, Path], RunState]
@@ -112,11 +115,13 @@ def nightly(
     gallery_dir: Path,
     announce: Callable[[Question], str | None] = no_genie,
 ) -> Nightly:
-    """Answer up to `n` top questions, falling back to the next candidate when a run fails.
+    """Answer up to `n` top questions at least `MIN_AGE` old, falling back to the next candidate
+    when a run fails.
 
     `announce` drafts the Genie's line for a pick, None for the plain announcement.
     """
-    candidates = rank(board_db.board(db))
+    cutoff = board_db.now() - MIN_AGE
+    candidates = [q for q in rank(board_db.board(db)) if q.created_at <= cutoff]
     picks: list[Pick] = []
     failed = False
     for slot in range(n):
