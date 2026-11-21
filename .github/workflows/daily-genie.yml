@@ -1,5 +1,5 @@
 # Question of the Day (U16): each night, answer the board's top-voted question and open a PR
-# for review. Merging the PR publishes the answer (see the after-merge workflow, U18).
+# for review. A merged answer is posted by the daily publish workflow, one a day (U18).
 #
 # Question text comes from strangers. It never appears on a `run:` line: Python reads it from
 # the database and writes files; values reach the shell only through `env:`.
@@ -49,7 +49,9 @@ jobs:
           GENIE_MODE: "1"
           N: ${{ inputs.n || '1' }}
         # Exits 1 if a slot found no answer after 2 tries; the PR step still runs for the others.
-        run: uv run python -m causal_genie.ui.picks run --n "$N" --body-file "$RUNNER_TEMP/pr_body.md"
+        run: >-
+          uv run python -m causal_genie.ui.picks run --n "$N"
+          --body-file "$RUNNER_TEMP/pr_body.md" --title-file "$RUNNER_TEMP/pr_title.txt"
 
       - name: Open the review PR
         if: ${{ !cancelled() }}
@@ -68,5 +70,7 @@ jobs:
           git add gallery
           git commit -m "Question of the Day: $day"
           git push origin "$branch"
+          # The title holds stranger text: read from a file into one quoted argument, never evaluated.
+          title="$(cat "$RUNNER_TEMP/pr_title.txt")"
           gh pr create --base main --head "$branch" \
-            --title "Question of the Day: $day" --body-file "$RUNNER_TEMP/pr_body.md"
+            --title "$title" --body-file "$RUNNER_TEMP/pr_body.md"
