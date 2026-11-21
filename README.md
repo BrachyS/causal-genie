@@ -4,6 +4,8 @@
 
 **▶️ [Watch the 3-minute demo](https://youtu.be/0SusEmi7FcQ)**: a live run on the site, then answers from the gallery.
 
+Built for the ODSC AI hackathon (November 2026). The version submitted on Nov 19 is the [`hackathon-submission`](https://github.com/BrachyS/causal-genie/releases/tag/hackathon-submission) release; work since then continues on `main`.
+
 A research agent for "does X cause Y?" questions (*"Does the full moon cause more births?"*). It researches the question like a small systematic review, draws a causal graph (DAG) whose arrows cite checked source passages, looks for a public dataset with the treatment, outcome and confounders, and estimates the effect, or declines and says what is missing. Every number in a report traces to a tool call, and every claim to a quoted source. Models run on Nebius Token Factory and search runs on Tavily.
 
 **Team:** Sabrina Liu ([@BrachyS](https://github.com/BrachyS))
