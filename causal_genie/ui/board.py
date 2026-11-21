@@ -6,7 +6,7 @@ inline JS (Streamlit's built-in `st.components.v2`, no extra package) store the 
 back. Clearing site data gives a new ID; the per-voter rate limits in `board_db` bound what that
 can do.
 
-Board tab (U13a): `render_board` shows today's answered question, the questions up next with
+Board tab (U13a): `render_board` shows the latest answered question, the questions up next with
 a vote button, the ask box and the archive. Question text (and the model's line) is shown with
 every Markdown character escaped, never as Markdown or HTML, and never in a button label.
 
@@ -303,9 +303,11 @@ def render_board(
 def _render(db: Engine, voter_id: str | None, gallery_dir: Path) -> None:
     latest = board_db.latest_answered(db)
     if latest:
-        st.subheader("Today's question")
+        st.subheader("Latest answer")
         with st.container(border=True):
             st.markdown(f"**{plain(latest.text)}**")
+            if day := latest.answered_at:
+                st.caption(f"Answered {day:%b} {day.day}")
             pick = _pick(gallery_dir, latest.run_id)
             if pick and pick.verdict:
                 st.markdown(VERDICT_LABELS[pick.verdict])
