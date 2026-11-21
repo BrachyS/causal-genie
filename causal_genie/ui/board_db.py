@@ -261,6 +261,6 @@ def answered(engine: Engine) -> list[Question]:
 
 
 def latest_answered(engine: Engine) -> Question | None:
-    """Today's question: the most recently answered one, if any."""
+    """The board's latest answer: the most recently answered question, if any."""
     rows = answered(engine)
     return rows[0] if rows else None

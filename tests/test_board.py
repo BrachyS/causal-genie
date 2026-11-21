@@ -300,7 +300,7 @@ def test_question_text_on_the_board_is_escaped(board_app) -> None:
     assert not any(EVIL in t for t in _texts(app))
 
 
-def test_todays_question_shows_the_latest_answer_with_its_link(board_app, tmp_path) -> None:
+def test_latest_answer_shows_with_its_date_and_link(board_app, tmp_path) -> None:
     url, db, gallery = board_app
     qid = _shown(db, "Does tea cause calm?")
     board_db.set_status(db, qid, "answered", run_id="r1", announcement="Brewing tonight!")
@@ -322,7 +322,8 @@ def test_todays_question_shows_the_latest_answer_with_its_link(board_app, tmp_pa
     app.run()
 
     page = "\n".join(_texts(app))
-    assert app.subheader[0].value == "Today's question"
+    assert app.subheader[0].value == "Latest answer"
+    assert any(c.value.startswith("Answered ") for c in app.caption)
     assert "Published evidence only" in page and board.plain("Brewing tonight!") in page
     assert "?run=r1" in page
 
