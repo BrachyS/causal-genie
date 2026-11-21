@@ -1,9 +1,11 @@
 """After a Question of the Day PR is merged (U18): mark the question answered, post to Bluesky.
 
-The after-merge workflow runs `python -m causal_genie.ui.bluesky publish`. It reads every
-`gallery/*/pick.json`; a pick whose question is still `running` with that run is the one just
-merged. It is marked `answered` first, then posted, so a failed post leaves the answer
-published on the board and fails the job for a retry by hand; a re-run never posts twice.
+A daily workflow runs `python -m causal_genie.ui.bluesky publish`. It reads every
+`gallery/*/pick.json`; a pick whose question is still `running` with that run is merged but not
+yet posted. Only the oldest such pick (by run id, which starts with its date) is published per
+run, so the feed gets one question a day and a backlog drains on nights with no new answer.
+It is marked `answered` first, then posted, so a failed post leaves the answer published on
+the board and fails the job for a retry by hand; a re-run never posts twice.
 
 The post (at most 300 characters) has the question (cut if needed, never the link), the vote
 count (left out at 0), the verdict label and a deep link to the run. The pick's announcement
@@ -87,9 +89,10 @@ def post(http: httpx.Client, handle: str, app_password: str, text: str, facets: 
 def publish(
     db: Engine, gallery: Path, http: httpx.Client, handle: str, app_password: str, app_url: str
 ) -> list[str]:
-    """Mark merged picks answered and post each; returns the run ids whose post failed."""
+    """Mark the oldest merged, unposted pick answered and post it; returns its run id if the
+    post failed."""
     failed: list[str] = []
-    for path in sorted(gallery.glob("*/pick.json")):
+    for path in sorted(gallery.glob("*/pick.json"), key=lambda p: p.parent.name):
         pick = Pick.model_validate_json(path.read_text())
         q = board_db.get_question(db, pick.question_id)
         if q.status != "running" or q.run_id != pick.run_id:
@@ -107,8 +110,10 @@ def publish(
         except httpx.HTTPError:
             log.exception("bluesky: post for run %s failed; the question stays answered", q.run_id)
             failed.append(pick.run_id)
-            continue
+            return failed
         log.info("bluesky: posted run %s as %s", pick.run_id, uri)
+        return failed
+    log.info("bluesky: no merged pick waiting to post")
     return failed
 
 
@@ -119,7 +124,7 @@ def transport() -> httpx.BaseTransport:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Publish merged Question of the Day answers.")
     sub = parser.add_subparsers(dest="command", required=True)
-    pub = sub.add_parser("publish", help="mark merged picks answered and post them to Bluesky")
+    pub = sub.add_parser("publish", help="post the oldest merged pick to Bluesky")
     pub.add_argument("--gallery", type=Path, default=GALLERY_DIR)
     args = parser.parse_args(argv)
     setup_logging()

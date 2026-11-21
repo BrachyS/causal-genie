@@ -199,6 +199,26 @@ def test_pr_body_keeps_stranger_text_inert(db, tmp_path) -> None:
     assert "run-1" in body and "2 votes" in body
 
 
+def test_pr_title_names_the_question(db, tmp_path) -> None:
+    _shown(db, "Does  coffee\ncause\theadaches?", votes=2)
+    night = _nightly(db, tmp_path, FakeRuns({}))
+
+    title = picks.pr_title(night, "2026-11-21")
+
+    assert title == "Question of the Day 2026-11-21: Does coffee cause headaches?"
+
+
+def test_pr_title_is_short_and_counts_the_other_picks(db, tmp_path) -> None:
+    _shown(db, "Does " + "very " * 30 + "long cause effect?", votes=3)
+    _shown(db, "Does tea cause calm?", votes=1)
+    night = _nightly(db, tmp_path, FakeRuns({}), n=2)
+
+    title = picks.pr_title(night, "2026-11-21")
+
+    assert len(title) <= picks.TITLE_CHARS
+    assert title.endswith("… (+1 more)") and "\n" not in title
+
+
 def test_main_writes_the_pr_body_and_fails_when_a_slot_is_empty(db, tmp_path, monkeypatch) -> None:
     url = f"sqlite:///{tmp_path / 'board.db'}"
     board = board_db.connect(url)
@@ -208,9 +228,11 @@ def test_main_writes_the_pr_body_and_fails_when_a_slot_is_empty(db, tmp_path, mo
     monkeypatch.setattr(picks, "run_live", FakeRuns({}))
     args = ["run", "--n", "1", "--runs", str(tmp_path / "runs"), "--gallery"]
     args += [str(tmp_path / "g"), "--body-file", str(tmp_path / "body.md")]
+    args += ["--title-file", str(tmp_path / "title.txt")]
 
     picks.main(args)
     assert "Does coffee cause headaches?" in (tmp_path / "body.md").read_text()
+    assert "Does coffee cause headaches?" in (tmp_path / "title.txt").read_text()
 
     (tmp_path / "body.md").unlink()
     monkeypatch.setattr(picks, "run_live", FakeRuns({"Is water wet?": "not_causal"}))
@@ -223,7 +245,7 @@ def test_main_writes_the_pr_body_and_fails_when_a_slot_is_empty(db, tmp_path, mo
 def test_main_rejects_n_outside_1_to_3(n, tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("BOARD_DB_URL", "sqlite://")
     with pytest.raises(SystemExit):
-        picks.main(["run", "--n", n, "--body-file", str(tmp_path / "b.md")])
+        picks.main(["run", "--n", n, "--body-file", str(tmp_path / "b.md"), "--title-file", "t"])
 
 
 WORKFLOWS = Path(__file__).parents[1] / ".github" / "workflows"

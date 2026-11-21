@@ -111,7 +111,7 @@ def test_post_logs_in_with_the_app_password_then_creates_the_record() -> None:
     assert record["record"]["text"] == "hello" and record["record"]["$type"] == "app.bsky.feed.post"
 
 
-# --- publish: what the after-merge workflow runs -----------------------------------------
+# --- publish: what the daily publish workflow runs -----------------------------------------
 
 
 @pytest.fixture
@@ -141,6 +141,23 @@ def test_publish_marks_merged_picks_answered_and_posts_each_once(db, tmp_path) -
     assert q.answered_at is not None
     assert failed == again == []
     assert sum(path.endswith("createRecord") for path, _ in fake.requests) == 1
+
+
+def test_publish_posts_only_the_oldest_waiting_pick_each_day(db, tmp_path) -> None:
+    newer = _running(db, tmp_path, "Does coffee cause drowsiness?", "20261117-185820-d30072")
+    older = _running(db, tmp_path, "Does music cause better exams?", "20261116-040302-aaaaaa")
+    fake = FakeBluesky()
+
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        bluesky.publish(db, tmp_path, http, "genie.bsky.social", "pw", APP)
+        statuses_after_day_1 = [board_db.get_question(db, q).status for q in (older, newer)]
+        bluesky.publish(db, tmp_path, http, "genie.bsky.social", "pw", APP)
+
+    posts = [body["record"]["text"] for path, body in fake.requests if path.endswith("Record")]
+    assert statuses_after_day_1 == ["answered", "running"]
+    assert board_db.get_question(db, newer).status == "answered"
+    assert len(posts) == 2
+    assert "music" in posts[0] and "coffee" in posts[1]
 
 
 def test_a_post_error_fails_without_undoing_answered(db, tmp_path) -> None:

@@ -1,5 +1,6 @@
-# Question of the Day (U18): after a pick's PR is merged into main, mark the question answered
-# on the board and post it to Bluesky with a link to the run.
+# Question of the Day (U18): once a day, take the oldest merged pick not yet posted, mark its
+# question answered on the board and post it to Bluesky with a link to the run. One post a day
+# even when several pick PRs were merged; a backlog drains on nights with no new answer.
 #
 # Idempotent: only picks whose question is still `running` with that run are published, so a
 # re-run never posts twice. A failed post fails this job; the question stays answered.
@@ -9,9 +10,11 @@
 name: Genie publish
 
 on:
-  push:
-    branches: [main]
-    paths: ["gallery/**/pick.json"]
+  schedule:
+    # 02:00 UTC: 6 pm PST / 7 pm PDT (cron is UTC only), evening for US readers. The nightly
+    # answer job (10:00 UTC, 2 am PST) opens the pick PR before the morning review; a PR merged
+    # that morning posts the same evening, one merged later posts the next day.
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 permissions:

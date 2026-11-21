@@ -17,7 +17,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -37,6 +37,7 @@ log = logging.getLogger(__name__)
 TRIES_PER_SLOT = 2
 MIN_AGE = timedelta(hours=24)  # a question waits this long on the board before it can be picked
 MAX_N = 3
+TITLE_CHARS = 100
 
 Answer = Callable[[str, Path], RunState]
 
@@ -170,10 +171,22 @@ def _inert(text: str) -> str:
     return text.replace("`", "'")
 
 
+def pr_title(night: Nightly, day: str) -> str:
+    """The review PR's title: the date and the top pick's question on one line, cut to
+    TITLE_CHARS so the reviewer sees what was answered. Titles don't render Markdown."""
+    head = f"Question of the Day {day}: "
+    more = f" (+{len(night.picks) - 1} more)" if len(night.picks) > 1 else ""
+    question = " ".join(night.picks[0].question.split())
+    room = TITLE_CHARS - len(head) - len(more)
+    if len(question) > room:
+        question = question[: room - 1].rstrip() + "…"
+    return head + question + more
+
+
 def pr_body(night: Nightly) -> str:
     """The review PR's description. Question text sits in fenced blocks, where Markdown,
     links and @mentions do nothing."""
-    parts = ["Question of the Day answers to review. Merging publishes them (U18).", ""]
+    parts = ["Question of the Day answers to review. Once merged, they post one a day (U18).", ""]
     for p in night.picks:
         votes = f"{p.votes} vote" + ("" if p.votes == 1 else "s")
         parts += [
@@ -208,6 +221,7 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--runs", type=Path, default=Path("runs"))
     run.add_argument("--gallery", type=Path, default=GALLERY_DIR)
     run.add_argument("--body-file", type=Path, required=True)
+    run.add_argument("--title-file", type=Path, required=True)
     args = parser.parse_args(argv)
     setup_logging()
     db = board_db.connect(os.environ["BOARD_DB_URL"])
@@ -220,6 +234,7 @@ def main(argv: list[str] | None = None) -> None:
     night = nightly(db, args.n, run_live, args.runs, args.gallery, announce)
     if night.picks:
         args.body_file.write_text(pr_body(night))
+        args.title_file.write_text(pr_title(night, datetime.now(UTC).strftime("%Y-%m-%d")))
     if night.failed:
         sys.exit(1)
 
