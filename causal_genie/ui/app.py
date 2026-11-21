@@ -428,6 +428,40 @@ def answered_link(question: str, runs_dir: Path) -> str | None:
     return None
 
 
+CHATBOT_NOTE = """\
+Try your question on any chatbot you like and compare. Here's what to look for.
+
+- **Every source shown and checked.** A chatbot often names a few studies it remembers and \
+thinks are representative. It can't show you where in a study a claim comes from, and its \
+citations are sometimes wrong. The Genie searches fresh, shows every source it used, and keeps \
+a claim only if it finds a quote that backs it up on the source page.
+- **Recent evidence.** A chatbot that answers from memory only knows what was published before \
+it was trained. The Genie searches for new studies every time and shows the date of each answer.
+- **Only real studies count.** The Genie throws out retracted papers. Ten news stories about \
+the same study count as one study.
+- **Numbers are calculated, not remembered.** A number from a chatbot can be off, or come from \
+one small study and sound like the whole picture. The Genie computes effect sizes with tested \
+statistics code, from the raw data when it can get it, and shows where each number comes from.
+- **Confidence follows fixed rules.** The Genie bases its confidence on how the studies were \
+designed and whether they agree. When studies disagree, it explains why instead of counting \
+votes.
+- **You can check its work.** Every run is saved with all its searches and sources.
+
+**When a chatbot is fine:** quick facts, definitions, or questions that aren't about cause and \
+effect. A Genie answer takes several minutes, so save it for "does X cause Y?" questions where \
+you want to see the evidence.
+
+*The Genie uses AI models too, to find and read evidence. The checks, the math and the final \
+verdict come from tested code.*
+"""
+
+
+def chatbot_note() -> None:
+    """How the Genie differs from asking a chatbot, collapsed under the ask box."""
+    with st.expander("How is this different from asking a chatbot?"):
+        st.markdown(CHATBOT_NOTE)
+
+
 def ask_box(
     db: Engine | None, voter: str | None, llm: LLMClient | None, passcode: str, runs_dir: Path
 ) -> None:
@@ -436,6 +470,7 @@ def ask_box(
     st.subheader("Ask the Genie 🧞")
     if db is None and not passcode:
         st.info("Asking is off in this demo. Browse the answered questions below.")
+        chatbot_note()
         return
     if db is not None:
         st.caption(
@@ -471,6 +506,7 @@ def ask_box(
         live_run(text, entered, passcode)
     if db is not None:
         board.ask_outcome(db, voter, llm)
+    chatbot_note()
     if shown := st.session_state.get("live_shown"):
         with st.expander(f"Your private answer: {shown.question}", expanded=True):
             show(shown)

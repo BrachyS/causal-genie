@@ -248,6 +248,15 @@ def test_no_tabs_and_no_dropdown_the_ask_box_heads_the_page(ui_state, tmp_path, 
     assert asks == ["Your cause-and-effect question"]
     assert at.main.subheader[0].value.startswith("Ask the Genie")
     assert not at.sidebar.text_input
+    assert at.main.expander[0].label == "How is this different from asking a chatbot?"
+
+
+def test_the_chatbot_note_shows_even_when_asking_is_off(tmp_path, monkeypatch) -> None:
+    at = app(tmp_path, monkeypatch)
+
+    assert not at.exception
+    labels = [e.label for e in at.main.expander]
+    assert "How is this different from asking a chatbot?" in labels
 
 
 def test_app_with_no_saved_runs(tmp_path, monkeypatch) -> None:
