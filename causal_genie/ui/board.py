@@ -207,6 +207,20 @@ def plain(text: str) -> str:
     return PUNCTUATION.sub(r"\\\1", " ".join(text.split()))
 
 
+TONIGHT = re.compile(r"^tonight\b[\s,:;!.-]*", re.IGNORECASE)
+PLAIN_LINES = ("Tonight's question:", "Up for the Genie:")
+
+
+def undated(announcement: str | None) -> str | None:
+    """The pick's line as the Latest answer card shows it, days after the answer: a leading
+    "Tonight" dropped (lines saved before the prompt banned it), and none for a plain line,
+    which only repeats the question above it."""
+    if not announcement or announcement.startswith(PLAIN_LINES):
+        return None
+    line = TONIGHT.sub("", announcement.strip())
+    return line[:1].upper() + line[1:] or None
+
+
 def run_link(run_id: str | None) -> str | None:
     """The app's deep link to a saved run (U14), only for a well-formed run id."""
     return f"?run={run_id}" if run_id and RUN_ID.fullmatch(run_id) else None
@@ -311,8 +325,8 @@ def _render(db: Engine, voter_id: str | None, gallery_dir: Path) -> None:
             pick = _pick(gallery_dir, latest.run_id)
             if pick and pick.verdict:
                 st.markdown(VERDICT_LABELS[pick.verdict])
-            if latest.announcement:
-                st.markdown(f"🧞 {plain(latest.announcement)}")
+            if line := undated(latest.announcement):
+                st.markdown(f"🧞 {plain(line)}")
             if link := run_link(latest.run_id):
                 st.markdown(f"[Read the Genie's answer]({link})")
 
