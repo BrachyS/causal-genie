@@ -303,7 +303,7 @@ def test_question_text_on_the_board_is_escaped(board_app) -> None:
 def test_latest_answer_shows_with_its_date_and_link(board_app, tmp_path) -> None:
     url, db, gallery = board_app
     qid = _shown(db, "Does tea cause calm?")
-    board_db.set_status(db, qid, "answered", run_id="r1", announcement="Brewing tonight!")
+    board_db.set_status(db, qid, "answered", run_id="r1", announcement="Tonight, brewing!")
     (tmp_path / "gallery" / "r1").mkdir(parents=True)
     (tmp_path / "gallery" / "r1" / "pick.json").write_text(
         json.dumps(
@@ -313,7 +313,7 @@ def test_latest_answer_shows_with_its_date_and_link(board_app, tmp_path) -> None
                 "votes": 4,
                 "run_id": "r1",
                 "verdict": "published_only",
-                "announcement": "Brewing tonight!",
+                "announcement": "Tonight, brewing!",
                 "genie": True,
             }
         )
@@ -324,7 +324,11 @@ def test_latest_answer_shows_with_its_date_and_link(board_app, tmp_path) -> None
     page = "\n".join(_texts(app))
     assert app.subheader[0].value == "Latest answer"
     assert any(c.value.startswith("Answered ") for c in app.caption)
-    assert "Published evidence only" in page and board.plain("Brewing tonight!") in page
+    assert (
+        "Published evidence only" in page
+        and board.plain("Brewing!") in page
+        and "Tonight" not in page
+    )
     assert "?run=r1" in page
 
 
@@ -370,3 +374,16 @@ def test_no_being_answered_section_when_nothing_is_running(board_app) -> None:
     app.run()
 
     assert "Being answered" not in [s.value for s in app.subheader]
+
+
+def test_the_latest_answer_line_does_not_date() -> None:
+    assert (
+        board.undated("Tonight the Genie tunes in to see if study playlists make the grade.")
+        == "The Genie tunes in to see if study playlists make the grade."
+    )
+    assert board.undated("Tonight, a chilly mystery!") == "A chilly mystery!"
+    assert board.undated("Brewing up a storm!") == "Brewing up a storm!"
+    assert board.undated("Tonightly odd") == "Tonightly odd"
+    assert board.undated("Tonight's question: Does tea cause calm?") is None
+    assert board.undated("Up for the Genie: Does tea cause calm?") is None
+    assert board.undated(None) is None and board.undated("Tonight!") is None

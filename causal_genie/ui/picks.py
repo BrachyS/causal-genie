@@ -50,7 +50,7 @@ class Pick(BaseModel):
     votes: int
     run_id: str
     verdict: Verdict | None
-    announcement: str  # the Genie's line, or the plain "Tonight's question: …"
+    announcement: str  # the Genie's line, or the plain "Up for the Genie: …"
     genie: bool  # True if `announcement` is the Genie's line (not posted on sensitive topics)
 
 
@@ -74,12 +74,15 @@ class PickLine(Schema):
     line: str  # one playful sentence, no numbers
 
 
+PLAIN_PREFIX = "Up for the Genie: "
+
+
 def plain_announcement(q: Question) -> str:
-    return f"Tonight's question: {q.text}"
+    return f"{PLAIN_PREFIX}{q.text}"
 
 
 def genie_line(question: str, llm: LLMClient) -> str | None:
-    """The Genie's line announcing tonight's question, or None when the gate forbids one."""
+    """The Genie's line announcing a picked question, or None when the gate forbids one."""
     judged = llm.complete("large", "genie_pick", f"<question>\n{question}\n</question>", PickLine)
     line = judged.line.strip()
     log.info("genie_pick: sensitive=%s line=%r", judged.sensitive, line)

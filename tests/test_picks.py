@@ -310,7 +310,7 @@ def test_the_pick_uses_the_plain_line_without_the_genie(db, tmp_path) -> None:
     )
 
     (pick,) = night.picks
-    assert pick.announcement == "Tonight's question: Do vaccines cause autism?"
+    assert pick.announcement == "Up for the Genie: Do vaccines cause autism?"
     assert pick.genie is False
 
 
