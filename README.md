@@ -122,7 +122,7 @@ Without any secrets the app still serves the gallery.
 
 ## Ask the Genie (question board)
 
-In the app's **Ask the Genie 🧞** box, anyone can post a public "does X cause Y?" question and vote (one vote per browser, no account) in the sidebar. Once a day (10:00 UTC), if a question has been on the board for at least a day, a GitHub Action answers the top-voted one with the full pipeline and opens a PR; with no eligible question, it answers nothing. Once the PR is merged, the answer joins the gallery and is posted on Bluesky ([@causalgenie.bsky.social](https://bsky.app/profile/causalgenie.bsky.social)) with a link back. Each new question gets one moderation check: abusive, personal, spam or non-causal questions are hidden, and the asker is told why.
+In the app's **Ask the Genie 🧞** box, anyone can post a public "does X cause Y?" question and vote (one vote per browser, no account) in the sidebar. Once a day (00:23 UTC), if a question has been on the board for at least a day, a GitHub Action answers the top-voted one with the full pipeline and opens a PR; with no eligible question, it answers nothing. Once the PR is merged, the answer joins the gallery and is posted on Bluesky ([@causalgenie.bsky.social](https://bsky.app/profile/causalgenie.bsky.social)) with a link back. Each new question gets one moderation check: abusive, personal, spam or non-causal questions are hidden, and the asker is told why.
 
 Setup:
 - Actions secrets: `BOARD_DB_URL`, `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`.

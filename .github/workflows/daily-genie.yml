@@ -10,7 +10,10 @@ name: Daily Genie
 
 on:
   schedule:
-    - cron: "0 10 * * *"  # 10:00 UTC
+    # 00:23 UTC = 4:23 pm PST / 5:23 pm PDT. GitHub starts scheduled jobs late (7-10 h seen, worst
+    # near the top of the hour), so it is set early and off the hour: even 10 h late, the PR is
+    # open before the ~5 am PT review.
+    - cron: "23 0 * * *"
   workflow_dispatch:
     inputs:
       n:
