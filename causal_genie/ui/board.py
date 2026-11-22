@@ -37,6 +37,7 @@ from causal_genie.ui import board_db
 from causal_genie.ui.gallery import GALLERY_DIR
 from causal_genie.ui.live import passcode_ok
 from causal_genie.ui.picks import Pick, rank
+from causal_genie.ui.view import answered_on
 
 log = logging.getLogger(__name__)
 
@@ -320,8 +321,8 @@ def _render(db: Engine, voter_id: str | None, gallery_dir: Path) -> None:
         st.subheader("Latest answer")
         with st.container(border=True):
             st.markdown(f"**{plain(latest.text)}**")
-            if day := latest.answered_at:
-                st.caption(f"Answered {day:%b} {day.day}")
+            if day := answered_on(latest.run_id or ""):  # the run's day, as on its gallery card
+                st.caption(f"Answered {day}")
             pick = _pick(gallery_dir, latest.run_id)
             if pick and pick.verdict:
                 st.markdown(VERDICT_LABELS[pick.verdict])

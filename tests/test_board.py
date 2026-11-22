@@ -300,18 +300,21 @@ def test_question_text_on_the_board_is_escaped(board_app) -> None:
     assert not any(EVIL in t for t in _texts(app))
 
 
+RUN = "20261121-170902-15f030"
+
+
 def test_latest_answer_shows_with_its_date_and_link(board_app, tmp_path) -> None:
     url, db, gallery = board_app
     qid = _shown(db, "Does tea cause calm?")
-    board_db.set_status(db, qid, "answered", run_id="r1", announcement="Tonight, brewing!")
-    (tmp_path / "gallery" / "r1").mkdir(parents=True)
-    (tmp_path / "gallery" / "r1" / "pick.json").write_text(
+    board_db.set_status(db, qid, "answered", run_id=RUN, announcement="Tonight, brewing!")
+    (tmp_path / "gallery" / RUN).mkdir(parents=True)
+    (tmp_path / "gallery" / RUN / "pick.json").write_text(
         json.dumps(
             {
                 "question_id": qid,
                 "question": "Does tea cause calm?",
                 "votes": 4,
-                "run_id": "r1",
+                "run_id": RUN,
                 "verdict": "published_only",
                 "announcement": "Tonight, brewing!",
                 "genie": True,
@@ -323,13 +326,14 @@ def test_latest_answer_shows_with_its_date_and_link(board_app, tmp_path) -> None
 
     page = "\n".join(_texts(app))
     assert app.subheader[0].value == "Latest answer"
-    assert any(c.value.startswith("Answered ") for c in app.caption)
+    # the run's day, as on its gallery card, not the later time it was marked answered
+    assert any(c.value == "Answered Nov 21, 2026" for c in app.caption)
     assert (
         "Published evidence only" in page
         and board.plain("Brewing!") in page
         and "Tonight" not in page
     )
-    assert "?run=r1" in page
+    assert f"?run={RUN}" in page
 
 
 def test_database_down_shows_board_unavailable(tmp_path) -> None:
