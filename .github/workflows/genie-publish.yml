@@ -12,7 +12,7 @@ name: Genie publish
 on:
   schedule:
     # 02:00 UTC: 6 pm PST / 7 pm PDT (cron is UTC only), evening for US readers. The nightly
-    # answer job (10:00 UTC, 2 am PST) opens the pick PR before the morning review; a PR merged
+    # answer job (00:23 UTC, often hours late) opens the pick PR before the morning review; a PR merged
     # that morning posts the same evening, one merged later posts the next day.
     - cron: "0 2 * * *"
   workflow_dispatch:
