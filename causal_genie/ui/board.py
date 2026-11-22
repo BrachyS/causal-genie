@@ -338,8 +338,8 @@ def _render(db: Engine, voter_id: str | None, gallery_dir: Path) -> None:
 
     st.subheader("Up next")
     st.caption(
-        "Each night the Genie answers the question with the most votes"
-        " among those asked at least a day ago."
+        "The Genie answers up to one question a day: the one with the most votes among"
+        " those asked at least a day ago, when there is one."
     )
     voted = board_db.voted(db, voter_id) if voter_id else set()
     ranked = rank(board_db.board(db))

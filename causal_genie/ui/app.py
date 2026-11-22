@@ -211,8 +211,8 @@ INTRO = """\
 
 1. **Ask** a "does X cause Y?" question in the box at the top of the page. It goes on the \
 public board below, where anyone can vote.
-2. **Vote** for the question you want answered next. Each night the Genie answers the \
-top-voted one and it joins the gallery.
+2. **Vote** for the question you want answered next. The Genie answers up to one question a \
+day: the top-voted one asked at least a day ago, when there is one. It then joins the gallery.
 3. **Browse** the answered questions by topic, and open any card for the full answer: the \
 graph, the estimate and the quoted sources.
 
@@ -228,7 +228,7 @@ VOTE_BANNER = """\
   box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);">
   <div style="font-size: 1.25rem; font-weight: 700;">🗳️ Vote on what's next</div>
   <div style="font-size: 0.9rem; opacity: 0.92; margin-top: 2px;">
-    The top-voted question gets answered tonight. One tap, no sign-up.
+    The Genie answers up to one top-voted question a day. One tap, no sign-up.
   </div>
 </div>
 """
@@ -474,8 +474,9 @@ def ask_box(
         return
     if db is not None:
         st.caption(
-            "Questions are public: anyone can vote in the sidebar, and the top-voted one is "
-            "answered each night, then added to the gallery below."
+            "Questions are public: anyone can vote in the sidebar. The Genie answers up to one "
+            "question a day, the top-voted one when there is one, then adds it to the gallery "
+            "below."
         )
     with st.form("ask", clear_on_submit=True, border=False):
         field, submit = st.columns([5, 1], vertical_alignment="bottom")

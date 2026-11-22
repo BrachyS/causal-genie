@@ -52,7 +52,7 @@ def test_zero_votes_are_not_mentioned() -> None:
     text, _ = bluesky.compose(pick().model_copy(update={"votes": 0}), APP)
 
     assert "vote" not in text
-    assert text.startswith("Question of the Day: Does tea cause calm?")
+    assert text.startswith("From the question board: Does tea cause calm?")
 
 
 def test_a_long_question_with_emoji_is_cut_but_the_link_never_is() -> None:

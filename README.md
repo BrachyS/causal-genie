@@ -94,7 +94,7 @@ Other ways the agent stops short of an answer, each its own verdict: published e
 
 One page, no tabs.
 
-- **Ask the Genie 🧞** (top of the page): the one place to type a question. **Post to the board** makes it public: anyone can vote, and the top-voted question is answered each night (needs `BOARD_DB_URL`). Under **Have a passcode?**, **Run privately now** answers it live instead (about 5 to 10 minutes, with a daily spend cap). A question that is already in the gallery gets a link to its answer. Below it, **How is this different from asking a chatbot?** explains what the Genie checks that a chatbot answering from memory usually doesn't.
+- **Ask the Genie 🧞** (top of the page): the one place to type a question. **Post to the board** makes it public: anyone can vote, and the Genie answers up to one top-voted question a day when one is eligible (needs `BOARD_DB_URL`). Under **Have a passcode?**, **Run privately now** answers it live instead (about 5 to 10 minutes, with a daily spend cap). A question that is already in the gallery gets a link to its answer. Below it, **How is this different from asking a chatbot?** explains what the Genie checks that a chatbot answering from memory usually doesn't.
 - **📚 Answered questions:** cards in topic bands (Daily life, Health, Silly & fun, Business (A/B tests), Miscellaneous), newest first, each with the question, the date it was answered, the verdict, the first sentence of the answer and the Genie's aside. Search the questions or filter by verdict. **Read full answer →** opens the answer on its own page, with the causal graph, the studies behind each arrow linked to their source cards, and **Download report (PDF)**. Answers are dated: they reflect the evidence found then.
 - **Sidebar:** the board (**🗳️ Vote on what's next**: today's question, the one being answered, and what's up next), **How to use it**, and **What the verdicts mean**.
 - **Links:** `?run=<run_id>` opens a saved run and `?q=<question>` opens a saved question, so shared links and Bluesky posts land on the answer.
@@ -120,9 +120,9 @@ One page, no tabs.
 
 Without any secrets the app still serves the gallery.
 
-## Ask the Genie (Question of the Day)
+## Ask the Genie (question board)
 
-In the app's **Ask the Genie 🧞** box, anyone can post a public "does X cause Y?" question and vote (one vote per browser, no account) in the sidebar. Each night at 10:00 UTC a GitHub Action answers the top-voted question with the full pipeline and opens a PR. Once the PR is merged, the answer joins the gallery and is posted on Bluesky ([@causalgenie.bsky.social](https://bsky.app/profile/causalgenie.bsky.social)) with a link back. Each new question gets one moderation check: abusive, personal, spam or non-causal questions are hidden, and the asker is told why.
+In the app's **Ask the Genie 🧞** box, anyone can post a public "does X cause Y?" question and vote (one vote per browser, no account) in the sidebar. Once a day (10:00 UTC), if a question has been on the board for at least a day, a GitHub Action answers the top-voted one with the full pipeline and opens a PR; with no eligible question, it answers nothing. Once the PR is merged, the answer joins the gallery and is posted on Bluesky ([@causalgenie.bsky.social](https://bsky.app/profile/causalgenie.bsky.social)) with a link back. Each new question gets one moderation check: abusive, personal, spam or non-causal questions are hidden, and the asker is told why.
 
 Setup:
 - Actions secrets: `BOARD_DB_URL`, `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`.
