@@ -46,7 +46,7 @@ def compose(pick: Pick, app_url: str) -> tuple[str, list[dict]]:
     """The post text and its facets (the link's UTF-8 byte range, so it is clickable)."""
     link = run_link(app_url, pick.run_id)
     votes = f" ({pick.votes} vote" + ("" if pick.votes == 1 else "s") + ")" if pick.votes else ""
-    head = f"Question of the Day{votes}: "
+    head = f"From the question board{votes}: "
     verdict = f"\n{VERDICT_LABELS[pick.verdict]}" if pick.verdict else ""
     tail = f"{verdict}\n{link}"
     room = MAX_CHARS - len(head) - len(tail)

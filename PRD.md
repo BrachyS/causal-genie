@@ -305,7 +305,7 @@ Env vars: `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `TAVILY_API_KEY`, `GENIE_MODE`, `
 
 ### 5.11 Question of the Day (public board)
 
-Anyone can post a public "does X cause Y?" question in the app and vote, with no account; each night the top question is answered, reviewed by a person, and posted.
+Anyone can post a public "does X cause Y?" question in the app and vote, with no account; up to once a day, the top eligible question is answered, reviewed by a person, and posted.
 
 - **Ask and vote:** questions (≤ 200 characters) and votes live in a hosted Postgres database (`BOARD_DB_URL`; tests use SQLite). One vote per browser: a random ID kept in the browser's localStorage. Per ID: 3 questions a day, 30 votes an hour. Private questions stay the passcode live run and never touch the board.
 - **Moderation:** one large-model call (reasoning off, `board_check`) labels a new question `causal` and `problem` (abusive, personal info, spam, off topic); the harness shows it only if causal with no problem, otherwise hides it and tells the asker why. An exact repeat (ignoring case and punctuation) of a question on the board counts as a vote; a similar one (fuzzy score ≥ 85) is shown to the asker, who votes for it or asks anyway. An admin view behind the passcode hides or unhides any question.

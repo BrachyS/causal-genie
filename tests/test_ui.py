@@ -559,7 +559,7 @@ def test_the_vote_banner_heads_the_sidebar(ui_state, tmp_path, monkeypatch) -> N
 
     assert not at.exception
     first = at.sidebar.markdown[0].value
-    assert "Vote on what's next" in first and "answered tonight" in first
+    assert "Vote on what's next" in first and "up to one top-voted question a day" in first
 
 
 def test_without_a_board_there_is_no_vote_banner(tmp_path, monkeypatch) -> None:
