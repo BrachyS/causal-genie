@@ -1,5 +1,5 @@
 {
-  "run_id": "20261123-004018-8476e0",
+  "run_id": "20261123-164201-e20ffb",
   "question": "Does shopping on Black Friday save you money?",
   "route": {
     "kind": "causal",
@@ -8690,6 +8690,24 @@
   "extracts": [],
   "lookups": [
     {
+      "query": "TITLE:\"over a third of black friday deals aren t real discounts shows study\"",
+      "record": null,
+      "latency_s": 0.6128802500024904,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"over a third of black friday deals aren t worth it study finds\"",
+      "record": null,
+      "latency_s": 4.922081790995435,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"wallethub s 2026 black friday report\"",
+      "record": null,
+      "latency_s": 3.630128082993906,
+      "error": null
+    },
+    {
       "query": "TITLE:\"study tracks savings claims on black friday deals\"",
       "record": null,
       "latency_s": 1.7867974169930676,
@@ -8708,21 +8726,9 @@
       "error": null
     },
     {
-      "query": "TITLE:\"over a third of black friday deals aren t real discounts shows study\"",
-      "record": null,
-      "latency_s": 0.6128802500024904,
-      "error": null
-    },
-    {
       "query": "TITLE:\"black friday discount statistics 2025 11 8 billion online sales\"",
       "record": null,
       "latency_s": 0.6142872920027003,
-      "error": null
-    },
-    {
-      "query": "TITLE:\"wallethub s 2026 black friday report\"",
-      "record": null,
-      "latency_s": 3.630128082993906,
       "error": null
     },
     {
@@ -8732,15 +8738,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"itmagination s comprehensive analysis of electronics pricing\"",
+      "query": "TITLE:\"the psychology of discounts on cyber monday and black friday in 2024\"",
       "record": null,
-      "latency_s": 0.17308683399460278,
+      "latency_s": 4.777489999993122,
       "error": null
     },
     {
-      "query": "TITLE:\"over a third of black friday deals aren t worth it study finds\"",
+      "query": "TITLE:\"itmagination s comprehensive analysis of electronics pricing\"",
       "record": null,
-      "latency_s": 4.922081790995435,
+      "latency_s": 0.17308683399460278,
       "error": null
     },
     {
@@ -8762,21 +8768,9 @@
       "error": null
     },
     {
-      "query": "TITLE:\"the psychology of discounts on cyber monday and black friday in 2024\"",
-      "record": null,
-      "latency_s": 4.777489999993122,
-      "error": null
-    },
-    {
       "query": "TITLE:\"are black friday deals real our 2026 discount truth test\"",
       "record": null,
       "latency_s": 0.17049579200102016,
-      "error": null
-    },
-    {
-      "query": "TITLE:\"consumer behavior and economic impact a comprehensive study of black friday shopping trends\"",
-      "record": null,
-      "latency_s": 0.17786999999952968,
       "error": null
     },
     {
@@ -8786,9 +8780,9 @@
       "error": null
     },
     {
-      "query": "TITLE:\"decoding black friday shopping behavior from impulse buys to thoughtful choices\"",
+      "query": "TITLE:\"consumer behavior and economic impact a comprehensive study of black friday shopping trends\"",
       "record": null,
-      "latency_s": 0.1724523750017397,
+      "latency_s": 0.17786999999952968,
       "error": null
     },
     {
@@ -8804,15 +8798,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"black friday as a mechanism of consumer manipulation\"",
-      "record": null,
-      "latency_s": 0.609179375009262,
-      "error": null
-    },
-    {
       "query": "TITLE:\"black friday shoppers spent billions despite wider economic uncertainty\"",
       "record": null,
       "latency_s": 0.6802182499959599,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"decoding black friday shopping behavior from impulse buys to thoughtful choices\"",
+      "record": null,
+      "latency_s": 0.1724523750017397,
       "error": null
     },
     {
@@ -8828,9 +8822,9 @@
       "error": null
     },
     {
-      "query": "TITLE:\"do stores really mark up prices before black friday to make discounts look bigger\"",
+      "query": "TITLE:\"black friday as a mechanism of consumer manipulation\"",
       "record": null,
-      "latency_s": 0.7410415410122368,
+      "latency_s": 0.609179375009262,
       "error": null
     },
     {
@@ -8843,6 +8837,12 @@
       "query": "TITLE:\"don t let inflated prices ruin your black friday shopping\"",
       "record": null,
       "latency_s": 0.6656374580052216,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"do stores really mark up prices before black friday to make discounts look bigger\"",
+      "record": null,
+      "latency_s": 0.7410415410122368,
       "error": null
     },
     {
@@ -8886,15 +8886,21 @@
       "error": null
     },
     {
-      "query": "TITLE:\"our new report found more than 1 in 10 black friday deals last year were priced higher than before the sale\"",
-      "record": null,
-      "latency_s": 0.6343117919896031,
-      "error": null
-    },
-    {
       "query": "TITLE:\"black friday isn t always cheaper and sometimes it s more expensive report finds\"",
       "record": null,
       "latency_s": 3.5152153330127476,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"black friday deals may not be real discounts study finds\"",
+      "record": null,
+      "latency_s": 3.145351582992589,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"do amazon s black friday deals really save you money a new report casts doubt\"",
+      "record": null,
+      "latency_s": 3.3846783329936443,
       "error": null
     },
     {
@@ -8910,9 +8916,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"black friday deals may not be real discounts study finds\"",
+      "query": "TITLE:\"our new report found more than 1 in 10 black friday deals last year were priced higher than before the sale\"",
       "record": null,
-      "latency_s": 3.145351582992589,
+      "latency_s": 0.6343117919896031,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"not every black friday deal is a bargain here s how to spot real savings\"",
+      "record": null,
+      "latency_s": 4.492294292009319,
       "error": null
     },
     {
@@ -8928,27 +8940,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"do amazon s black friday deals really save you money a new report casts doubt\"",
+      "query": "TITLE:\"black friday pricing behavior at walmart\"",
       "record": null,
-      "latency_s": 3.3846783329936443,
-      "error": null
-    },
-    {
-      "query": "TITLE:\"not every black friday deal is a bargain here s how to spot real savings\"",
-      "record": null,
-      "latency_s": 4.492294292009319,
+      "latency_s": 3.914993707992835,
       "error": null
     },
     {
       "query": "TITLE:\"retailer s guide to overcoming overstock\"",
       "record": null,
       "latency_s": 4.638980791991344,
-      "error": null
-    },
-    {
-      "query": "TITLE:\"black friday pricing behavior at walmart\"",
-      "record": null,
-      "latency_s": 3.914993707992835,
       "error": null
     },
     {
@@ -8970,21 +8970,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"i tracked the price history of 50 black friday deals it s a scam\"",
-      "record": null,
-      "latency_s": 4.38104929200199,
-      "error": null
-    },
-    {
       "query": "TITLE:\"sales prices are usually fake discounts\"",
       "record": null,
       "latency_s": 3.9452105829986976,
       "error": null
     },
     {
-      "query": "TITLE:\"a comprehensive study of black friday shopping trends\"",
+      "query": "TITLE:\"i tracked the price history of 50 black friday deals it s a scam\"",
       "record": null,
-      "latency_s": 0.7036859590007225,
+      "latency_s": 4.38104929200199,
       "error": null
     },
     {
@@ -9002,6 +8996,12 @@
         "retracted": false
       },
       "latency_s": 0.6475404999946477,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"a comprehensive study of black friday shopping trends\"",
+      "record": null,
+      "latency_s": 0.7036859590007225,
       "error": null
     },
     {
@@ -9261,51 +9261,56 @@
         ]
       },
       {
-        "text": "Some studies find that many Black Friday deals are not real discounts: 36% of items showed no savings compared with their prices between Oct. 27 and Nov. 17, and 9% of deals actually cost more during the sale events.",
+        "text": "Some studies find real discounts, but many find that a large share of Black Friday deals offer no savings or are not the cheapest price available.",
         "cites": [
           "s56248d10-effect",
-          "s99854e2f-effect"
+          "s68a55c0d-effect",
+          "s81cca167-effect"
         ]
       },
       {
-        "text": "Other research points the other way, finding that 74% of tracked products hit their lowest price on Black Friday itself.",
+        "text": "For example, one study found 36% of Black Friday items showed no savings compared with their prices between Oct. 27 and Nov. 17, while genuine deals averaged about 24% off.",
         "cites": [
-          "s73042157-effect"
+          "s56248d10-effect"
         ]
       },
       {
-        "text": "Because the findings conflict and the best evidence is observational and about a different population or exposure, we cannot be sure whether Black Friday shopping generally saves money.",
+        "text": "Other research found 83% of products were cheaper or the same price on at least one other date outside of the four-week sales period.",
         "cites": [
-          "F-certainty",
-          "F-data"
+          "s68a55c0d-effect"
+        ]
+      },
+      {
+        "text": "The answer may depend on product category and retailer.",
+        "cites": [
+          "F-factors"
         ]
       }
     ],
     "comparison": [],
     "limitations": [
       {
-        "text": "The certainty is very low because the best evidence is observational and concerns a different population or exposure.",
+        "text": "Certainty is very low because the best evidence is observational and is about a different population or exposure.",
         "cites": [
           "F-certainty"
         ]
       },
       {
-        "text": "No usable dataset was available, so the analysis could not be based on direct price comparisons for the same items.",
+        "text": "No usable dataset was found: 37 candidates were considered and 0 were in restricted repositories.",
         "cites": [
           "F-data"
         ]
       },
       {
-        "text": "The studies report conflicting results, with some finding many deals offer no savings and others finding most products hit their lowest price on Black Friday.",
+        "text": "The evidence comes from studies with different designs and populations, so the results are hard to compare directly.",
         "cites": [
-          "s56248d10-effect",
-          "s73042157-effect"
+          "F-certainty"
         ]
       }
     ]
   },
   "genie": null,
-  "report": "# Does shopping on Black Friday save you money?\n\n**Verdict:** ❓ Insufficient evidence\n\n## What the research and analysis found\n\nThe evidence is not strong enough to say whether shopping on Black Friday saves you money. Some studies find that many Black Friday deals are not real discounts: 36% of items showed no savings compared with their prices between Oct. 27 and Nov. 17, and 9% of deals actually cost more during the sale events. [s56248d10-effect, s99854e2f-effect] Other research points the other way, finding that 74% of tracked products hit their lowest price on Black Friday itself. [s73042157-effect] Because the findings conflict and the best evidence is observational and about a different population or exposure, we cannot be sure whether Black Friday shopping generally saves money.\n\n## Question (PECO)\n\n- **Population:** consumers who shop during Black Friday\n- **Exposure:** making purchases on Black Friday\n- **Comparator:** making purchases on a non-Black Friday day (e.g., a typical weekday or weekend)\n- **Outcome:** the difference between the price paid on Black Friday and the price that would have been paid on a non-Black Friday day for the same or similar items\n- **Time window:** within 30 days of Black Friday\n- **Estimand:** ATE, mean difference, deviations handled as received\n\n## Causal graph (DAG)\n\n- black_friday_shopping → spending_savings: the question being tested\n- product_category → spending_savings: cites s7e4d0d6e-effect, sbbdb09aa-effect, s91fdad52-effect\n- retailer → spending_savings: cites sbbdb09aa-effect\n- pre_sale_price_inflation → spending_savings: assumed (no source)\n- black_friday_shopping → pre_sale_price_inflation: assumed (no source)\n- inflation → spending_savings: assumed (no source)\n- purchase_pressure → spending_savings: assumed (no source)\n- black_friday_shopping → purchase_pressure: assumed (no source)\n- price_tracking → spending_savings: assumed (no source)\n- year → spending_savings: assumed (no source)\n\nTreated as exogenous (the model's judgment that nothing in the graph can cause it; no source): product_category, retailer, inflation, year.\n\n## Key confounders\n\nNo confounder in the DAG.\n\n## Evidence\n\n**Certainty:** very low (starts low: best evidence is observational; down one: best evidence is about a different population or exposure)\n\nEvidence flow: 172 sources found → 163 studies after dedupe → 51 included (excluded: wrong_outcome 17, off_topic 71, not_a_study 19, wrong_exposure 4, wrong_population 1).\n\n- [Over a third of Black Friday 'deals' aren't real discounts, shows study](https://www.benzinga.com/news/retail-sales/25/11/49101979/over-a-third-of-black-friday-deals-arent-real-discounts-shows-study) — cross_sectional, 2025, known only from secondary sources: 36% of Black Friday items showed no savings at all compared with their prices between Oct. 27 and Nov. 17, while genuine deals averaged about 24% off\n- [Study tracks savings claims on Black Friday deals](https://www.youtube.com/watch?v=P9IoWkq3Mts) — cross_sectional, 2026, known only from secondary sources: 9% of the deals actually cost more during the sale events\n- [Most Black Friday deals cheaper or the same price at other times, study finds](https://www.itv.com/news/2025-11-25/most-black-friday-deals-cheaper-or-the-same-price-at-other-times-study-finds) — cross_sectional, 2025, known only from secondary sources: 83% of products were cheaper or the same price on at least one other date outside of the four-week sales period\n- [Most Black Friday deals the same price or cheaper at other times of the year, Which? finds](https://www.which.co.uk/policy-and-insight/article/dont-believe-the-hype-most-black-friday-deals-the-same-price-or-cheaper-at-other-times-of-the-year-which-finds-a3TbD5x5KADs) — cross_sectional, 2024, known only from secondary sources: 83% of products were cheaper or equal in price on at least one occasion outside of the four-week Black Friday sales period\n- [Consumer behavior and economic impact: A comprehensive study of Black Friday shopping trends](https://www.allcommercejournal.com/article/486/6-1-70-763.pdf) — cross_sectional, 2019: 60% of consumers report experiencing pressure to make quick purchase decisions, although statistical analysis suggests this is not a universal trend\n- [A Review on the Cause of Black Friday Consumerism](https://drpress.org/ojs/index.php/EHSS/article/download/20346/19912/24771) — systematic_review, year unknown, known only from secondary sources: Black Friday is a typical date for an explosion in the number of irrational and excessive consumer behaviours. to overspend.\n- [Black Friday shoppers are growing skeptical of holiday discounts, new survey finds](https://www.consumeraffairs.com/news/black-friday-shoppers-are-growing-skeptical-of-holiday-discounts-new-survey-finds-110526.html) — cross_sectional, 2025, known only from secondary sources: Only 54% of consumers trust Black Friday discounts, while one in five actively distrusts advertised sale prices\n- [Black Friday Deals May Not Be Real Discounts, Study Finds](https://hoodline.com/2026/11/black-friday-deals-may-be-fake-discounts-price-tracking-research-finds) — cross_sectional, 2026, known only from secondary sources: 74% of tracked products hit their lowest price on Black Friday itself, suggesting the sales event often does deliver the best price of the season, even if not always\n- [Do Amazon's Black Friday deals really save you money? A new report casts doubt](https://www.morningstar.com/news/marketwatch/2026111739/do-amazons-black-friday-deals-really-save-you-money-a-new-report-casts-doubt) — cross_sectional, 2025, known only from secondary sources: 29.1% of the deals analyzed were priced the same or higher during the sale event than the month leading up to it; nearly 60% were priced higher when looking back 90 days before the deal\n- [36% of Black Friday sales aren't really discounts, study finds](https://www.cnbc.com/make-it/2025/11/26/how-to-find-real-deals-on-black-friday.html) — cross_sectional, 2025, known only from secondary sources: 36% of items on sale for Black Friday offer no savings compared with how they were priced between Oct. 27 and Nov. 17\n- [Black Friday Consumer Buying Behaviour: Why Early Retailers Win](https://priceshape.com/resources/blog/black-friday-consumer-buying-behaviour) — cross_sectional, 2025, known only from secondary sources: the deepest discounting activity across the UK, Germany and Benelux happened during the week before Black Friday\n- [Impact of Black Friday on Consumer Behavior](https://www.scribd.com/document/697160984/An-Empirical-Study-to-Determine-the-Impact-of-Black-Friday-on-consumer) — cross_sectional, 2019: approximately half of participants shopped on Black Friday, mostly purchasing electronics and clothes\n- [Black Friday](https://dr.lib.iastate.edu/server/api/core/bitstreams/a644cef1-c024-4074-9ad2-bd9fd5e35850/content) — cross_sectional, 2020: only 1/3 of consumers participate in in-store Black Friday sales, and the rest are shifting to online sales\n- [Black Friday Consumer Study 2024: What to Expect](https://web-assets.bcg.com/e9/6b/0ff886b5442e9fe95e72e974ae91/black-friday-consumer-study-2024-global-results-vf.pdf) — cross_sectional, 2024, known only from secondary sources: Every fourth consumer intends to spend more during this year's sales events\n- [Over a third of Black Friday deals aren't worth it, study finds](https://www.youtube.com/watch?v=_d-p-1e8yXI) — other, year unknown, known only from secondary sources: 36% of Black Friday deals don't lead to true savings, while average discounts are about 24% and up to 60% for computers and phones\n- [WalletHub's 2026 Black Friday Report](https://shopping.yahoo.com/deals/articles/stores-highest-average-black-friday-191602765.html) — other, 2026, known only from secondary sources: Target ranks third with average discounts of 38.5% and select markdowns reaching 80%. Furniture discounts average 45.5%, while toy savings average 40.6%.\n- [36% of Black Friday deals aren’t really discounts, study reveals](https://www.nbcchicago.com/holidays/black-friday-deals-not-all-really-discounts-study/3856144) — other, year unknown, known only from secondary sources: 36% of online items offer no savings compared to their pre-Black Friday prices\n- [Report finds some advertised deals offered no savings](https://www.cbsnews.com/philadelphia/news/black-friday-deals-how-to-spot-savings) — other, year unknown, known only from secondary sources: nearly 30% of 350 advertised deals provided no savings compared with the products' recent 30-day pricing history; about 1 in 10 were priced higher than they had been within the previous 30 days\n- [Black Friday Discount Statistics 2025 – $11.8 Billion Online Sales](https://statistics.blackfriday) — other, 2025, known only from secondary sources: Shoppers enjoyed an average discount of 26% during Cyber Week, with makeup products standing out by offering the deepest discounts at 40%.\n- [Black Friday discounts fail to offer cheapest prices, Which? research](https://www.theguardian.com/business/2025/nov/25/black-friday-discounts-fail-to-offer-cheapest-prices-which-research-finds) — other, 2025, known only from secondary sources: on the day of Black Friday 2024 none of the items it looked at were at the cheapest price they had been over the surrounding year\n- [The psychology of discounts on Cyber Monday and Black Friday in 2024](https://www.ie.edu/uncover-ie/the-psychology-of-discounts-on-cyber-monday-and-black-friday) — other, year unknown, known only from secondary sources: The Discount Effect was first formally described by economists Daniel Kahneman and Amos Tversky in their seminal work “Prospect Theory”, published in 1979. Their research demonstrated that people tend to be more sensitive to losses than gains and can lead to several predictable biases in decision-making.\n- [ITMAGINATION’s comprehensive analysis of electronics pricing](https://redstagfulfillment.com/average-discount-offered-on-black-friday) — other, year unknown, known only from secondary sources: retailers often raise prices in mid-November, then apply Black Friday discounts that merely return items to normal pricing levels\n- [Study Finds 9% of Black Friday Deals Were More Expensive](https://www.facebook.com/100067398641804/videos/study-tracks-savings-claims-on-black-friday-deals/1195180006711902) — other, year unknown, known only from secondary sources: 9% of Black Friday deals were actually more expensive during the sales events\n- [Are Black Friday deals real? Our 2026 discount truth test](https://www.rivalsweeper.com/research/black-friday-discount-truth-test-2026) — other, 2026, known only from secondary sources: 83% of the 175 products it tracked at eight retailers were the same price or cheaper at least once outside the Black Friday sale period\n- [Are Black Friday Deals Really Cheaper? How to Check for Price Inflation](https://www.howtogeek.com/are-black-friday-deals-really-cheaper-how-to-check-for-price-inflation) — other, year unknown, known only from secondary sources: 29% of products saw an increase in price in the days leading up to Black Friday. The average price hike was $51 before the prices were slashed and offered as a 'discount.' 42% of Black Friday deals were genuine.\n- [How have the pandemic and online spending affected Black Friday shopping? Analyzing retail trade margins 2009–22](https://www.bls.gov/opub/btn/volume-12/how-have-the-pandemic-and-online-spending-affected-black-friday-shopping-analyzing-retail-trade-margins-2009-22.htm) — other, 2023, known only from secondary sources: average spending per shopper over the Black Friday weekend increased to $325 per shopper in 2022, an 8 percent rise over 2021, spending was still 10 percent below the 2019 level of nearly $362 per shopper\n- [Black Friday 2026: How Global Economic Shifts Are Influencing Consumer Spending](https://tgmresearch.com/black-friday-consumer-spending-under-economic-pressure-2026.html) — other, year unknown, known only from secondary sources: about 77% of consumers said they sometimes or often postpone purchases earlier in the year so they can buy during major sales events. At the same time, 44% of participating shoppers said they definitely planned to make a purchase, up from 39% the year before.\n- [Black Friday shoppers spent billions despite wider economic uncertainty](https://www.nbcnews.com/business/economy/black-friday-shoppers-spent-billions-rcna246456) — other, year unknown, known only from secondary sources: Black Friday sales excluding automotive rose 4.1% from a year ago; online sales jumped by 10.4%, while in-store purchases inched up 1.7%\n- [Decoding Black Friday Shopping Behavior: From Impulse Buys to Thoughtful Choices](https://som.yale.edu/story/2023/decoding-black-friday-shopping-behavior-impulse-buys-thoughtful-choices) — other, 2023, known only from secondary sources: effect not verified\n- [The Anchoring Bias: Consumers, Beware!](https://www.pon.harvard.edu/daily/negotiation-skills-daily/the-anchoring-bias-consumers-beware) — other, year unknown, known only from secondary sources: Retailers often engage in price anchoring, marking up prices and then offering discounts that are not deep concessions, making deals appear more attractive than they are.\n- [Price Setting in Online Markets: Does IT Click?](https://www.nber.org/system/files/working_papers/w20819/w20819.pdf) — other, 2014: effect not verified\n- [Black Friday as a Mechanism of Consumer Manipulation](https://www.researchgate.net/publication/398071302_Black_Friday_as_a_Mechanism_of_Consumer_Manipulation) — other, year unknown: effect not verified\n- [Don’t Let Inflated Prices Ruin Your Black Friday Shopping](https://www.youtube.com/watch?v=lf7fjni9E04) — other, year unknown, known only from secondary sources: Black Friday and Cyber Week deals aren’t what they used to be. As inflation continues to drive up prices, today’s “sale” price often matches what an item cost at full price just a year or two ago.\n- [Do stores really mark up prices before Black Friday to make discounts look bigger?](https://www.reddit.com/r/questions/comments/1h2swa3/do_stores_really_mark_up_prices_before_black) — other, year unknown, known only from secondary sources: The usual street price if you've been tracking it is 40% off. mark the item at 50% off\n- [Black Friday Sales Analytics](https://www.slideshare.net/slideshow/black-friday-sales-analytics/250452285) — other, year unknown, known only from secondary sources: effect not verified\n- [A Big Data Approach to Black Friday Sales](https://www.researchgate.net/publication/350836319_A_Big_Data_Approach_to_Black_Friday_Sales) — other, year unknown: effect not verified\n- [FINANCIAL RETURNS TO ...](https://www.nber.org/system/files/working_papers/w27740/revisions/w27740.rev1.pdf) — other, year unknown: the total net returns to investment in household working capital\n- [Black Friday isn’t always cheaper – and sometimes it’s more expensive, report finds](https://shopping.yahoo.com/deals/articles/black-friday-isn-t-always-223319049.html) — other, year unknown, known only from secondary sources: effect not verified\n- [Our new report found more than 1 in 10 Black Friday “deals” last year were priced HIGHER than before the sale.](https://www.instagram.com/reel/Df2xmt3PJrI) — other, 2026, known only from secondary sources: more than 1 in 10 Black Friday “deals” last year were priced HIGHER than before the sale\n- [Not every Black Friday deal is a bargain. Here's how to spot real savings.](https://www.youtube.com/watch?v=gG0iOD-jCM4) — other, 2026, known only from secondary sources: effect not verified\n- [The science of the deal: Why Black Friday discounts are so hard to resist](https://news.bryant.edu/science-deal-why-black-friday-discounts-are-so-hard-resist) — other, year unknown, known only from secondary sources: A 20 percent markdown on a price that climbed 15 percent over the year leaves the shopper only slightly ahead of where they were last November.\n- [Research from the consumer group Which? on Black Friday deals](https://www.facebook.com/citizensadviceplymouth/posts/black-friday-deals-are-back-but-are-you-really-saving-moneysome-black-friday-dea/1556127573208974) — other, year unknown, known only from secondary sources: eight in ten Black Friday deals are not actually cheaper than regular prices\n- [Black Friday Pricing Behavior at Walmart](https://ir.library.oregonstate.edu/downloads/w3763f83m) — other, year unknown: Black Friday products have significantly higher prices before the sales than selected products\n- [Retailer’s Guide to Overcoming Overstock](https://7learnings.com/blog/how-dynamic-pricing-can-optimize-your-black-friday-pricing-strategy) — other, year unknown, known only from secondary sources: machine learning algorithms are used to calculate products’ price elasticity based on data gathered from past sales activities, such as those from Black Friday in 2019\n- [How do Black Friday discounts influence the purchasing decision of ...](https://www.theseus.fi/bitstreams/1d7e4b2d-d2d5-4dbd-8239-9ed42eabb868/download) — other, 2025: effect not verified\n- [Shoppers beware: study uncovers how fake sales manipulate buying decisions](https://komonews.com/news/consumer/best-websites-to-shop-sales-black-friday-sales-holiday-shopping-gifts-guide-sale-prices-are-usually-fake-discounts-study-on-shopping) — other, year unknown, known only from secondary sources: Nearly all retailers now use fake sales to mislead their customers; markdowns advertised by most stores aren’t special prices or savings\n- [Sales Prices Are Usually Fake Discounts](https://wtop.com/business-money/2025/11/looking-forward-to-black-friday-sales-theyre-really-just-lying-to-you-warns-dc-consumer-expert) — other, 2025, known only from secondary sources: most advertised markdowns are not special prices or savings at all; the original prices used for discounts are often fabricated\n- [I tracked the price history of 50 \"Black Friday Deals.\" It's a scam.](https://www.reddit.com/r/Anticonsumption/comments/1p976c6/i_tracked_the_price_history_of_50_black_friday) — other, year unknown, known only from secondary sources: The TV that's on sale today for $500 (they say was $800) was actually $450 back in August\n- [A comprehensive study of Black Friday shopping trends](https://www.researchgate.net/publication/389966908_Consumer_behavior_and_economic_impact_A_comprehensive_study_of_Black_Friday_shopping_trends) — other, year unknown: effect not verified\n- [Consumer Behavior and Economic Impact of Black Friday Shopping Trends](https://www.studocu.vn/vn/document/truong-dai-hoc-ngan-hang-thanh-pho-ho-chi-minh/tieng-trung/consumer-behavior-and-economic-impact-of-black-friday-shopping-trends-ajmc-61/160103629) — other, year unknown: effect not verified\n- [South Korean Consumers' Experiences and Underlying Shopping ...](https://accesson.kr/jds/assets/pdf/50574/journal-17-11-63.pdf) — other, year unknown: effect not verified\n\n## Estimate\n\nNo estimate was computed for this question.\n\n## Limitations\n\n- The certainty is very low because the best evidence is observational and concerns a different population or exposure.\n- No usable dataset was available, so the analysis could not be based on direct price comparisons for the same items.\n- The studies report conflicting results, with some finding many deals offer no savings and others finding most products hit their lowest price on Black Friday. [s56248d10-effect, s73042157-effect]\n\n## Sources\n\n- [s56248d10-effect] 2025: \"36% of Black Friday items showed no savings at all compared with their prices between Oct. 27 and Nov. 17, while genuine deals averaged about 24% off\" — https://www.benzinga.com/news/retail-sales/25/11/49101979/over-a-third-of-black-friday-deals-arent-real-discounts-shows-study\n- [s99854e2f-effect] 2026: \"The study found that 9% of the deals actually cost more during the sale events.\" — https://www.youtube.com/watch?v=P9IoWkq3Mts\n- [s73042157-effect] 2026: \"74% of tracked products hit their lowest price on Black Friday itself, suggesting the sales event often does deliver the best price of the season, even if not always\" — https://hoodline.com/2026/11/black-friday-deals-may-be-fake-discounts-price-tracking-research-finds\n\n---\n\nCausal Genie writes research summaries, not medical advice. Check with a qualified professional before acting on them.\n\nRun ID: `20261123-004018-8476e0`\n",
+  "report": "# Does shopping on Black Friday save you money?\n\n**Verdict:** ❓ Insufficient evidence\n\n## What the research and analysis found\n\nThe evidence is not strong enough to say whether shopping on Black Friday saves you money. Some studies find real discounts, but many find that a large share of Black Friday deals offer no savings or are not the cheapest price available. [s56248d10-effect, s68a55c0d-effect, s81cca167-effect] For example, one study found 36% of Black Friday items showed no savings compared with their prices between Oct. 27 and Nov. 17, while genuine deals averaged about 24% off. [s56248d10-effect] Other research found 83% of products were cheaper or the same price on at least one other date outside of the four-week sales period. [s68a55c0d-effect] The answer may depend on product category and retailer.\n\n## Question (PECO)\n\n- **Population:** consumers who shop during Black Friday\n- **Exposure:** making purchases on Black Friday\n- **Comparator:** making purchases on a non-Black Friday day (e.g., a typical weekday or weekend)\n- **Outcome:** the difference between the price paid on Black Friday and the price that would have been paid on a non-Black Friday day for the same or similar items\n- **Time window:** within 30 days of Black Friday\n- **Estimand:** ATE, mean difference, deviations handled as received\n\n## Causal graph (DAG)\n\n- black_friday_shopping → spending_savings: the question being tested\n- product_category → spending_savings: cites s7e4d0d6e-effect, sbbdb09aa-effect, s91fdad52-effect\n- retailer → spending_savings: cites sbbdb09aa-effect\n- pre_sale_price_inflation → spending_savings: assumed (no source)\n- black_friday_shopping → pre_sale_price_inflation: assumed (no source)\n- inflation → spending_savings: assumed (no source)\n- purchase_pressure → spending_savings: assumed (no source)\n- black_friday_shopping → purchase_pressure: assumed (no source)\n- price_tracking → spending_savings: assumed (no source)\n- year → spending_savings: assumed (no source)\n\nTreated as exogenous (the model's judgment that nothing in the graph can cause it; no source): product_category, retailer, inflation, year.\n\n## Key confounders\n\nNo confounder in the DAG.\n\n## Evidence\n\n**Certainty:** very low (starts low: best evidence is observational; down one: best evidence is about a different population or exposure)\n\nEvidence flow: 172 sources found → 163 studies after dedupe → 51 included (excluded: wrong_outcome 17, off_topic 71, not_a_study 19, wrong_exposure 4, wrong_population 1).\n\n- [Over a third of Black Friday 'deals' aren't real discounts, shows study](https://www.benzinga.com/news/retail-sales/25/11/49101979/over-a-third-of-black-friday-deals-arent-real-discounts-shows-study) — cross_sectional, 2025, known only from secondary sources: 36% of Black Friday items showed no savings at all compared with their prices between Oct. 27 and Nov. 17, while genuine deals averaged about 24% off\n- [Study tracks savings claims on Black Friday deals](https://www.youtube.com/watch?v=P9IoWkq3Mts) — cross_sectional, 2026, known only from secondary sources: 9% of the deals actually cost more during the sale events\n- [Most Black Friday deals cheaper or the same price at other times, study finds](https://www.itv.com/news/2025-11-25/most-black-friday-deals-cheaper-or-the-same-price-at-other-times-study-finds) — cross_sectional, 2025, known only from secondary sources: 83% of products were cheaper or the same price on at least one other date outside of the four-week sales period\n- [Most Black Friday deals the same price or cheaper at other times of the year, Which? finds](https://www.which.co.uk/policy-and-insight/article/dont-believe-the-hype-most-black-friday-deals-the-same-price-or-cheaper-at-other-times-of-the-year-which-finds-a3TbD5x5KADs) — cross_sectional, 2024, known only from secondary sources: 83% of products were cheaper or equal in price on at least one occasion outside of the four-week Black Friday sales period\n- [Consumer behavior and economic impact: A comprehensive study of Black Friday shopping trends](https://www.allcommercejournal.com/article/486/6-1-70-763.pdf) — cross_sectional, 2019: 60% of consumers report experiencing pressure to make quick purchase decisions, although statistical analysis suggests this is not a universal trend\n- [A Review on the Cause of Black Friday Consumerism](https://drpress.org/ojs/index.php/EHSS/article/download/20346/19912/24771) — systematic_review, year unknown, known only from secondary sources: Black Friday is a typical date for an explosion in the number of irrational and excessive consumer behaviours. to overspend.\n- [Black Friday shoppers are growing skeptical of holiday discounts, new survey finds](https://www.consumeraffairs.com/news/black-friday-shoppers-are-growing-skeptical-of-holiday-discounts-new-survey-finds-110526.html) — cross_sectional, 2025, known only from secondary sources: Only 54% of consumers trust Black Friday discounts, while one in five actively distrusts advertised sale prices\n- [Black Friday Deals May Not Be Real Discounts, Study Finds](https://hoodline.com/2026/11/black-friday-deals-may-be-fake-discounts-price-tracking-research-finds) — cross_sectional, 2026, known only from secondary sources: 74% of tracked products hit their lowest price on Black Friday itself, suggesting the sales event often does deliver the best price of the season, even if not always\n- [Do Amazon's Black Friday deals really save you money? A new report casts doubt](https://www.morningstar.com/news/marketwatch/2026111739/do-amazons-black-friday-deals-really-save-you-money-a-new-report-casts-doubt) — cross_sectional, 2025, known only from secondary sources: 29.1% of the deals analyzed were priced the same or higher during the sale event than the month leading up to it; nearly 60% were priced higher when looking back 90 days before the deal\n- [36% of Black Friday sales aren't really discounts, study finds](https://www.cnbc.com/make-it/2025/11/26/how-to-find-real-deals-on-black-friday.html) — cross_sectional, 2025, known only from secondary sources: 36% of items on sale for Black Friday offer no savings compared with how they were priced between Oct. 27 and Nov. 17\n- [Black Friday Consumer Buying Behaviour: Why Early Retailers Win](https://priceshape.com/resources/blog/black-friday-consumer-buying-behaviour) — cross_sectional, 2025, known only from secondary sources: the deepest discounting activity across the UK, Germany and Benelux happened during the week before Black Friday\n- [Impact of Black Friday on Consumer Behavior](https://www.scribd.com/document/697160984/An-Empirical-Study-to-Determine-the-Impact-of-Black-Friday-on-consumer) — cross_sectional, 2019: approximately half of participants shopped on Black Friday, mostly purchasing electronics and clothes\n- [Black Friday](https://dr.lib.iastate.edu/server/api/core/bitstreams/a644cef1-c024-4074-9ad2-bd9fd5e35850/content) — cross_sectional, 2020: only 1/3 of consumers participate in in-store Black Friday sales, and the rest are shifting to online sales\n- [Black Friday Consumer Study 2024: What to Expect](https://web-assets.bcg.com/e9/6b/0ff886b5442e9fe95e72e974ae91/black-friday-consumer-study-2024-global-results-vf.pdf) — cross_sectional, 2024, known only from secondary sources: Every fourth consumer intends to spend more during this year's sales events\n- [Over a third of Black Friday deals aren't worth it, study finds](https://www.youtube.com/watch?v=_d-p-1e8yXI) — other, year unknown, known only from secondary sources: 36% of Black Friday deals don't lead to true savings, while average discounts are about 24% and up to 60% for computers and phones\n- [WalletHub's 2026 Black Friday Report](https://shopping.yahoo.com/deals/articles/stores-highest-average-black-friday-191602765.html) — other, 2026, known only from secondary sources: Target ranks third with average discounts of 38.5% and select markdowns reaching 80%. Furniture discounts average 45.5%, while toy savings average 40.6%.\n- [36% of Black Friday deals aren’t really discounts, study reveals](https://www.nbcchicago.com/holidays/black-friday-deals-not-all-really-discounts-study/3856144) — other, year unknown, known only from secondary sources: 36% of online items offer no savings compared to their pre-Black Friday prices\n- [Report finds some advertised deals offered no savings](https://www.cbsnews.com/philadelphia/news/black-friday-deals-how-to-spot-savings) — other, year unknown, known only from secondary sources: nearly 30% of 350 advertised deals provided no savings compared with the products' recent 30-day pricing history; about 1 in 10 were priced higher than they had been within the previous 30 days\n- [Black Friday Discount Statistics 2025 – $11.8 Billion Online Sales](https://statistics.blackfriday) — other, 2025, known only from secondary sources: Shoppers enjoyed an average discount of 26% during Cyber Week, with makeup products standing out by offering the deepest discounts at 40%.\n- [Black Friday discounts fail to offer cheapest prices, Which? research](https://www.theguardian.com/business/2025/nov/25/black-friday-discounts-fail-to-offer-cheapest-prices-which-research-finds) — other, 2025, known only from secondary sources: on the day of Black Friday 2024 none of the items it looked at were at the cheapest price they had been over the surrounding year\n- [The psychology of discounts on Cyber Monday and Black Friday in 2024](https://www.ie.edu/uncover-ie/the-psychology-of-discounts-on-cyber-monday-and-black-friday) — other, year unknown, known only from secondary sources: The Discount Effect was first formally described by economists Daniel Kahneman and Amos Tversky in their seminal work “Prospect Theory”, published in 1979. Their research demonstrated that people tend to be more sensitive to losses than gains and can lead to several predictable biases in decision-making.\n- [ITMAGINATION’s comprehensive analysis of electronics pricing](https://redstagfulfillment.com/average-discount-offered-on-black-friday) — other, year unknown, known only from secondary sources: retailers often raise prices in mid-November, then apply Black Friday discounts that merely return items to normal pricing levels\n- [Study Finds 9% of Black Friday Deals Were More Expensive](https://www.facebook.com/100067398641804/videos/study-tracks-savings-claims-on-black-friday-deals/1195180006711902) — other, year unknown, known only from secondary sources: 9% of Black Friday deals were actually more expensive during the sales events\n- [Are Black Friday deals real? Our 2026 discount truth test](https://www.rivalsweeper.com/research/black-friday-discount-truth-test-2026) — other, 2026, known only from secondary sources: 83% of the 175 products it tracked at eight retailers were the same price or cheaper at least once outside the Black Friday sale period\n- [Are Black Friday Deals Really Cheaper? How to Check for Price Inflation](https://www.howtogeek.com/are-black-friday-deals-really-cheaper-how-to-check-for-price-inflation) — other, year unknown, known only from secondary sources: 29% of products saw an increase in price in the days leading up to Black Friday. The average price hike was $51 before the prices were slashed and offered as a 'discount.' 42% of Black Friday deals were genuine.\n- [How have the pandemic and online spending affected Black Friday shopping? Analyzing retail trade margins 2009–22](https://www.bls.gov/opub/btn/volume-12/how-have-the-pandemic-and-online-spending-affected-black-friday-shopping-analyzing-retail-trade-margins-2009-22.htm) — other, 2023, known only from secondary sources: average spending per shopper over the Black Friday weekend increased to $325 per shopper in 2022, an 8 percent rise over 2021, spending was still 10 percent below the 2019 level of nearly $362 per shopper\n- [Black Friday 2026: How Global Economic Shifts Are Influencing Consumer Spending](https://tgmresearch.com/black-friday-consumer-spending-under-economic-pressure-2026.html) — other, year unknown, known only from secondary sources: about 77% of consumers said they sometimes or often postpone purchases earlier in the year so they can buy during major sales events. At the same time, 44% of participating shoppers said they definitely planned to make a purchase, up from 39% the year before.\n- [Black Friday shoppers spent billions despite wider economic uncertainty](https://www.nbcnews.com/business/economy/black-friday-shoppers-spent-billions-rcna246456) — other, year unknown, known only from secondary sources: Black Friday sales excluding automotive rose 4.1% from a year ago; online sales jumped by 10.4%, while in-store purchases inched up 1.7%\n- [Decoding Black Friday Shopping Behavior: From Impulse Buys to Thoughtful Choices](https://som.yale.edu/story/2023/decoding-black-friday-shopping-behavior-impulse-buys-thoughtful-choices) — other, 2023, known only from secondary sources: effect not verified\n- [The Anchoring Bias: Consumers, Beware!](https://www.pon.harvard.edu/daily/negotiation-skills-daily/the-anchoring-bias-consumers-beware) — other, year unknown, known only from secondary sources: Retailers often engage in price anchoring, marking up prices and then offering discounts that are not deep concessions, making deals appear more attractive than they are.\n- [Price Setting in Online Markets: Does IT Click?](https://www.nber.org/system/files/working_papers/w20819/w20819.pdf) — other, 2014: effect not verified\n- [Black Friday as a Mechanism of Consumer Manipulation](https://www.researchgate.net/publication/398071302_Black_Friday_as_a_Mechanism_of_Consumer_Manipulation) — other, year unknown: effect not verified\n- [Don’t Let Inflated Prices Ruin Your Black Friday Shopping](https://www.youtube.com/watch?v=lf7fjni9E04) — other, year unknown, known only from secondary sources: Black Friday and Cyber Week deals aren’t what they used to be. As inflation continues to drive up prices, today’s “sale” price often matches what an item cost at full price just a year or two ago.\n- [Do stores really mark up prices before Black Friday to make discounts look bigger?](https://www.reddit.com/r/questions/comments/1h2swa3/do_stores_really_mark_up_prices_before_black) — other, year unknown, known only from secondary sources: The usual street price if you've been tracking it is 40% off. mark the item at 50% off\n- [Black Friday Sales Analytics](https://www.slideshare.net/slideshow/black-friday-sales-analytics/250452285) — other, year unknown, known only from secondary sources: effect not verified\n- [A Big Data Approach to Black Friday Sales](https://www.researchgate.net/publication/350836319_A_Big_Data_Approach_to_Black_Friday_Sales) — other, year unknown: effect not verified\n- [FINANCIAL RETURNS TO ...](https://www.nber.org/system/files/working_papers/w27740/revisions/w27740.rev1.pdf) — other, year unknown: the total net returns to investment in household working capital\n- [Black Friday isn’t always cheaper – and sometimes it’s more expensive, report finds](https://shopping.yahoo.com/deals/articles/black-friday-isn-t-always-223319049.html) — other, year unknown, known only from secondary sources: effect not verified\n- [Our new report found more than 1 in 10 Black Friday “deals” last year were priced HIGHER than before the sale.](https://www.instagram.com/reel/Df2xmt3PJrI) — other, 2026, known only from secondary sources: more than 1 in 10 Black Friday “deals” last year were priced HIGHER than before the sale\n- [Not every Black Friday deal is a bargain. Here's how to spot real savings.](https://www.youtube.com/watch?v=gG0iOD-jCM4) — other, 2026, known only from secondary sources: effect not verified\n- [The science of the deal: Why Black Friday discounts are so hard to resist](https://news.bryant.edu/science-deal-why-black-friday-discounts-are-so-hard-resist) — other, year unknown, known only from secondary sources: A 20 percent markdown on a price that climbed 15 percent over the year leaves the shopper only slightly ahead of where they were last November.\n- [Research from the consumer group Which? on Black Friday deals](https://www.facebook.com/citizensadviceplymouth/posts/black-friday-deals-are-back-but-are-you-really-saving-moneysome-black-friday-dea/1556127573208974) — other, year unknown, known only from secondary sources: eight in ten Black Friday deals are not actually cheaper than regular prices\n- [Black Friday Pricing Behavior at Walmart](https://ir.library.oregonstate.edu/downloads/w3763f83m) — other, year unknown: Black Friday products have significantly higher prices before the sales than selected products\n- [Retailer’s Guide to Overcoming Overstock](https://7learnings.com/blog/how-dynamic-pricing-can-optimize-your-black-friday-pricing-strategy) — other, year unknown, known only from secondary sources: machine learning algorithms are used to calculate products’ price elasticity based on data gathered from past sales activities, such as those from Black Friday in 2019\n- [How do Black Friday discounts influence the purchasing decision of ...](https://www.theseus.fi/bitstreams/1d7e4b2d-d2d5-4dbd-8239-9ed42eabb868/download) — other, 2025: effect not verified\n- [Shoppers beware: study uncovers how fake sales manipulate buying decisions](https://komonews.com/news/consumer/best-websites-to-shop-sales-black-friday-sales-holiday-shopping-gifts-guide-sale-prices-are-usually-fake-discounts-study-on-shopping) — other, year unknown, known only from secondary sources: Nearly all retailers now use fake sales to mislead their customers; markdowns advertised by most stores aren’t special prices or savings\n- [Sales Prices Are Usually Fake Discounts](https://wtop.com/business-money/2025/11/looking-forward-to-black-friday-sales-theyre-really-just-lying-to-you-warns-dc-consumer-expert) — other, 2025, known only from secondary sources: most advertised markdowns are not special prices or savings at all; the original prices used for discounts are often fabricated\n- [I tracked the price history of 50 \"Black Friday Deals.\" It's a scam.](https://www.reddit.com/r/Anticonsumption/comments/1p976c6/i_tracked_the_price_history_of_50_black_friday) — other, year unknown, known only from secondary sources: The TV that's on sale today for $500 (they say was $800) was actually $450 back in August\n- [A comprehensive study of Black Friday shopping trends](https://www.researchgate.net/publication/389966908_Consumer_behavior_and_economic_impact_A_comprehensive_study_of_Black_Friday_shopping_trends) — other, year unknown: effect not verified\n- [Consumer Behavior and Economic Impact of Black Friday Shopping Trends](https://www.studocu.vn/vn/document/truong-dai-hoc-ngan-hang-thanh-pho-ho-chi-minh/tieng-trung/consumer-behavior-and-economic-impact-of-black-friday-shopping-trends-ajmc-61/160103629) — other, year unknown: effect not verified\n- [South Korean Consumers' Experiences and Underlying Shopping ...](https://accesson.kr/jds/assets/pdf/50574/journal-17-11-63.pdf) — other, year unknown: effect not verified\n\n## Estimate\n\nNo estimate was computed for this question.\n\n## Limitations\n\n- Certainty is very low because the best evidence is observational and is about a different population or exposure.\n- No usable dataset was found: 37 candidates were considered and 0 were in restricted repositories.\n- The evidence comes from studies with different designs and populations, so the results are hard to compare directly.\n\n## Sources\n\n- [s56248d10-effect] 2025: \"36% of Black Friday items showed no savings at all compared with their prices between Oct. 27 and Nov. 17, while genuine deals averaged about 24% off\" — https://www.benzinga.com/news/retail-sales/25/11/49101979/over-a-third-of-black-friday-deals-arent-real-discounts-shows-study\n- [s68a55c0d-effect] 2025: \"It found that 83% were cheaper or the same on at least one other date outside of the four-week sales period.\" — https://www.itv.com/news/2025-11-25/most-black-friday-deals-cheaper-or-the-same-price-at-other-times-study-finds\n- [s81cca167-effect] 2025: \"It found that on the day of Black Friday 2024 none of the items it looked at were at the cheapest price they had been over the surrounding year.\" — https://www.theguardian.com/business/2025/nov/25/black-friday-discounts-fail-to-offer-cheapest-prices-which-research-finds\n\n---\n\nCausal Genie writes research summaries, not medical advice. Check with a qualified professional before acting on them.\n\nRun ID: `20261123-164201-e20ffb`\n",
   "llm_calls": [
     {
       "prompt_name": "route",
@@ -9369,79 +9374,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1970,
-      "tokens_out": 247,
-      "latency_s": 9.165370041999267,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2062,
-      "tokens_out": 271,
-      "latency_s": 10.523451832996216,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1921,
-      "tokens_out": 336,
-      "latency_s": 11.032369250009651,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1999,
-      "tokens_out": 356,
-      "latency_s": 11.306005624996033,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1875,
-      "tokens_out": 354,
-      "latency_s": 11.846187792005367,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1926,
       "tokens_out": 386,
       "latency_s": 12.124396583996713,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 681,
+      "tokens_out": 28,
+      "latency_s": 4.296423667008639,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9467,23 +9416,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 744,
+      "tokens_in": 1008,
       "tokens_out": 28,
-      "latency_s": 4.565083833003882,
+      "latency_s": 6.170429749996401,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 702,
-      "tokens_out": 28,
-      "latency_s": 4.100085707992548,
+      "tokens_in": 1999,
+      "tokens_out": 356,
+      "latency_s": 11.306005624996033,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9509,9 +9458,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1557,
-      "tokens_out": 227,
-      "latency_s": 8.036356209006044,
+      "tokens_in": 1875,
+      "tokens_out": 354,
+      "latency_s": 11.846187792005367,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1970,
+      "tokens_out": 247,
+      "latency_s": 9.165370041999267,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9523,9 +9486,51 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 681,
+      "tokens_in": 744,
       "tokens_out": 28,
-      "latency_s": 4.296423667008639,
+      "latency_s": 4.565083833003882,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1921,
+      "tokens_out": 336,
+      "latency_s": 11.032369250009651,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 702,
+      "tokens_out": 28,
+      "latency_s": 4.100085707992548,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2062,
+      "tokens_out": 271,
+      "latency_s": 10.523451832996216,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9546,14 +9551,42 @@
       ]
     },
     {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1557,
+      "tokens_out": 227,
+      "latency_s": 8.036356209006044,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1939,
+      "tokens_out": 383,
+      "latency_s": 10.548838458009413,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
       "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1008,
+      "tokens_in": 720,
       "tokens_out": 28,
-      "latency_s": 6.170429749996401,
+      "latency_s": 5.423570833998383,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9588,14 +9621,14 @@
       ]
     },
     {
-      "prompt_name": "extract",
+      "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1939,
-      "tokens_out": 383,
-      "latency_s": 10.548838458009413,
+      "tokens_in": 366,
+      "tokens_out": 73,
+      "latency_s": 5.316120874995249,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9621,9 +9654,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 366,
-      "tokens_out": 73,
-      "latency_s": 5.316120874995249,
+      "tokens_in": 728,
+      "tokens_out": 28,
+      "latency_s": 4.407403917008196,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9649,23 +9682,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 720,
+      "tokens_in": 768,
       "tokens_out": 28,
-      "latency_s": 5.423570833998383,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1801,
-      "tokens_out": 301,
-      "latency_s": 9.948506792003172,
+      "latency_s": 4.669063374996767,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9691,9 +9710,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 728,
-      "tokens_out": 28,
-      "latency_s": 4.407403917008196,
+      "tokens_in": 963,
+      "tokens_out": 46,
+      "latency_s": 4.848759582993807,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9705,23 +9724,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1979,
-      "tokens_out": 363,
-      "latency_s": 10.641349834011635,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 768,
-      "tokens_out": 28,
-      "latency_s": 4.669063374996767,
+      "tokens_in": 1801,
+      "tokens_out": 301,
+      "latency_s": 9.948506792003172,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9747,9 +9752,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1958,
-      "tokens_out": 147,
-      "latency_s": 7.165643917003763,
+      "tokens_in": 1979,
+      "tokens_out": 363,
+      "latency_s": 10.641349834011635,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9761,9 +9766,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 963,
-      "tokens_out": 46,
-      "latency_s": 4.848759582993807,
+      "tokens_in": 763,
+      "tokens_out": 28,
+      "latency_s": 6.184508624995942,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9789,9 +9794,37 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 763,
-      "tokens_out": 28,
-      "latency_s": 6.184508624995942,
+      "tokens_in": 884,
+      "tokens_out": 46,
+      "latency_s": 4.105276041998877,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1958,
+      "tokens_out": 147,
+      "latency_s": 7.165643917003763,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1977,
+      "tokens_out": 305,
+      "latency_s": 9.414412708996679,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9803,9 +9836,37 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 884,
-      "tokens_out": 46,
-      "latency_s": 4.105276041998877,
+      "tokens_in": 759,
+      "tokens_out": 28,
+      "latency_s": 4.306187458001659,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1912,
+      "tokens_out": 274,
+      "latency_s": 9.34518891699554,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 799,
+      "tokens_out": 230,
+      "latency_s": 10.595343082997715,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9859,23 +9920,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1977,
-      "tokens_out": 305,
-      "latency_s": 9.414412708996679,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1912,
-      "tokens_out": 274,
-      "latency_s": 9.34518891699554,
+      "tokens_in": 1818,
+      "tokens_out": 145,
+      "latency_s": 6.212916083008167,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9890,34 +9937,6 @@
       "tokens_in": 1849,
       "tokens_out": 137,
       "latency_s": 6.13345379200473,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1818,
-      "tokens_out": 145,
-      "latency_s": 6.212916083008167,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 759,
-      "tokens_out": 28,
-      "latency_s": 4.306187458001659,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9957,23 +9976,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1549,
-      "tokens_out": 139,
-      "latency_s": 6.752882875007344,
+      "tokens_in": 1862,
+      "tokens_out": 283,
+      "latency_s": 10.052554542009602,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "extract",
+      "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1862,
-      "tokens_out": 283,
-      "latency_s": 10.052554542009602,
+      "tokens_in": 634,
+      "tokens_out": 28,
+      "latency_s": 5.52083483300521,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9999,9 +10018,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1538,
-      "tokens_out": 140,
-      "latency_s": 6.665488500002539,
+      "tokens_in": 1549,
+      "tokens_out": 139,
+      "latency_s": 6.752882875007344,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1878,
+      "tokens_out": 283,
+      "latency_s": 9.400331625001854,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10013,9 +10046,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 799,
-      "tokens_out": 230,
-      "latency_s": 10.595343082997715,
+      "tokens_in": 727,
+      "tokens_out": 46,
+      "latency_s": 4.703960916987853,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1538,
+      "tokens_out": 140,
+      "latency_s": 6.665488500002539,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10055,34 +10102,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1878,
-      "tokens_out": 283,
-      "latency_s": 9.400331625001854,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 634,
-      "tokens_out": 28,
-      "latency_s": 5.52083483300521,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1881,
       "tokens_out": 142,
       "latency_s": 6.797151667007711,
@@ -10106,14 +10125,14 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 727,
-      "tokens_out": 46,
-      "latency_s": 4.703960916987853,
+      "tokens_in": 1538,
+      "tokens_out": 141,
+      "latency_s": 7.041605166989029,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10125,9 +10144,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1538,
-      "tokens_out": 141,
-      "latency_s": 7.041605166989029,
+      "tokens_in": 1548,
+      "tokens_out": 253,
+      "latency_s": 8.99318512500031,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 353,
+      "tokens_out": 52,
+      "latency_s": 4.5071399580047,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10167,20 +10200,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1548,
-      "tokens_out": 253,
-      "latency_s": 8.99318512500031,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1560,
       "tokens_out": 137,
       "latency_s": 6.9590752080112,
@@ -10195,107 +10214,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1549,
-      "tokens_out": 214,
-      "latency_s": 8.24300841600052,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1546,
-      "tokens_out": 146,
-      "latency_s": 6.780587500004913,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 353,
-      "tokens_out": 52,
-      "latency_s": 4.5071399580047,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1585,
-      "tokens_out": 147,
-      "latency_s": 6.7829508330032695,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 2002,
       "tokens_out": 289,
       "latency_s": 10.110769166989485,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1527,
-      "tokens_out": 145,
-      "latency_s": 6.713352457998553,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1545,
-      "tokens_out": 251,
-      "latency_s": 8.822071540998877,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1853,
-      "tokens_out": 149,
-      "latency_s": 6.449964750005165,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10321,9 +10242,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1934,
-      "tokens_out": 168,
-      "latency_s": 7.426823583009536,
+      "tokens_in": 1549,
+      "tokens_out": 214,
+      "latency_s": 8.24300841600052,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1545,
+      "tokens_out": 251,
+      "latency_s": 8.822071540998877,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10349,9 +10284,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1860,
-      "tokens_out": 155,
-      "latency_s": 7.423054416998639,
+      "tokens_in": 1546,
+      "tokens_out": 146,
+      "latency_s": 6.780587500004913,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10363,9 +10298,51 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2045,
-      "tokens_out": 148,
-      "latency_s": 6.866937000013422,
+      "tokens_in": 1585,
+      "tokens_out": 147,
+      "latency_s": 6.7829508330032695,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1527,
+      "tokens_out": 145,
+      "latency_s": 6.713352457998553,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1853,
+      "tokens_out": 149,
+      "latency_s": 6.449964750005165,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1934,
+      "tokens_out": 168,
+      "latency_s": 7.426823583009536,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10386,6 +10363,34 @@
       ]
     },
     {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 802,
+      "tokens_out": 29,
+      "latency_s": 3.952641333002248,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1860,
+      "tokens_out": 155,
+      "latency_s": 7.423054416998639,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -10394,6 +10399,34 @@
       "tokens_in": 1540,
       "tokens_out": 302,
       "latency_s": 10.03186329199525,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 361,
+      "tokens_out": 29,
+      "latency_s": 6.294378457998391,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2045,
+      "tokens_out": 148,
+      "latency_s": 6.866937000013422,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10428,20 +10461,6 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 802,
-      "tokens_out": 29,
-      "latency_s": 3.952641333002248,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -10450,20 +10469,6 @@
       "tokens_in": 2427,
       "tokens_out": 149,
       "latency_s": 6.471670875005657,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1936,
-      "tokens_out": 155,
-      "latency_s": 7.096561999991536,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10489,9 +10494,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 361,
-      "tokens_out": 29,
-      "latency_s": 6.294378457998391,
+      "tokens_in": 786,
+      "tokens_out": 46,
+      "latency_s": 4.5071149169962155,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10506,6 +10511,34 @@
       "tokens_in": 1549,
       "tokens_out": 303,
       "latency_s": 10.178601708990755,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1936,
+      "tokens_out": 155,
+      "latency_s": 7.096561999991536,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1932,
+      "tokens_out": 466,
+      "latency_s": 13.210534124998958,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10554,20 +10587,6 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 786,
-      "tokens_out": 46,
-      "latency_s": 4.5071149169962155,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -10576,20 +10595,6 @@
       "tokens_in": 2000,
       "tokens_out": 151,
       "latency_s": 7.267232625003089,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1932,
-      "tokens_out": 466,
-      "latency_s": 13.210534124998958,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10629,9 +10634,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1869,
-      "tokens_out": 147,
-      "latency_s": 6.524007708008867,
+      "tokens_in": 1995,
+      "tokens_out": 326,
+      "latency_s": 10.335632999995141,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 848,
+      "tokens_out": 46,
+      "latency_s": 7.360584499998367,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10646,6 +10665,20 @@
       "tokens_in": 2024,
       "tokens_out": 150,
       "latency_s": 6.8006659999955446,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1869,
+      "tokens_out": 147,
+      "latency_s": 6.524007708008867,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10674,20 +10707,6 @@
       "tokens_in": 1530,
       "tokens_out": 143,
       "latency_s": 6.345372875002795,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1995,
-      "tokens_out": 326,
-      "latency_s": 10.335632999995141,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10778,20 +10797,6 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 848,
-      "tokens_out": 46,
-      "latency_s": 7.360584499998367,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -10800,62 +10805,6 @@
       "tokens_in": 1978,
       "tokens_out": 371,
       "latency_s": 11.728276957990602,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1951,
-      "tokens_out": 326,
-      "latency_s": 10.579941709002014,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1959,
-      "tokens_out": 379,
-      "latency_s": 12.84819829200569,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1694,
-      "tokens_out": 274,
-      "latency_s": 9.46179074999236,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1887,
-      "tokens_out": 338,
-      "latency_s": 10.742567917011911,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10881,51 +10830,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1908,
-      "tokens_out": 483,
-      "latency_s": 14.135832624990144,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1979,
-      "tokens_out": 344,
-      "latency_s": 10.853350416989997,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1972,
-      "tokens_out": 248,
-      "latency_s": 9.063395500008482,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 728,
-      "tokens_out": 28,
-      "latency_s": 4.810171332996106,
+      "tokens_in": 1959,
+      "tokens_out": 379,
+      "latency_s": 12.84819829200569,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10946,14 +10853,14 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 681,
-      "tokens_out": 28,
-      "latency_s": 6.558161832988844,
+      "tokens_in": 1908,
+      "tokens_out": 483,
+      "latency_s": 14.135832624990144,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10968,6 +10875,118 @@
       "tokens_in": 667,
       "tokens_out": 72,
       "latency_s": 5.930267332994845,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1951,
+      "tokens_out": 326,
+      "latency_s": 10.579941709002014,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 728,
+      "tokens_out": 28,
+      "latency_s": 4.810171332996106,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1887,
+      "tokens_out": 338,
+      "latency_s": 10.742567917011911,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 681,
+      "tokens_out": 28,
+      "latency_s": 6.558161832988844,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1694,
+      "tokens_out": 274,
+      "latency_s": 9.46179074999236,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1979,
+      "tokens_out": 344,
+      "latency_s": 10.853350416989997,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 838,
+      "tokens_out": 80,
+      "latency_s": 8.196459917002358,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1972,
+      "tokens_out": 248,
+      "latency_s": 9.063395500008482,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11002,14 +11021,14 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 838,
-      "tokens_out": 80,
-      "latency_s": 8.196459917002358,
+      "tokens_in": 1560,
+      "tokens_out": 154,
+      "latency_s": 6.637889584002551,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11021,9 +11040,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1560,
-      "tokens_out": 154,
-      "latency_s": 6.637889584002551,
+      "tokens_in": 1985,
+      "tokens_out": 338,
+      "latency_s": 10.787229333000141,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11063,9 +11082,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1985,
-      "tokens_out": 338,
-      "latency_s": 10.787229333000141,
+      "tokens_in": 1955,
+      "tokens_out": 295,
+      "latency_s": 9.954802749998635,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11077,9 +11096,37 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1955,
-      "tokens_out": 295,
-      "latency_s": 9.954802749998635,
+      "tokens_in": 1552,
+      "tokens_out": 279,
+      "latency_s": 9.520836207986576,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 403,
+      "tokens_out": 46,
+      "latency_s": 4.681366582997725,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1858,
+      "tokens_out": 315,
+      "latency_s": 10.046144542007823,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11105,51 +11152,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1552,
-      "tokens_out": 279,
-      "latency_s": 9.520836207986576,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1547,
       "tokens_out": 150,
       "latency_s": 6.825160624997807,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1858,
-      "tokens_out": 315,
-      "latency_s": 10.046144542007823,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 403,
-      "tokens_out": 46,
-      "latency_s": 4.681366582997725,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11175,6 +11180,20 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 444,
+      "tokens_out": 67,
+      "latency_s": 7.66685883399623,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 434,
       "tokens_out": 68,
       "latency_s": 5.860893707998912,
@@ -11189,9 +11208,51 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 401,
+      "tokens_out": 62,
+      "latency_s": 8.4784229999932,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 409,
+      "tokens_out": 97,
+      "latency_s": 7.050904500007164,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 312,
       "tokens_out": 38,
       "latency_s": 5.859986791008851,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 423,
+      "tokens_out": 64,
+      "latency_s": 8.479111540989834,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11231,9 +11292,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 409,
-      "tokens_out": 97,
-      "latency_s": 7.050904500007164,
+      "tokens_in": 480,
+      "tokens_out": 66,
+      "latency_s": 7.1580535839893855,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11245,37 +11306,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 444,
-      "tokens_out": 67,
-      "latency_s": 7.66685883399623,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 401,
-      "tokens_out": 62,
-      "latency_s": 8.4784229999932,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 423,
-      "tokens_out": 64,
-      "latency_s": 8.479111540989834,
+      "tokens_in": 348,
+      "tokens_out": 66,
+      "latency_s": 7.150228999991668,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11315,9 +11348,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 348,
-      "tokens_out": 66,
-      "latency_s": 7.150228999991668,
+      "tokens_in": 441,
+      "tokens_out": 64,
+      "latency_s": 7.218959500009078,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11329,9 +11362,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 480,
+      "tokens_in": 403,
       "tokens_out": 66,
-      "latency_s": 7.1580535839893855,
+      "latency_s": 6.628555542003596,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11371,34 +11404,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 441,
-      "tokens_out": 64,
-      "latency_s": 7.218959500009078,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 403,
-      "tokens_out": 66,
-      "latency_s": 6.628555542003596,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 423,
       "tokens_out": 38,
       "latency_s": 6.380447667004773,
@@ -11413,9 +11418,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 354,
-      "tokens_out": 64,
-      "latency_s": 5.2936279170098715,
+      "tokens_in": 385,
+      "tokens_out": 39,
+      "latency_s": 7.179604459000984,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11441,23 +11446,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 318,
-      "tokens_out": 39,
-      "latency_s": 5.209941416003858,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 385,
-      "tokens_out": 39,
-      "latency_s": 7.179604459000984,
+      "tokens_in": 354,
+      "tokens_out": 64,
+      "latency_s": 5.2936279170098715,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11511,6 +11502,20 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 318,
+      "tokens_out": 39,
+      "latency_s": 5.209941416003858,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 353,
       "tokens_out": 66,
       "latency_s": 6.339136666996637,
@@ -11525,9 +11530,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 279,
-      "tokens_out": 37,
-      "latency_s": 5.1572681670077145,
+      "tokens_in": 435,
+      "tokens_out": 99,
+      "latency_s": 8.564407666010084,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11553,9 +11558,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 430,
-      "tokens_out": 68,
-      "latency_s": 5.670306665997487,
+      "tokens_in": 279,
+      "tokens_out": 37,
+      "latency_s": 5.1572681670077145,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11581,9 +11586,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 435,
-      "tokens_out": 99,
-      "latency_s": 8.564407666010084,
+      "tokens_in": 430,
+      "tokens_out": 68,
+      "latency_s": 5.670306665997487,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11637,6 +11642,20 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 413,
+      "tokens_out": 69,
+      "latency_s": 6.865546917004394,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 306,
       "tokens_out": 39,
       "latency_s": 5.799672916997224,
@@ -11654,20 +11673,6 @@
       "tokens_in": 327,
       "tokens_out": 38,
       "latency_s": 5.1203501660056645,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 413,
-      "tokens_out": 69,
-      "latency_s": 6.865546917004394,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11735,6 +11740,20 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 1705,
+      "tokens_out": 326,
+      "latency_s": 12.127088084002025,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 1902,
       "tokens_out": 139,
       "latency_s": 8.006117624987382,
@@ -11777,9 +11796,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1930,
-      "tokens_out": 142,
-      "latency_s": 8.94461262501136,
+      "tokens_in": 1566,
+      "tokens_out": 275,
+      "latency_s": 10.844875916998717,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 434,
+      "tokens_out": 46,
+      "latency_s": 4.992580582998926,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11819,51 +11852,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1566,
-      "tokens_out": 275,
-      "latency_s": 10.844875916998717,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1705,
-      "tokens_out": 326,
-      "latency_s": 12.127088084002025,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 434,
-      "tokens_out": 46,
-      "latency_s": 4.992580582998926,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1535,
-      "tokens_out": 137,
-      "latency_s": 7.193392625005799,
+      "tokens_in": 1930,
+      "tokens_out": 142,
+      "latency_s": 8.94461262501136,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11878,34 +11869,6 @@
       "tokens_in": 2077,
       "tokens_out": 168,
       "latency_s": 8.147329707993777,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1530,
-      "tokens_out": 143,
-      "latency_s": 7.507745499999146,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1542,
-      "tokens_out": 146,
-      "latency_s": 7.506416999996873,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11945,9 +11908,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1524,
-      "tokens_out": 141,
-      "latency_s": 7.341781583003467,
+      "tokens_in": 1535,
+      "tokens_out": 137,
+      "latency_s": 7.193392625005799,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11959,9 +11922,37 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2017,
+      "tokens_in": 1530,
+      "tokens_out": 143,
+      "latency_s": 7.507745499999146,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1542,
       "tokens_out": 146,
-      "latency_s": 7.051893625000957,
+      "latency_s": 7.506416999996873,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1524,
+      "tokens_out": 141,
+      "latency_s": 7.341781583003467,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11987,9 +11978,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1959,
-      "tokens_out": 157,
-      "latency_s": 7.064792375007528,
+      "tokens_in": 2017,
+      "tokens_out": 146,
+      "latency_s": 7.051893625000957,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12001,9 +11992,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1900,
-      "tokens_out": 151,
-      "latency_s": 7.742073583009187,
+      "tokens_in": 1959,
+      "tokens_out": 157,
+      "latency_s": 7.064792375007528,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12029,9 +12020,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1966,
+      "tokens_in": 1900,
       "tokens_out": 151,
-      "latency_s": 7.670171666002716,
+      "latency_s": 7.742073583009187,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12046,6 +12037,20 @@
       "tokens_in": 1923,
       "tokens_out": 170,
       "latency_s": 8.025336792008602,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1966,
+      "tokens_out": 151,
+      "latency_s": 7.670171666002716,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12183,34 +12188,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1683,
-      "tokens_out": 145,
-      "latency_s": 7.497271540996735,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1782,
-      "tokens_out": 147,
-      "latency_s": 7.514485292005702,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1963,
       "tokens_out": 285,
       "latency_s": 10.119147124991287,
@@ -12225,107 +12202,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1567,
-      "tokens_out": 250,
-      "latency_s": 9.518133249992388,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1526,
-      "tokens_out": 143,
-      "latency_s": 7.260827916994458,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2060,
-      "tokens_out": 195,
-      "latency_s": 8.555726166989189,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2021,
-      "tokens_out": 191,
-      "latency_s": 8.548650124997948,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 2000,
       "tokens_out": 381,
       "latency_s": 13.226313791994471,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1995,
-      "tokens_out": 149,
-      "latency_s": 7.680487000005087,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 338,
-      "tokens_out": 28,
-      "latency_s": 5.813413290990866,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1851,
-      "tokens_out": 153,
-      "latency_s": 7.964357333999942,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12351,9 +12230,135 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2019,
-      "tokens_out": 154,
-      "latency_s": 8.23247962500318,
+      "tokens_in": 1683,
+      "tokens_out": 145,
+      "latency_s": 7.497271540996735,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1567,
+      "tokens_out": 250,
+      "latency_s": 9.518133249992388,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 338,
+      "tokens_out": 28,
+      "latency_s": 5.813413290990866,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2060,
+      "tokens_out": 195,
+      "latency_s": 8.555726166989189,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1782,
+      "tokens_out": 147,
+      "latency_s": 7.514485292005702,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2021,
+      "tokens_out": 191,
+      "latency_s": 8.548650124997948,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1526,
+      "tokens_out": 143,
+      "latency_s": 7.260827916994458,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1995,
+      "tokens_out": 149,
+      "latency_s": 7.680487000005087,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1851,
+      "tokens_out": 153,
+      "latency_s": 7.964357333999942,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1842,
+      "tokens_out": 173,
+      "latency_s": 8.596516500008875,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12379,9 +12384,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1909,
-      "tokens_out": 136,
-      "latency_s": 7.915014457990765,
+      "tokens_in": 2019,
+      "tokens_out": 154,
+      "latency_s": 8.23247962500318,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12393,9 +12398,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1842,
-      "tokens_out": 173,
-      "latency_s": 8.596516500008875,
+      "tokens_in": 1909,
+      "tokens_out": 136,
+      "latency_s": 7.915014457990765,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12407,23 +12412,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 330,
-      "tokens_out": 39,
-      "latency_s": 5.394633874995634,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 363,
-      "tokens_out": 65,
-      "latency_s": 5.729431250001653,
+      "tokens_in": 410,
+      "tokens_out": 90,
+      "latency_s": 7.083367457991699,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12449,9 +12440,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 410,
-      "tokens_out": 90,
-      "latency_s": 7.083367457991699,
+      "tokens_in": 363,
+      "tokens_out": 65,
+      "latency_s": 5.729431250001653,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 330,
+      "tokens_out": 39,
+      "latency_s": 5.394633874995634,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12477,37 +12482,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1901,
-      "tokens_out": 143,
-      "latency_s": 9.068365792001714,
+      "tokens_in": 1924,
+      "tokens_out": 304,
+      "latency_s": 12.567308625002624,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "extract",
+      "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1952,
-      "tokens_out": 137,
-      "latency_s": 9.0808951670042,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1549,
-      "tokens_out": 138,
-      "latency_s": 9.078405917010969,
+      "tokens_in": 701,
+      "tokens_out": 60,
+      "latency_s": 5.5172770409990335,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12533,9 +12524,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1574,
-      "tokens_out": 140,
-      "latency_s": 9.085207541007549,
+      "tokens_in": 1952,
+      "tokens_out": 137,
+      "latency_s": 9.0808951670042,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12561,9 +12552,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1924,
-      "tokens_out": 304,
-      "latency_s": 12.567308625002624,
+      "tokens_in": 1901,
+      "tokens_out": 143,
+      "latency_s": 9.068365792001714,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12589,9 +12580,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1531,
-      "tokens_out": 137,
-      "latency_s": 7.667864583010669,
+      "tokens_in": 1549,
+      "tokens_out": 138,
+      "latency_s": 9.078405917010969,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1574,
+      "tokens_out": 140,
+      "latency_s": 9.085207541007549,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12631,9 +12636,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1562,
-      "tokens_out": 138,
-      "latency_s": 7.645283916994231,
+      "tokens_in": 1531,
+      "tokens_out": 137,
+      "latency_s": 7.667864583010669,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2060,
+      "tokens_out": 499,
+      "latency_s": 15.0613697499939,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12645,9 +12664,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 701,
-      "tokens_out": 60,
-      "latency_s": 5.5172770409990335,
+      "tokens_in": 912,
+      "tokens_out": 29,
+      "latency_s": 5.080214415997034,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1562,
+      "tokens_out": 138,
+      "latency_s": 7.645283916994231,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12673,20 +12706,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2060,
-      "tokens_out": 499,
-      "latency_s": 15.0613697499939,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1905,
       "tokens_out": 155,
       "latency_s": 8.966278791005607,
@@ -12701,23 +12720,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1924,
-      "tokens_out": 136,
-      "latency_s": 7.4424303749983665,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1802,
-      "tokens_out": 139,
-      "latency_s": 8.095364583001356,
+      "tokens_in": 1976,
+      "tokens_out": 157,
+      "latency_s": 8.783577124995645,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12743,23 +12748,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1976,
-      "tokens_out": 157,
-      "latency_s": 8.783577124995645,
+      "tokens_in": 1802,
+      "tokens_out": 139,
+      "latency_s": 8.095364583001356,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 912,
-      "tokens_out": 29,
-      "latency_s": 5.080214415997034,
+      "tokens_in": 1924,
+      "tokens_out": 136,
+      "latency_s": 7.4424303749983665,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12799,6 +12804,20 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 1557,
+      "tokens_out": 143,
+      "latency_s": 8.330644792004023,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 1770,
       "tokens_out": 144,
       "latency_s": 8.323676750005689,
@@ -12813,9 +12832,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1557,
-      "tokens_out": 143,
-      "latency_s": 8.330644792004023,
+      "tokens_in": 1988,
+      "tokens_out": 320,
+      "latency_s": 11.44249662499351,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12844,20 +12863,6 @@
       "tokens_in": 1548,
       "tokens_out": 143,
       "latency_s": 8.398369417001959,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1988,
-      "tokens_out": 320,
-      "latency_s": 11.44249662499351,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -13009,9 +13014,9 @@
       "model": "deepseek-ai/DeepSeek-V4-Pro-0813",
       "user_content": "",
       "response": "",
-      "tokens_in": 5059,
-      "tokens_out": 414,
-      "latency_s": 6.551024291999056,
+      "tokens_in": 5167,
+      "tokens_out": 430,
+      "latency_s": 7.290394791998551,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -13040,53 +13045,53 @@
   "timings": [
     {
       "name": "route",
-      "started_at": "2026-11-23T00:40:18.201211Z",
-      "seconds": 5.500252
+      "started_at": "2026-11-23T16:42:01.267091Z",
+      "seconds": 0.000074
     },
     {
       "name": "frame",
-      "started_at": "2026-11-23T00:40:23.701507Z",
-      "seconds": 9.262076
+      "started_at": "2026-11-23T16:42:01.267172Z",
+      "seconds": 0.000019
     },
     {
       "name": "research",
-      "started_at": "2026-11-23T00:40:32.963617Z",
-      "seconds": 409.40256
+      "started_at": "2026-11-23T16:42:01.267193Z",
+      "seconds": 0.168855
     },
     {
       "name": "research round 1",
-      "started_at": "2026-11-23T00:40:32.963666Z",
-      "seconds": 233.906879
+      "started_at": "2026-11-23T16:42:01.267196Z",
+      "seconds": 0.043053
     },
     {
       "name": "research round 2",
-      "started_at": "2026-11-23T00:44:26.870601Z",
-      "seconds": 92.088049
+      "started_at": "2026-11-23T16:42:01.310258Z",
+      "seconds": 0.052126
     },
     {
       "name": "research round 3",
-      "started_at": "2026-11-23T00:45:58.958762Z",
-      "seconds": 83.407178
+      "started_at": "2026-11-23T16:42:01.362394Z",
+      "seconds": 0.073625
     },
     {
       "name": "dag",
-      "started_at": "2026-11-23T00:47:22.366227Z",
-      "seconds": 17.330296
+      "started_at": "2026-11-23T16:42:01.436053Z",
+      "seconds": 0.122298
     },
     {
       "name": "data",
-      "started_at": "2026-11-23T00:47:39.696597Z",
-      "seconds": 61.67379
+      "started_at": "2026-11-23T16:42:01.558420Z",
+      "seconds": 0.060174
     },
     {
       "name": "report",
-      "started_at": "2026-11-23T00:48:41.370847Z",
-      "seconds": 6.553472
+      "started_at": "2026-11-23T16:42:01.618747Z",
+      "seconds": 7.291513
     },
     {
       "name": "genie",
-      "started_at": "2026-11-23T00:48:47.924337Z",
-      "seconds": 1.450267
+      "started_at": "2026-11-23T16:42:08.910281Z",
+      "seconds": 0.000244
     }
   ]
 }
