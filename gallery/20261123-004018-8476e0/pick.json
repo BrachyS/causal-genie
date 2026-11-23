@@ -2,8 +2,8 @@
   "question_id": 4,
   "question": "Does shopping on Black Friday save you money?",
   "votes": 1,
-  "run_id": "20261120-182237-e1edf4",
-  "verdict": "common_cause",
+  "run_id": "20261123-004018-8476e0",
+  "verdict": "insufficient",
   "announcement": "Tonight's question: Does shopping on Black Friday save you money?",
   "genie": false
 }
