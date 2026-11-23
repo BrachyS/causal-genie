@@ -2,8 +2,8 @@
   "question_id": 6,
   "question": "Do highly rated public schools help increase your admissions chances to public colleges?",
   "votes": 1,
-  "run_id": "20261122-173852-f5676a",
-  "verdict": "common_cause",
+  "run_id": "20261123-004849-e8bd5a",
+  "verdict": "insufficient",
   "announcement": "The Genie cracks open the yearbook to see if school stars shine on college applications.",
   "genie": true
 }
