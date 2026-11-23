@@ -1,5 +1,5 @@
 {
-  "run_id": "20261123-004849-e8bd5a",
+  "run_id": "20261123-164208-02aba0",
   "question": "Do highly rated public schools help increase your admissions chances to public colleges?",
   "route": {
     "kind": "causal",
@@ -8943,12 +8943,6 @@
   "extracts": [],
   "lookups": [
     {
-      "query": "TITLE:\"does your high school impact your college admission chances\"",
-      "record": null,
-      "latency_s": 0.817336708001676,
-      "error": null
-    },
-    {
       "query": "PMCID:PMC3940449",
       "record": {
         "pmid": "24610997",
@@ -8966,26 +8960,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"in transparency and percent plans nber working paper 32372\"",
+      "query": "TITLE:\"does your high school impact your college admission chances\"",
       "record": null,
-      "latency_s": 0.20156250000582077,
+      "latency_s": 0.817336708001676,
       "error": null
     },
     {
-      "query": "PMCID:PMC3500972",
-      "record": {
-        "pmid": "23172979",
-        "doi": "10.1177/003804070908200401",
-        "title": "High School Classmates and College Success.",
-        "first_author": "Fletcher",
-        "year": 2009,
-        "publication_types": [
-          "research-article",
-          "Journal Article"
-        ],
-        "retracted": false
-      },
-      "latency_s": 1.147746125003323,
+      "query": "TITLE:\"in transparency and percent plans nber working paper 32372\"",
+      "record": null,
+      "latency_s": 0.20156250000582077,
       "error": null
     },
     {
@@ -9012,6 +8995,12 @@
       "error": null
     },
     {
+      "query": "TITLE:\"match or mismatch automatic admissions and college preferences\"",
+      "record": null,
+      "latency_s": 1.0503814590047114,
+      "error": null
+    },
+    {
       "query": "PMCID:PMC3584632",
       "record": {
         "pmid": "23459198",
@@ -9029,9 +9018,20 @@
       "error": null
     },
     {
-      "query": "TITLE:\"match or mismatch automatic admissions and college preferences\"",
-      "record": null,
-      "latency_s": 1.0503814590047114,
+      "query": "PMCID:PMC3500972",
+      "record": {
+        "pmid": "23172979",
+        "doi": "10.1177/003804070908200401",
+        "title": "High School Classmates and College Success.",
+        "first_author": "Fletcher",
+        "year": 2009,
+        "publication_types": [
+          "research-article",
+          "Journal Article"
+        ],
+        "retracted": false
+      },
+      "latency_s": 1.147746125003323,
       "error": null
     },
     {
@@ -9127,6 +9127,12 @@
       "error": null
     },
     {
+      "query": "TITLE:\"results of texas s experiment in increasing college diversity\"",
+      "record": null,
+      "latency_s": 0.6992020409961697,
+      "error": null
+    },
+    {
       "query": "TITLE:\"do bans on affirmative action hurt minority students evidence from\"",
       "record": null,
       "latency_s": 0.8142516249936307,
@@ -9136,12 +9142,6 @@
       "query": "TITLE:\"importance of high school conditions for college access\"",
       "record": null,
       "latency_s": 0.6498571249976521,
-      "error": null
-    },
-    {
-      "query": "TITLE:\"results of texas s experiment in increasing college diversity\"",
-      "record": null,
-      "latency_s": 0.6992020409961697,
       "error": null
     },
     {
@@ -9181,21 +9181,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"do colleges look at high school ranking is it better to be top 10 at a normal school or top third\"",
-      "record": null,
-      "latency_s": 0.6256072919932194,
-      "error": null
-    },
-    {
       "query": "TITLE:\"putting school surveys\"",
       "record": null,
       "latency_s": 0.6482902910065604,
       "error": null
     },
     {
-      "query": "TITLE:\"the long term impacts of high quality early education\"",
+      "query": "TITLE:\"nber working paper series\"",
       "record": null,
-      "latency_s": 0.19436149999091867,
+      "latency_s": 3.9276901249977527,
       "error": null
     },
     {
@@ -9216,9 +9210,15 @@
       "error": null
     },
     {
-      "query": "TITLE:\"nber working paper series\"",
+      "query": "TITLE:\"do colleges look at high school ranking is it better to be top 10 at a normal school or top third\"",
       "record": null,
-      "latency_s": 3.9276901249977527,
+      "latency_s": 0.6256072919932194,
+      "error": null
+    },
+    {
+      "query": "TITLE:\"the long term impacts of high quality early education\"",
+      "record": null,
+      "latency_s": 0.19436149999091867,
       "error": null
     },
     {
@@ -9463,61 +9463,57 @@
   "prose": {
     "summary": [
       {
-        "text": "There is not enough evidence to say whether attending a highly rated public high school increases your chances of admission to a public college.",
+        "text": "There is not enough evidence to say whether attending a highly rated public high school changes your chances of getting into a public college.",
         "cites": [
           "F-verdict",
           "F-certainty"
         ]
       },
       {
-        "text": "The available studies point in different directions: some find that being in the top 10% or attending a higher-quality school is linked to higher admission or enrollment, while others find no effect or even declines for some groups.",
+        "text": "The best studies point in different directions, with some finding positive effects, some finding no effect, and some finding negative effects, so confidence is very low.",
         "cites": [
-          "F-certainty",
-          "sf272e034-effect",
-          "sebdf920a-effect",
-          "saa349baa-effect",
-          "s1a202d50-effect"
+          "F-certainty"
         ]
       },
       {
-        "text": "Because the best evidence is observational and the findings conflict, confidence in any single answer is very low.",
+        "text": "The sources describe a possible path from high school rating to college readiness to college admission, but a plausible path does not show how big the effect is or that it happens.",
         "cites": [
-          "F-certainty"
+          "F-path"
+        ]
+      },
+      {
+        "text": "The answer may depend on household income, parental education, and school type.",
+        "cites": [
+          "F-factors"
         ]
       }
     ],
     "comparison": [],
     "limitations": [
       {
-        "text": "The best available evidence is observational, so it cannot rule out that other differences between students or schools explain the results.",
+        "text": "The evidence is observational, and the best studies point in different directions, so certainty is very low.",
         "cites": [
           "F-certainty"
         ]
       },
       {
-        "text": "The studies point in different directions, with positive, negative, and null findings, which lowers confidence in any single conclusion.",
-        "cites": [
-          "F-certainty"
-        ]
-      },
-      {
-        "text": "No usable dataset was available for this analysis, so the answer relies on published study claims rather than a direct data estimate.",
+        "text": "No usable dataset was found, so the analysis could not be run on data.",
         "cites": [
           "F-data"
         ]
       },
       {
-        "text": "Many of the strongest findings come from Texas percent-plan studies, which may not apply to public colleges in other states.",
+        "text": "The studies adjust for different sets of confounders, and some do not account for household income, parental education, or school type.",
         "cites": [
-          "sf272e034-effect",
-          "sebdf920a-effect",
-          "saa349baa-effect"
+          "F-factors",
+          "s79ddcc85-adjusted_for",
+          "sc9caf471-adjusted_for"
         ]
       }
     ]
   },
   "genie": "If only admissions officers had a magic decoder ring for school ratings—though I suspect they'd still ask for your essay about overcoming a challenge. Read the studies listed above to see what evidence exists, or look for a dataset that links individual high school ratings to public college admissions outcomes.",
-  "report": "# Do highly rated public schools help increase your admissions chances to public colleges?\n\n**Verdict:** ❓ Insufficient evidence\n\n## What the research and analysis found\n\nThere is not enough evidence to say whether attending a highly rated public high school increases your chances of admission to a public college. The available studies point in different directions: some find that being in the top 10% or attending a higher-quality school is linked to higher admission or enrollment, while others find no effect or even declines for some groups. [sf272e034-effect, sebdf920a-effect, saa349baa-effect, s1a202d50-effect] Because the best evidence is observational and the findings conflict, confidence in any single answer is very low.\n\n## Question (PECO)\n\n- **Population:** high school students applying to public colleges in the United States\n- **Exposure:** attending a public high school rated in the top 10% of schools in the state based on standardized test scores, graduation rates, and college readiness metrics\n- **Comparator:** attending a public high school rated in the bottom 50% of schools in the state\n- **Outcome:** being admitted to a public four-year college or university\n- **Time window:** not specified\n- **Estimand:** ATE, risk difference, deviations handled as received\n\n## Causal graph (DAG)\n\n- high_school_rating → college_admission: the question being tested\n- high_school_rating → college_readiness: cites sa55144bb-effect\n- college_readiness → college_admission: cites sfee6c091-effect\n- household_income → high_school_rating: assumed (no source)\n- household_income → college_admission: cites s3105df47-effect\n- parental_education → household_income: assumed (no source)\n- parental_education → college_admission: cites sb2ab86dc-effect\n- race_ethnicity → high_school_rating: assumed (no source)\n- race_ethnicity → college_admission: assumed (no source)\n- school_type → high_school_rating: assumed (no source)\n- school_type → college_admission: cites sdabb60c3-effect\n- college_application → college_admission: assumed (no source)\n- college_readiness → college_application: assumed (no source)\n- race_ethnicity → college_application: cites sc9caf471-effect\n\nTreated as exogenous (the model's judgment that nothing in the graph can cause it; no source): race_ethnicity, parental_education.\n\n## Key confounders\n\n- household_income\n- race_ethnicity\n- school_type\n\n## Evidence\n\n**Certainty:** very low (starts low: best evidence is observational; down one: best studies point in different directions (+, -, null))\n\nEvidence flow: 117 sources found → 109 studies after dedupe → 31 included (excluded: off_topic 35, wrong_exposure 19, wrong_population 19, wrong_outcome 3, not_a_study 2).\n\n- [Tracing the Effects of Guaranteed Admission through the College Process: Regression Discontinuity Evidence from the Texas 10% Plan.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3940449) — natural_experiment, 2014: students slightly above the 90th percentile had a 17 percentage point increase in admission probability at UT and a 4 percentage point increase at A&M\n- [In Transparency and Percent Plans (NBER Working Paper 32372)](https://www.nber.org/digest/202408/effects-texas-top-ten-percent-college-admissions-plan) — natural_experiment, 2024, known only from secondary sources: being in the top 10 percent raises the probability that a student will attend a flagship state university by 13.8 percentage points\n- [Minority Student Academic Performance under the Uniform Admission Law: Evidence from the University of Texas at Austin.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3579572) — cohort, 2010: effect not verified\n- [Match or mismatch? Automatic admissions and college preferences ...](https://www.nber.org/system/files/working_papers/w22559/w22559.pdf) — cohort, 2016: effect not verified\n- [High School Classmates and College Success.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3500972) — natural_experiment, 2009: effect not verified\n- [MINORITY HIGHER EDUCATION PIPLINE: CONSEQUNCES OF CHANGES IN COLLEGE ADMISSIONS POLICY IN TEXAS.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3471132) — natural_experiment, 2010: the uniform admission regime did not restore Hispanic and black representation at UT and TAMU even after four years\n- [School Choice, School Quality and Postsecondary Attainment.](https://www.nber.org/system/files/working_papers/w17438/w17438.pdf) — natural_experiment, 2014: lottery winners score 0.078 standard deviations higher on the Attainment Index\n- [Long-term health implications of school quality.](https://pmc.ncbi.nlm.nih.gov/articles/PMC4875819) — cohort, 2016: effect not verified\n- [Efficacy Versus Equity](http://users.nber.org/~cortesk/eepa2016.pdf) — natural_experiment, 2016: effect not verified\n- [Peer Quality and the Academic Benefits to Attending Better Schools](https://www.nber.org/system/files/working_papers/w22337/w22337.pdf) — natural_experiment, 2016: effect not verified\n- [Results of Texas’s Experiment in Increasing College Diversity](http://www.nber.org/digest/jun20/results-texass-experiment-increasing-college-diversity) — natural_experiment, 2020, known only from secondary sources: effect not verified\n- [Do bans on affirmative action hurt minority students? Evidence from ...](https://users.nber.org/~cortesk/econed2010.pdf) — natural_experiment, 2010: both freshmen retention and college graduation rates of lower-decile minority students declined after the change in admissions policies from affirmative action admissions to the Top 10% Plan\n- [Importance of High School Conditions for College Access](https://pathways.gseis.ucla.edu/publications/201307_HSConditionsRB.pdf) — cohort, 2013: Higher-income students, on the other hand, largely entered four-year colleges and universities, whether they had (84%) or had not (49%) completed an academic concentrator curriculum.\n- [Addressing Non-Financial Barriers to College Access and Success](https://www.nber.org/system/files/working_papers/w30054/w30054.pdf) — natural_experiment, 2020: selected students were more likely to take advanced courses, graduate from high school and enroll in college, with college-related gains mostly driven by Black students and Latino students\n- [School Accountability, Postsecondary Attainment and Earnings](https://www.nber.org/system/files/working_papers/w19444/w19444.pdf) — natural_experiment, 2013: Students in schools at risk of being rated Low-Performing were 28 more likely to pass the 10th grade math exam on time, acquired more math credits in high school (beyond a 10th grade level), and were more likely to graduate from high school on time. In the long-run, they had higher rates of postsecondary attainment and earnings.\n- [Apply Yourself: Racial and Ethnic Differences in College Application](https://users.nber.org/~cortesk/NBER_w21368_apply.pdf) — cohort, 2015: racial and ethnic gaps in application rates, particularly for Hispanic students, are not explained by differential levels of college readiness, high school quality, or information regarding college admissions\n- [Diversifying Society's Leaders? The Causal Effects of Admission to ...](https://www.nber.org/system/files/working_papers/w31492/revisions/w31492.rev0.pdf) — natural_experiment, 2023: effect not verified\n- [The Impact of the Texas Top 10 Percent Law on College Enrollment: A Regression Discontinuity Approach.](https://pmc.ncbi.nlm.nih.gov/articles/PMC4643283) — natural_experiment, 2010: The top 10 percent law affects flagship enrollment of Hispanic students eligible for the admission guarantee, as well as rank-eligible graduates from high schools where minority students predominate and from high schools with the state average share of economically disadvantaged students.\n- [The Long-Term Impacts of High-Quality Early Education](https://www.apa.org/pi/ses/resources/publications/education) — natural_experiment, 2011, known only from secondary sources: earned more, were more likely to attend college, saved more for retirement, and lived in better neighborhoods\n- [Public Universities, Equal Opportunity, and the Legacy of Jim Crow: Evidence from North Carolina](https://www.nber.org/system/files/working_papers/w21577/w21577.pdf) — cohort, 2015: Children of college graduates enjoy higher rates of entry into UNC and its most selective institutions than do those of less well educated parents\n- [Schools’ Effects on Longer-Term Outcomes](https://www.nber.org/system/files/working_papers/w34913/w34913.pdf) — cohort, 2023: high school quality matters for students’ probability of four-year college graduation and labor market earnings at age 30\n- [Does Your High School Impact Your College Admission Chances?](https://www.ivyscholars.com/does-your-high-school-impact-your-chances-of-college-admission) — other, year unknown, known only from secondary sources: effect not verified\n- [Addressing Non-Financial Barriers to College Access and Success](https://www.nber.org/system/files/working_papers/w30054/revisions/w30054.rev0.pdf) — other, 2022: persistence and graduation were flat or declining for minority students below the top decile, while the same outcomes were increasing for minority students in the top 10% (as well as for non-minority students throughout the distribution)\n- [High School Economic Composition and College Persistence.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3584632) — other, 2013: effect not verified\n- [How much of a factor is the ranking/quality of your child’s high school when it comes to college admission?](https://www.facebook.com/groups/collegeadmissionsexperts/posts/10162059822915087) — other, year unknown, known only from secondary sources: effect not verified\n- [High School GPAs and ACT Scores as Predictors of ...](https://www.luminafoundation.org/wp-content/uploads/2020/01/high-school-gpas.pdf) — other, 2013: school average ACT scores are significantly related to college enrollment and enrolling in a college with strong graduation rates\n- [Competitive Incentives: School Accountability and Student Achievement](https://conference.nber.org/confer/2004/hiedf04/deere.pdf) — other, 2004: effect not verified\n- [Public School Vs. Private School: How to Decide](https://toptieradmissions.com/public-school-vs-private-school-how-to-decide) — other, year unknown, known only from secondary sources: US public school students are admitted to top universities at a higher rate than private school students\n- [PUTTING SCHOOL SURVEYS TO THE TEST: DO THEY PREDICT SCHOOL EFFECTS ON LONGER-TERM OUTCOMES?](https://www.nber.org/system/files/working_papers/w33622/w33622.pdf) — other, 2024: A high school rated one standard deviation higher on surveys is estimated to increase on-time high school diploma receipt by 11 percentage points, on average\n- [PUTTING SCHOOL SURVEYS ...](https://www.nber.org/system/files/working_papers/w33622/revisions/w33622.rev0.pdf) — other, 2024: a one-standard deviation increase in school quality boosts test scores by 0.23 standard deviations of the student-level distribution, survey responses by 0.29 student-level standard deviations, and on-time enrollment at any college by 7 percentage points\n- [Do colleges look at high school ranking? Is it better to be top 10% at a normal school or top third …](https://www.facebook.com/groups/collegeadmissionsexperts/posts/10162427445455087) — other, year unknown, known only from secondary sources: effect not verified\n\n## Estimate\n\nNo estimate was computed for this question.\n\n## Limitations\n\n- The best available evidence is observational, so it cannot rule out that other differences between students or schools explain the results.\n- The studies point in different directions, with positive, negative, and null findings, which lowers confidence in any single conclusion.\n- No usable dataset was available for this analysis, so the answer relies on published study claims rather than a direct data estimate.\n- Many of the strongest findings come from Texas percent-plan studies, which may not apply to public colleges in other states. [sf272e034-effect, sebdf920a-effect, saa349baa-effect]\n\n## 🧞 Genie's aside\n\nIf only admissions officers had a magic decoder ring for school ratings—though I suspect they'd still ask for your essay about overcoming a challenge. Read the studies listed above to see what evidence exists, or look for a dataset that links individual high school ratings to public college admissions outcomes.\n\n## Sources\n\n- [sf272e034-effect] Fletcher 2014: \"individuals slightly above the threshold experienced an increase in the probability of admission by 17 percentage points at UT and 4 percentage points at A&M.\" — https://pmc.ncbi.nlm.nih.gov/articles/PMC3940449\n- [sebdf920a-effect] Kapor 2024: \"being in the top 10 percent raises the probability that a student will attend a flagship state university, identified as UT Austin and Texas A&M, by 13.8 percentage points\" — https://www.nber.org/digest/202408/effects-texas-top-ten-percent-college-admissions-plan\n- [saa349baa-effect] Harris 2010: \"the uniform admission regime did not restore Hispanic and black representation at UT and TAMU even after four years\" — https://pmc.ncbi.nlm.nih.gov/articles/PMC3471132\n- [s1a202d50-effect] Cortes 2010: \"The results show that both freshmen retention and college graduation rates of lower-decile minority students declined after the change in admissions policies from affirmative action admissions to the Top 10% Plan.\" — https://users.nber.org/~cortesk/econed2010.pdf\n\n---\n\nCausal Genie writes research summaries, not medical advice. Check with a qualified professional before acting on them.\n\nRun ID: `20261123-004849-e8bd5a`\n",
+  "report": "# Do highly rated public schools help increase your admissions chances to public colleges?\n\n**Verdict:** ❓ Insufficient evidence\n\n## What the research and analysis found\n\nThere is not enough evidence to say whether attending a highly rated public high school changes your chances of getting into a public college. The best studies point in different directions, with some finding positive effects, some finding no effect, and some finding negative effects, so confidence is very low. The sources describe a possible path from high school rating to college readiness to college admission, but a plausible path does not show how big the effect is or that it happens. The answer may depend on household income, parental education, and school type.\n\n## Question (PECO)\n\n- **Population:** high school students applying to public colleges in the United States\n- **Exposure:** attending a public high school rated in the top 10% of schools in the state based on standardized test scores, graduation rates, and college readiness metrics\n- **Comparator:** attending a public high school rated in the bottom 50% of schools in the state\n- **Outcome:** being admitted to a public four-year college or university\n- **Time window:** not specified\n- **Estimand:** ATE, risk difference, deviations handled as received\n\n## Causal graph (DAG)\n\n- high_school_rating → college_admission: the question being tested\n- high_school_rating → college_readiness: cites sa55144bb-effect\n- college_readiness → college_admission: cites sfee6c091-effect\n- household_income → high_school_rating: assumed (no source)\n- household_income → college_admission: cites s3105df47-effect\n- parental_education → household_income: assumed (no source)\n- parental_education → college_admission: cites sb2ab86dc-effect\n- race_ethnicity → high_school_rating: assumed (no source)\n- race_ethnicity → college_admission: assumed (no source)\n- school_type → high_school_rating: assumed (no source)\n- school_type → college_admission: cites sdabb60c3-effect\n- college_application → college_admission: assumed (no source)\n- college_readiness → college_application: assumed (no source)\n- race_ethnicity → college_application: cites sc9caf471-effect\n\nTreated as exogenous (the model's judgment that nothing in the graph can cause it; no source): race_ethnicity, parental_education.\n\n## Key confounders\n\n- household_income\n- race_ethnicity\n- school_type\n\n## Evidence\n\n**Certainty:** very low (starts low: best evidence is observational; down one: best studies point in different directions (+, -, null))\n\nEvidence flow: 117 sources found → 109 studies after dedupe → 31 included (excluded: off_topic 35, wrong_exposure 19, wrong_population 19, wrong_outcome 3, not_a_study 2).\n\n- [Tracing the Effects of Guaranteed Admission through the College Process: Regression Discontinuity Evidence from the Texas 10% Plan.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3940449) — natural_experiment, 2014: students slightly above the 90th percentile had a 17 percentage point increase in admission probability at UT and a 4 percentage point increase at A&M\n- [In Transparency and Percent Plans (NBER Working Paper 32372)](https://www.nber.org/digest/202408/effects-texas-top-ten-percent-college-admissions-plan) — natural_experiment, 2024, known only from secondary sources: being in the top 10 percent raises the probability that a student will attend a flagship state university by 13.8 percentage points\n- [Minority Student Academic Performance under the Uniform Admission Law: Evidence from the University of Texas at Austin.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3579572) — cohort, 2010: effect not verified\n- [Match or mismatch? Automatic admissions and college preferences ...](https://www.nber.org/system/files/working_papers/w22559/w22559.pdf) — cohort, 2016: effect not verified\n- [High School Classmates and College Success.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3500972) — natural_experiment, 2009: effect not verified\n- [MINORITY HIGHER EDUCATION PIPLINE: CONSEQUNCES OF CHANGES IN COLLEGE ADMISSIONS POLICY IN TEXAS.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3471132) — natural_experiment, 2010: the uniform admission regime did not restore Hispanic and black representation at UT and TAMU even after four years\n- [School Choice, School Quality and Postsecondary Attainment.](https://www.nber.org/system/files/working_papers/w17438/w17438.pdf) — natural_experiment, 2014: lottery winners score 0.078 standard deviations higher on the Attainment Index\n- [Long-term health implications of school quality.](https://pmc.ncbi.nlm.nih.gov/articles/PMC4875819) — cohort, 2016: effect not verified\n- [Efficacy Versus Equity](http://users.nber.org/~cortesk/eepa2016.pdf) — natural_experiment, 2016: effect not verified\n- [Peer Quality and the Academic Benefits to Attending Better Schools](https://www.nber.org/system/files/working_papers/w22337/w22337.pdf) — natural_experiment, 2016: effect not verified\n- [Results of Texas’s Experiment in Increasing College Diversity](http://www.nber.org/digest/jun20/results-texass-experiment-increasing-college-diversity) — natural_experiment, 2020, known only from secondary sources: effect not verified\n- [Do bans on affirmative action hurt minority students? Evidence from ...](https://users.nber.org/~cortesk/econed2010.pdf) — natural_experiment, 2010: both freshmen retention and college graduation rates of lower-decile minority students declined after the change in admissions policies from affirmative action admissions to the Top 10% Plan\n- [Importance of High School Conditions for College Access](https://pathways.gseis.ucla.edu/publications/201307_HSConditionsRB.pdf) — cohort, 2013: Higher-income students, on the other hand, largely entered four-year colleges and universities, whether they had (84%) or had not (49%) completed an academic concentrator curriculum.\n- [Addressing Non-Financial Barriers to College Access and Success](https://www.nber.org/system/files/working_papers/w30054/w30054.pdf) — natural_experiment, 2020: selected students were more likely to take advanced courses, graduate from high school and enroll in college, with college-related gains mostly driven by Black students and Latino students\n- [School Accountability, Postsecondary Attainment and Earnings](https://www.nber.org/system/files/working_papers/w19444/w19444.pdf) — natural_experiment, 2013: Students in schools at risk of being rated Low-Performing were 28 more likely to pass the 10th grade math exam on time, acquired more math credits in high school (beyond a 10th grade level), and were more likely to graduate from high school on time. In the long-run, they had higher rates of postsecondary attainment and earnings.\n- [Apply Yourself: Racial and Ethnic Differences in College Application](https://users.nber.org/~cortesk/NBER_w21368_apply.pdf) — cohort, 2015: racial and ethnic gaps in application rates, particularly for Hispanic students, are not explained by differential levels of college readiness, high school quality, or information regarding college admissions\n- [Diversifying Society's Leaders? The Causal Effects of Admission to ...](https://www.nber.org/system/files/working_papers/w31492/revisions/w31492.rev0.pdf) — natural_experiment, 2023: effect not verified\n- [The Impact of the Texas Top 10 Percent Law on College Enrollment: A Regression Discontinuity Approach.](https://pmc.ncbi.nlm.nih.gov/articles/PMC4643283) — natural_experiment, 2010: The top 10 percent law affects flagship enrollment of Hispanic students eligible for the admission guarantee, as well as rank-eligible graduates from high schools where minority students predominate and from high schools with the state average share of economically disadvantaged students.\n- [The Long-Term Impacts of High-Quality Early Education](https://www.apa.org/pi/ses/resources/publications/education) — natural_experiment, 2011, known only from secondary sources: earned more, were more likely to attend college, saved more for retirement, and lived in better neighborhoods\n- [Public Universities, Equal Opportunity, and the Legacy of Jim Crow: Evidence from North Carolina](https://www.nber.org/system/files/working_papers/w21577/w21577.pdf) — cohort, 2015: Children of college graduates enjoy higher rates of entry into UNC and its most selective institutions than do those of less well educated parents\n- [Schools’ Effects on Longer-Term Outcomes](https://www.nber.org/system/files/working_papers/w34913/w34913.pdf) — cohort, 2023: high school quality matters for students’ probability of four-year college graduation and labor market earnings at age 30\n- [Does Your High School Impact Your College Admission Chances?](https://www.ivyscholars.com/does-your-high-school-impact-your-chances-of-college-admission) — other, year unknown, known only from secondary sources: effect not verified\n- [Addressing Non-Financial Barriers to College Access and Success](https://www.nber.org/system/files/working_papers/w30054/revisions/w30054.rev0.pdf) — other, 2022: persistence and graduation were flat or declining for minority students below the top decile, while the same outcomes were increasing for minority students in the top 10% (as well as for non-minority students throughout the distribution)\n- [High School Economic Composition and College Persistence.](https://pmc.ncbi.nlm.nih.gov/articles/PMC3584632) — other, 2013: effect not verified\n- [How much of a factor is the ranking/quality of your child’s high school when it comes to college admission?](https://www.facebook.com/groups/collegeadmissionsexperts/posts/10162059822915087) — other, year unknown, known only from secondary sources: effect not verified\n- [High School GPAs and ACT Scores as Predictors of ...](https://www.luminafoundation.org/wp-content/uploads/2020/01/high-school-gpas.pdf) — other, 2013: school average ACT scores are significantly related to college enrollment and enrolling in a college with strong graduation rates\n- [Competitive Incentives: School Accountability and Student Achievement](https://conference.nber.org/confer/2004/hiedf04/deere.pdf) — other, 2004: effect not verified\n- [Public School Vs. Private School: How to Decide](https://toptieradmissions.com/public-school-vs-private-school-how-to-decide) — other, year unknown, known only from secondary sources: US public school students are admitted to top universities at a higher rate than private school students\n- [PUTTING SCHOOL SURVEYS TO THE TEST: DO THEY PREDICT SCHOOL EFFECTS ON LONGER-TERM OUTCOMES?](https://www.nber.org/system/files/working_papers/w33622/w33622.pdf) — other, 2024: A high school rated one standard deviation higher on surveys is estimated to increase on-time high school diploma receipt by 11 percentage points, on average\n- [PUTTING SCHOOL SURVEYS ...](https://www.nber.org/system/files/working_papers/w33622/revisions/w33622.rev0.pdf) — other, 2024: a one-standard deviation increase in school quality boosts test scores by 0.23 standard deviations of the student-level distribution, survey responses by 0.29 student-level standard deviations, and on-time enrollment at any college by 7 percentage points\n- [Do colleges look at high school ranking? Is it better to be top 10% at a normal school or top third …](https://www.facebook.com/groups/collegeadmissionsexperts/posts/10162427445455087) — other, year unknown, known only from secondary sources: effect not verified\n\n## Estimate\n\nNo estimate was computed for this question.\n\n## Limitations\n\n- The evidence is observational, and the best studies point in different directions, so certainty is very low.\n- No usable dataset was found, so the analysis could not be run on data.\n- The studies adjust for different sets of confounders, and some do not account for household income, parental education, or school type. [s79ddcc85-adjusted_for, sc9caf471-adjusted_for]\n\n## 🧞 Genie's aside\n\nIf only admissions officers had a magic decoder ring for school ratings—though I suspect they'd still ask for your essay about overcoming a challenge. Read the studies listed above to see what evidence exists, or look for a dataset that links individual high school ratings to public college admissions outcomes.\n\n## Sources\n\n- [s79ddcc85-adjusted_for] Dudovitz 2016: \"We examined the associations between potential HS quality measures and each academic outcome, after controlling for school (school size, school type, urbanicity, and region) and individual demographic covariates (age, gender, race/ethnicity, household income, parental level of education, family structure, home language).\" — https://pmc.ncbi.nlm.nih.gov/articles/PMC4875819\n- [sc9caf471-adjusted_for] Cortes 2015: \"We estimate racial and ethnic differences in the probability of applying to college, controlling for a student’s college readiness, high school quality, certainty of college admissions, and high school fixed effects.\" — https://users.nber.org/~cortesk/NBER_w21368_apply.pdf\n\n---\n\nCausal Genie writes research summaries, not medical advice. Check with a qualified professional before acting on them.\n\nRun ID: `20261123-164208-02aba0`\n",
   "llm_calls": [
     {
       "prompt_name": "route",
@@ -9567,9 +9563,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2005,
-      "tokens_out": 147,
-      "latency_s": 7.984942875002162,
+      "tokens_in": 1922,
+      "tokens_out": 148,
+      "latency_s": 9.134449834004045,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9581,9 +9577,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1897,
-      "tokens_out": 144,
-      "latency_s": 8.568037584002013,
+      "tokens_in": 2005,
+      "tokens_out": 147,
+      "latency_s": 7.984942875002162,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9609,107 +9605,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1953,
-      "tokens_out": 144,
-      "latency_s": 8.581788708994281,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1922,
-      "tokens_out": 148,
-      "latency_s": 9.134449834004045,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1670,
-      "tokens_out": 313,
-      "latency_s": 11.059899625004618,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1994,
       "tokens_out": 424,
       "latency_s": 14.371246750000864,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2052,
-      "tokens_out": 393,
-      "latency_s": 14.370585750002647,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1979,
-      "tokens_out": 154,
-      "latency_s": 7.191729290992953,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2036,
-      "tokens_out": 179,
-      "latency_s": 7.656449042013264,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 517,
-      "tokens_out": 108,
-      "latency_s": 5.181610917003127,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9724,6 +9622,34 @@
       "tokens_in": 799,
       "tokens_out": 29,
       "latency_s": 4.479078250005841,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1953,
+      "tokens_out": 144,
+      "latency_s": 8.581788708994281,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2052,
+      "tokens_out": 393,
+      "latency_s": 14.370585750002647,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9749,9 +9675,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2096,
-      "tokens_out": 404,
-      "latency_s": 12.058845416002441,
+      "tokens_in": 1670,
+      "tokens_out": 313,
+      "latency_s": 11.059899625004618,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 517,
+      "tokens_out": 108,
+      "latency_s": 5.181610917003127,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9763,9 +9703,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1899,
-      "tokens_out": 397,
-      "latency_s": 12.325058875008835,
+      "tokens_in": 1897,
+      "tokens_out": 144,
+      "latency_s": 8.568037584002013,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1979,
+      "tokens_out": 154,
+      "latency_s": 7.191729290992953,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9791,9 +9745,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2003,
-      "tokens_out": 139,
-      "latency_s": 6.535097208994557,
+      "tokens_in": 2036,
+      "tokens_out": 179,
+      "latency_s": 7.656449042013264,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9805,9 +9759,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1656,
-      "tokens_out": 285,
-      "latency_s": 9.713394584003254,
+      "tokens_in": 1899,
+      "tokens_out": 397,
+      "latency_s": 12.325058875008835,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9819,9 +9773,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1995,
-      "tokens_out": 327,
-      "latency_s": 10.792475250011194,
+      "tokens_in": 2096,
+      "tokens_out": 404,
+      "latency_s": 12.058845416002441,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9847,23 +9801,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1960,
-      "tokens_out": 427,
-      "latency_s": 12.352546582987998,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2004,
-      "tokens_out": 148,
-      "latency_s": 7.206932375003817,
+      "tokens_in": 1995,
+      "tokens_out": 327,
+      "latency_s": 10.792475250011194,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9889,37 +9829,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1992,
-      "tokens_out": 381,
-      "latency_s": 11.467070124999736,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 500,
-      "tokens_out": 46,
-      "latency_s": 6.804177416997845,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1886,
-      "tokens_out": 426,
-      "latency_s": 12.365277958990191,
+      "tokens_in": 1960,
+      "tokens_out": 427,
+      "latency_s": 12.352546582987998,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9945,9 +9857,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1924,
-      "tokens_out": 167,
-      "latency_s": 7.417858041997533,
+      "tokens_in": 1656,
+      "tokens_out": 285,
+      "latency_s": 9.713394584003254,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 500,
+      "tokens_out": 46,
+      "latency_s": 6.804177416997845,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -9959,37 +9885,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 2034,
-      "tokens_out": 144,
-      "latency_s": 7.473320874996716,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1916,
-      "tokens_out": 401,
-      "latency_s": 12.08274154200626,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1915,
+      "tokens_in": 2003,
       "tokens_out": 139,
-      "latency_s": 6.700503957996261,
+      "latency_s": 6.535097208994557,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1992,
+      "tokens_out": 381,
+      "latency_s": 11.467070124999736,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10015,9 +9927,135 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 2004,
+      "tokens_out": 148,
+      "latency_s": 7.206932375003817,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1886,
+      "tokens_out": 426,
+      "latency_s": 12.365277958990191,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 743,
+      "tokens_out": 153,
+      "latency_s": 9.634175583007163,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1916,
+      "tokens_out": 401,
+      "latency_s": 12.08274154200626,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 778,
+      "tokens_out": 46,
+      "latency_s": 6.741927625000244,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1924,
+      "tokens_out": 167,
+      "latency_s": 7.417858041997533,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 1872,
       "tokens_out": 471,
       "latency_s": 12.845824374991935,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 654,
+      "tokens_out": 28,
+      "latency_s": 6.995518916999572,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2034,
+      "tokens_out": 144,
+      "latency_s": 7.473320874996716,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1915,
+      "tokens_out": 139,
+      "latency_s": 6.700503957996261,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10052,20 +10090,6 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 743,
-      "tokens_out": 153,
-      "latency_s": 9.634175583007163,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -10080,76 +10104,6 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 778,
-      "tokens_out": 46,
-      "latency_s": 6.741927625000244,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 654,
-      "tokens_out": 28,
-      "latency_s": 6.995518916999572,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1906,
-      "tokens_out": 144,
-      "latency_s": 6.811505791993113,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1993,
-      "tokens_out": 158,
-      "latency_s": 7.380591916007688,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1547,
-      "tokens_out": 159,
-      "latency_s": 7.176351332993363,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -10158,48 +10112,6 @@
       "tokens_in": 2006,
       "tokens_out": 442,
       "latency_s": 12.400306125011411,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1999,
-      "tokens_out": 211,
-      "latency_s": 8.99626575000002,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1678,
-      "tokens_out": 360,
-      "latency_s": 10.88839537500462,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1890,
-      "tokens_out": 147,
-      "latency_s": 7.066658166004345,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10225,9 +10137,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1888,
-      "tokens_out": 146,
-      "latency_s": 6.8156641670066165,
+      "tokens_in": 1993,
+      "tokens_out": 158,
+      "latency_s": 7.380591916007688,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10239,9 +10151,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1682,
+      "tokens_in": 1906,
       "tokens_out": 144,
-      "latency_s": 6.949169792002067,
+      "latency_s": 6.811505791993113,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10253,23 +10165,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1971,
-      "tokens_out": 355,
-      "latency_s": 11.753222500003176,
+      "tokens_in": 1547,
+      "tokens_out": 159,
+      "latency_s": 7.176351332993363,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 740,
-      "tokens_out": 28,
-      "latency_s": 4.352425457997015,
+      "tokens_in": 1678,
+      "tokens_out": 360,
+      "latency_s": 10.88839537500462,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10295,9 +10207,121 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 1999,
+      "tokens_out": 211,
+      "latency_s": 8.99626575000002,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 740,
+      "tokens_out": 28,
+      "latency_s": 4.352425457997015,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1971,
+      "tokens_out": 355,
+      "latency_s": 11.753222500003176,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 774,
+      "tokens_out": 43,
+      "latency_s": 6.453101125007379,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 1879,
       "tokens_out": 403,
       "latency_s": 12.622454083000775,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 724,
+      "tokens_out": 73,
+      "latency_s": 6.2024641249881824,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1890,
+      "tokens_out": 147,
+      "latency_s": 7.066658166004345,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1682,
+      "tokens_out": 144,
+      "latency_s": 6.949169792002067,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1888,
+      "tokens_out": 146,
+      "latency_s": 6.8156641670066165,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10326,20 +10350,6 @@
       "tokens_in": 1945,
       "tokens_out": 137,
       "latency_s": 6.981379375007236,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 774,
-      "tokens_out": 43,
-      "latency_s": 6.453101125007379,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10402,14 +10412,14 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 724,
-      "tokens_out": 73,
-      "latency_s": 6.2024641249881824,
+      "tokens_in": 1896,
+      "tokens_out": 206,
+      "latency_s": 8.648467790990253,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10421,9 +10431,65 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1896,
-      "tokens_out": 206,
-      "latency_s": 8.648467790990253,
+      "tokens_in": 1968,
+      "tokens_out": 658,
+      "latency_s": 17.903675125009613,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 765,
+      "tokens_out": 127,
+      "latency_s": 7.224563459007186,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1976,
+      "tokens_out": 601,
+      "latency_s": 16.37538216599205,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 773,
+      "tokens_out": 127,
+      "latency_s": 7.559576500003459,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1951,
+      "tokens_out": 401,
+      "latency_s": 12.811662083986448,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10463,20 +10529,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1951,
-      "tokens_out": 401,
-      "latency_s": 12.811662083986448,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1829,
       "tokens_out": 389,
       "latency_s": 12.270713707999676,
@@ -10491,51 +10543,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1976,
-      "tokens_out": 601,
-      "latency_s": 16.37538216599205,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1968,
-      "tokens_out": 658,
-      "latency_s": 17.903675125009613,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1940,
-      "tokens_out": 182,
-      "latency_s": 7.415037625003606,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1978,
       "tokens_out": 502,
       "latency_s": 15.062184499998693,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 788,
+      "tokens_out": 29,
+      "latency_s": 4.88242550000723,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10575,51 +10599,79 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 788,
-      "tokens_out": 29,
-      "latency_s": 4.88242550000723,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 773,
-      "tokens_out": 127,
-      "latency_s": 7.559576500003459,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 765,
-      "tokens_out": 127,
-      "latency_s": 7.224563459007186,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 491,
       "tokens_out": 29,
       "latency_s": 5.238533833005931,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1940,
+      "tokens_out": 182,
+      "latency_s": 7.415037625003606,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1974,
+      "tokens_out": 441,
+      "latency_s": 13.59166741700028,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 824,
+      "tokens_out": 171,
+      "latency_s": 7.881069458002457,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1935,
+      "tokens_out": 468,
+      "latency_s": 14.568241000000853,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 846,
+      "tokens_out": 178,
+      "latency_s": 8.493366833004984,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10645,37 +10697,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1974,
-      "tokens_out": 441,
-      "latency_s": 13.59166741700028,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1935,
-      "tokens_out": 468,
-      "latency_s": 14.568241000000853,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1892,
       "tokens_out": 285,
       "latency_s": 10.92723116700654,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 748,
+      "tokens_out": 88,
+      "latency_s": 6.08550866600126,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10690,20 +10728,6 @@
       "tokens_in": 1557,
       "tokens_out": 147,
       "latency_s": 7.1933146249939455,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1558,
-      "tokens_out": 146,
-      "latency_s": 7.021691374990041,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10730,50 +10754,8 @@
       "user_content": "",
       "response": "",
       "tokens_in": 1558,
-      "tokens_out": 147,
-      "latency_s": 6.923205625003902,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 824,
-      "tokens_out": 171,
-      "latency_s": 7.881069458002457,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 748,
-      "tokens_out": 88,
-      "latency_s": 6.08550866600126,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 846,
-      "tokens_out": 178,
-      "latency_s": 8.493366833004984,
+      "tokens_out": 146,
+      "latency_s": 7.021691374990041,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10785,9 +10767,37 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1932,
-      "tokens_out": 144,
-      "latency_s": 7.257617416995345,
+      "tokens_in": 1558,
+      "tokens_out": 147,
+      "latency_s": 6.923205625003902,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1914,
+      "tokens_out": 432,
+      "latency_s": 13.36343750001106,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 741,
+      "tokens_out": 98,
+      "latency_s": 6.317982666005264,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10813,9 +10823,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1738,
-      "tokens_out": 142,
-      "latency_s": 7.569893874999252,
+      "tokens_in": 1932,
+      "tokens_out": 144,
+      "latency_s": 7.257617416995345,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10827,9 +10837,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1914,
-      "tokens_out": 432,
-      "latency_s": 13.36343750001106,
+      "tokens_in": 1738,
+      "tokens_out": 142,
+      "latency_s": 7.569893874999252,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10850,14 +10860,14 @@
       ]
     },
     {
-      "prompt_name": "extract",
+      "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1945,
-      "tokens_out": 144,
-      "latency_s": 7.219883583005867,
+      "tokens_in": 749,
+      "tokens_out": 28,
+      "latency_s": 4.303495959000429,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10878,14 +10888,14 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 741,
-      "tokens_out": 98,
-      "latency_s": 6.317982666005264,
+      "tokens_in": 1945,
+      "tokens_out": 144,
+      "latency_s": 7.219883583005867,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10925,9 +10935,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1633,
-      "tokens_out": 150,
-      "latency_s": 7.2985762499884,
+      "tokens_in": 1611,
+      "tokens_out": 174,
+      "latency_s": 7.916552583003067,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10939,23 +10949,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1611,
-      "tokens_out": 174,
-      "latency_s": 7.916552583003067,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 749,
-      "tokens_out": 28,
-      "latency_s": 4.303495959000429,
+      "tokens_in": 1633,
+      "tokens_out": 150,
+      "latency_s": 7.2985762499884,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -10995,23 +10991,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 292,
-      "tokens_out": 40,
-      "latency_s": 5.5599874170002295,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 356,
-      "tokens_out": 39,
-      "latency_s": 5.883396749995882,
+      "tokens_in": 413,
+      "tokens_out": 65,
+      "latency_s": 7.687313749993336,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11037,37 +11019,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 356,
+      "tokens_out": 39,
+      "latency_s": 5.883396749995882,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 389,
       "tokens_out": 67,
       "latency_s": 7.042043041001307,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 504,
-      "tokens_out": 90,
-      "latency_s": 7.163817583990749,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 413,
-      "tokens_out": 65,
-      "latency_s": 7.687313749993336,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11093,9 +11061,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 579,
-      "tokens_out": 118,
-      "latency_s": 8.426768459001323,
+      "tokens_in": 292,
+      "tokens_out": 40,
+      "latency_s": 5.5599874170002295,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11107,9 +11075,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 274,
-      "tokens_out": 38,
-      "latency_s": 4.575867958992603,
+      "tokens_in": 504,
+      "tokens_out": 90,
+      "latency_s": 7.163817583990749,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 579,
+      "tokens_out": 118,
+      "latency_s": 8.426768459001323,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11138,6 +11120,20 @@
       "tokens_in": 357,
       "tokens_out": 68,
       "latency_s": 6.085622500002501,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 274,
+      "tokens_out": 38,
+      "latency_s": 4.575867958992603,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11233,20 +11229,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 271,
-      "tokens_out": 38,
-      "latency_s": 5.7291594999987865,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 645,
       "tokens_out": 127,
       "latency_s": 7.225778542007902,
@@ -11261,9 +11243,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 346,
-      "tokens_out": 62,
-      "latency_s": 5.707479999997304,
+      "tokens_in": 271,
+      "tokens_out": 38,
+      "latency_s": 5.7291594999987865,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11284,6 +11266,20 @@
       ]
     },
     {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 346,
+      "tokens_out": 62,
+      "latency_s": 5.707479999997304,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
       "prompt_name": "research_plan",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -11292,6 +11288,34 @@
       "tokens_in": 2971,
       "tokens_out": 373,
       "latency_s": 13.32594033399073,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2044,
+      "tokens_out": 393,
+      "latency_s": 13.898167708990513,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 853,
+      "tokens_out": 29,
+      "latency_s": 5.38663949999318,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11345,37 +11369,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 1832,
+      "tokens_out": 454,
+      "latency_s": 15.809466167003848,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 2068,
       "tokens_out": 242,
       "latency_s": 10.282021499995608,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2044,
-      "tokens_out": 393,
-      "latency_s": 13.898167708990513,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1997,
-      "tokens_out": 383,
-      "latency_s": 14.172808542003622,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11401,51 +11411,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1907,
-      "tokens_out": 147,
-      "latency_s": 7.146423875004984,
+      "tokens_in": 1997,
+      "tokens_out": 383,
+      "latency_s": 14.172808542003622,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "extract",
+      "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1832,
-      "tokens_out": 454,
-      "latency_s": 15.809466167003848,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1752,
-      "tokens_out": 141,
-      "latency_s": 6.555243499999051,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2000,
-      "tokens_out": 198,
-      "latency_s": 7.8905011669994565,
+      "tokens_in": 831,
+      "tokens_out": 84,
+      "latency_s": 6.114595582999755,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11471,23 +11453,65 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 853,
-      "tokens_out": 29,
-      "latency_s": 5.38663949999318,
+      "tokens_in": 710,
+      "tokens_out": 157,
+      "latency_s": 8.037392082987935,
       "error": null,
       "finish_reasons": [
         "stop"
       ]
     },
     {
-      "prompt_name": "fix_quotes",
+      "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 831,
-      "tokens_out": 84,
-      "latency_s": 6.114595582999755,
+      "tokens_in": 1907,
+      "tokens_out": 147,
+      "latency_s": 7.146423875004984,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2000,
+      "tokens_out": 198,
+      "latency_s": 7.8905011669994565,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1752,
+      "tokens_out": 141,
+      "latency_s": 6.555243499999051,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1990,
+      "tokens_out": 363,
+      "latency_s": 11.8504597919964,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11536,14 +11560,28 @@
       ]
     },
     {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1795,
+      "tokens_out": 432,
+      "latency_s": 13.5428077079996,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
       "prompt_name": "fix_quotes",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 710,
-      "tokens_out": 157,
-      "latency_s": 8.037392082987935,
+      "tokens_in": 638,
+      "tokens_out": 46,
+      "latency_s": 5.635903041998972,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11555,9 +11593,23 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1990,
-      "tokens_out": 363,
-      "latency_s": 11.8504597919964,
+      "tokens_in": 2359,
+      "tokens_out": 624,
+      "latency_s": 18.20173329098907,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1139,
+      "tokens_out": 28,
+      "latency_s": 5.5813176249939715,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11597,20 +11649,6 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1795,
-      "tokens_out": 432,
-      "latency_s": 13.5428077079996,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1996,
       "tokens_out": 151,
       "latency_s": 7.860126165993279,
@@ -11628,6 +11666,20 @@
       "tokens_in": 1625,
       "tokens_out": 139,
       "latency_s": 7.088097749990993,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1911,
+      "tokens_out": 495,
+      "latency_s": 15.404164416002459,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11662,20 +11714,6 @@
       ]
     },
     {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 638,
-      "tokens_out": 46,
-      "latency_s": 5.635903041998972,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
       "prompt_name": "extract",
       "tier": "small",
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
@@ -11684,34 +11722,6 @@
       "tokens_in": 1638,
       "tokens_out": 143,
       "latency_s": 7.131249084006413,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2359,
-      "tokens_out": 624,
-      "latency_s": 18.20173329098907,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1660,
-      "tokens_out": 142,
-      "latency_s": 7.49436691601295,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11737,9 +11747,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1674,
-      "tokens_out": 147,
-      "latency_s": 7.872631624995847,
+      "tokens_in": 1660,
+      "tokens_out": 142,
+      "latency_s": 7.49436691601295,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11751,51 +11761,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1911,
-      "tokens_out": 495,
-      "latency_s": 15.404164416002459,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1139,
-      "tokens_out": 28,
-      "latency_s": 5.5813176249939715,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 432,
-      "tokens_out": 64,
-      "latency_s": 6.341197707995889,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "check_support",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 439,
-      "tokens_out": 93,
-      "latency_s": 6.690697957994416,
+      "tokens_in": 1674,
+      "tokens_out": 147,
+      "latency_s": 7.872631624995847,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11821,9 +11789,37 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 432,
+      "tokens_out": 64,
+      "latency_s": 6.341197707995889,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 512,
       "tokens_out": 93,
       "latency_s": 7.0665083339990815,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "check_support",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 439,
+      "tokens_out": 93,
+      "latency_s": 6.690697957994416,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11863,9 +11859,93 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
+      "tokens_in": 1975,
+      "tokens_out": 399,
+      "latency_s": 15.096974667001632,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 783,
+      "tokens_out": 54,
+      "latency_s": 5.547289791997173,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
       "tokens_in": 1883,
       "tokens_out": 185,
       "latency_s": 9.302477042001556,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1889,
+      "tokens_out": 344,
+      "latency_s": 12.72673208299966,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 2055,
+      "tokens_out": 334,
+      "latency_s": 13.06040058301005,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "fix_quotes",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 882,
+      "tokens_out": 82,
+      "latency_s": 6.454540334001649,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1930,
+      "tokens_out": 171,
+      "latency_s": 10.339767083001789,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -11905,121 +11985,9 @@
       "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
       "user_content": "",
       "response": "",
-      "tokens_in": 1930,
-      "tokens_out": 171,
-      "latency_s": 10.339767083001789,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1889,
-      "tokens_out": 344,
-      "latency_s": 12.72673208299966,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 2055,
-      "tokens_out": 334,
-      "latency_s": 13.06040058301005,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1975,
-      "tokens_out": 399,
-      "latency_s": 15.096974667001632,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
       "tokens_in": 1677,
       "tokens_out": 148,
       "latency_s": 7.860879541985923,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1931,
-      "tokens_out": 184,
-      "latency_s": 8.621832834003726,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 882,
-      "tokens_out": 82,
-      "latency_s": 6.454540334001649,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "fix_quotes",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 783,
-      "tokens_out": 54,
-      "latency_s": 5.547289791997173,
-      "error": null,
-      "finish_reasons": [
-        "stop"
-      ]
-    },
-    {
-      "prompt_name": "extract",
-      "tier": "small",
-      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
-      "user_content": "",
-      "response": "",
-      "tokens_in": 1841,
-      "tokens_out": 401,
-      "latency_s": 13.036257250001654,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12048,6 +12016,34 @@
       "tokens_in": 789,
       "tokens_out": 29,
       "latency_s": 6.444850625004619,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1931,
+      "tokens_out": 184,
+      "latency_s": 8.621832834003726,
+      "error": null,
+      "finish_reasons": [
+        "stop"
+      ]
+    },
+    {
+      "prompt_name": "extract",
+      "tier": "small",
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "user_content": "",
+      "response": "",
+      "tokens_in": 1841,
+      "tokens_out": 401,
+      "latency_s": 13.036257250001654,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12129,9 +12125,9 @@
       "model": "deepseek-ai/DeepSeek-V4-Pro-0813",
       "user_content": "",
       "response": "",
-      "tokens_in": 3097,
-      "tokens_out": 541,
-      "latency_s": 11.593788540994865,
+      "tokens_in": 3260,
+      "tokens_out": 381,
+      "latency_s": 6.666337874994497,
       "error": null,
       "finish_reasons": [
         "stop"
@@ -12160,53 +12156,53 @@
   "timings": [
     {
       "name": "route",
-      "started_at": "2026-11-23T00:48:49.408727Z",
-      "seconds": 6.5817
+      "started_at": "2026-11-23T16:42:08.930010Z",
+      "seconds": 0.000031
     },
     {
       "name": "frame",
-      "started_at": "2026-11-23T00:48:55.990455Z",
-      "seconds": 8.451552
+      "started_at": "2026-11-23T16:42:08.930045Z",
+      "seconds": 0.000016
     },
     {
       "name": "research",
-      "started_at": "2026-11-23T00:49:04.442034Z",
-      "seconds": 353.30631
+      "started_at": "2026-11-23T16:42:08.930063Z",
+      "seconds": 0.087643
     },
     {
       "name": "research round 1",
-      "started_at": "2026-11-23T00:49:04.442066Z",
-      "seconds": 205.477491
+      "started_at": "2026-11-23T16:42:08.930072Z",
+      "seconds": 0.033435
     },
     {
       "name": "research round 2",
-      "started_at": "2026-11-23T00:52:29.919688Z",
-      "seconds": 83.190421
+      "started_at": "2026-11-23T16:42:08.963518Z",
+      "seconds": 0.025603
     },
     {
       "name": "research round 3",
-      "started_at": "2026-11-23T00:53:53.110173Z",
-      "seconds": 64.637955
+      "started_at": "2026-11-23T16:42:08.989130Z",
+      "seconds": 0.028548
     },
     {
       "name": "dag",
-      "started_at": "2026-11-23T00:54:57.748429Z",
-      "seconds": 44.601296
+      "started_at": "2026-11-23T16:42:09.017710Z",
+      "seconds": 0.11978
     },
     {
       "name": "data",
-      "started_at": "2026-11-23T00:55:42.349798Z",
-      "seconds": 46.662353
+      "started_at": "2026-11-23T16:42:09.137560Z",
+      "seconds": 0.05822
     },
     {
       "name": "report",
-      "started_at": "2026-11-23T00:56:29.013202Z",
-      "seconds": 11.597948
+      "started_at": "2026-11-23T16:42:09.196166Z",
+      "seconds": 6.667367
     },
     {
       "name": "genie",
-      "started_at": "2026-11-23T00:56:40.611184Z",
-      "seconds": 1.791045
+      "started_at": "2026-11-23T16:42:15.863566Z",
+      "seconds": 0.000301
     }
   ]
 }
