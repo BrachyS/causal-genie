@@ -11,6 +11,7 @@ Nodes:
 - Include the exposure → outcome edge with `claim_ids: []`. It is the question being tested, not a fact to cite: the evidence for and against it is reported separately.
 - Add a node only if it matters for this question: a common cause of exposure and outcome (confounder), a step between them (mediator), or a common effect that someone might wrongly adjust for (collider). Prefer variables the claims name, e.g. ones studies adjusted for.
 - Also add the main other causes of the outcome that a dataset on this question is likely to record, each with an arrow into the outcome only, e.g. `day_of_week`, `holiday`, `season` and `year` for daily birth counts, or age for a disease. Adjusting for them makes the estimate more precise. Do not draw an arrow from them into the exposure unless they really cause it.
+- When you cite a claim for an edge, name its nodes after what the quote actually measures. If the quote is about shark presence near beaches, not shark attacks, add a `shark_presence` node (`season -> shark_presence -> shark_attacks`) instead of citing it for `season -> shark_attacks`.
 - Keep the graph small: at most about 12 nodes.
 
 Exogenous nodes:
@@ -21,6 +22,7 @@ Exogenous nodes:
 Citations:
 - `claim_ids` lists the ids of claims whose quote supports that edge, copied exactly from the input. Cite only ids that appear in the input; never invent one.
 - If no claim supports an edge but domain knowledge says it belongs, include it with `claim_ids: []`. It will be shown as "assumed". An honest assumed edge is better than a weak citation.
-- A study adjusting for a variable supports that the variable may affect the outcome; it does not show the direction or size of any effect.
+- A study that adjusted for, matched on or balanced a variable does not show that the variable causes anything: do not cite it for an edge. If you still think the edge belongs, include it with `claim_ids: []`.
+- Cite a claim only if its quote says the source affects the target in that direction. A quote saying the target drives the source supports the reverse edge, not this one.
 
 Do not give effect sizes, a verdict or any other text: only the edges and the exogenous list.

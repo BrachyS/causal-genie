@@ -283,6 +283,22 @@ class SupportCheck(Schema):
     judgments: list[SupportJudgment]
 
 
+EdgeSupport = Literal["supports", "reverse", "related_only", "irrelevant"]
+
+
+class EdgeJudgment(Schema):
+    pair_id: str
+    reason: str  # one line, written before the label, so a dropped citation can be audited
+    support: EdgeSupport
+
+
+class EdgeCheck(Schema):
+    """The model's verdict on whether each cited quote says source affects target, in that
+    direction (one call per DAG build)."""
+
+    judgments: list[EdgeJudgment]
+
+
 class DagEdge(Schema):
     source: str
     target: str

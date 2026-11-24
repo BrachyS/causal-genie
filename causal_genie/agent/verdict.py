@@ -44,27 +44,57 @@ def pick_verdict(state: RunState) -> Verdict:
     return "published_only"
 
 
+def cited_edges(state: RunState) -> list[tuple[str, str]]:
+    """Edges that cite a `documented` claim (quote found and judged to support). An assumed
+    edge is the model's guess, and the question edge is the hypothesis, so neither counts."""
+    documented = {c.id for c in state.claims if c.status == "documented"}
+    return [
+        (e.source, e.target) for e in state.edges if documented & {*e.claim_ids} and not e.question
+    ]
+
+
+def cited_paths(state: RunState) -> list[list[str]]:
+    """Every path of cited edges from the exposure to the outcome (through mediators): the
+    sources describe how the exposure could act, which is not proof that it does."""
+    if state.query is None:
+        return []
+    x, y = state.query.exposure.name, state.query.outcome.name
+    graph = nx.DiGraph(cited_edges(state))
+    if x not in graph or y not in graph:
+        return []
+    return sorted(nx.all_simple_paths(graph, x, y))
+
+
+def outcome_factors(state: RunState) -> list[str]:
+    """Other things checked sources say drive the outcome (product, store), so the answer may
+    depend on them. Nodes on a cited path from the exposure and shared causes are left out:
+    the report names those in their own entries."""
+    if state.query is None:
+        return []
+    x, y = state.query.exposure.name, state.query.outcome.name
+    named = {n for p in cited_paths(state) for n in p} | {*common_causes(state), x}
+    return sorted({s for s, t in cited_edges(state) if t == y and s not in named})
+
+
 def common_causes(state: RunState) -> list[str]:
     """Nodes that checked sources say drive both the exposure and the outcome, directly or
     through other nodes (hot weather -> beach crowds -> shark bites), when no included study
     (trial or observational, not news of one) tests the link itself.
 
-    Paths use only cited edges and never pass through the exposure. An
-    edge counts only if it cites a `documented` claim (quote found and judged to support):
-    an assumed edge is the model's guess, not evidence. Any direct study rules this out, since
-    real effects have confounders too and then the studies speak for themselves."""
+    Paths use only cited edges (`cited_edges`) and never pass through the exposure. A cited
+    path from the exposure to the outcome rules it out: the sources then say the exposure may
+    matter, so the link is not explained away. Any direct study rules it out too, since real
+    effects have confounders as well and then the studies speak for themselves."""
     if state.query is None:
         return []
     if any(studies_the_link(s) for s in state.studies):
         return []
-    documented = {c.id for c in state.claims if c.status == "documented"}
+    if paths := cited_paths(state):
+        log.info("common causes: none, cited paths from the exposure: %s", paths)
+        return []
     x, y = state.query.exposure.name, state.query.outcome.name
-    cited = nx.DiGraph()
-    cited.add_edges_from(
-        (e.source, e.target)
-        for e in state.edges
-        if documented & {*e.claim_ids} and e.source != x  # a path through x is not a backdoor
-    )
+    # A path through x is not a backdoor.
+    cited = nx.DiGraph([(s, t) for s, t in cited_edges(state) if s != x])
     if x not in cited or y not in cited:
         return []
     both = sorted(nx.ancestors(cited, x) & nx.ancestors(cited, y))

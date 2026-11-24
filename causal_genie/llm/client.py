@@ -121,8 +121,12 @@ class LLMClient:
             "user_chars": len(user_content),
         }
         with log_step("llm", **inputs) as rec:
+            earlier = self._answered(prompt_name, user_content)
             if self.openai is None:
                 call = self._replayed(prompt_name, user_content)
+            elif earlier is not None:
+                log.info("prompt %s: same input as an earlier call; answer reused", prompt_name)
+                call = earlier
             else:
                 call = self._live(tier, prompt_name, user_content, schema)
             # Recorded before validating, so a failed call still shows its tokens and output.
@@ -136,6 +140,14 @@ class LLMClient:
                 ) from e
             rec["output"] = output.model_dump()
             return output
+
+    def _answered(self, prompt_name: str, user_content: str) -> LLMCall | None:
+        """An earlier successful call in this run with the same prompt and input. Replay keeps
+        one answer per (prompt, input), so a run must not record two different ones."""
+        for c in self.calls:
+            if (c.prompt_name, c.user_content) == (prompt_name, user_content) and not c.error:
+                return c
+        return None
 
     def _replayed(self, prompt_name: str, user_content: str) -> LLMCall:
         """The recorded call for this prompt and input; a miss is an error, not a live call."""

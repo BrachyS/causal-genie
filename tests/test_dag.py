@@ -2,12 +2,13 @@ import json
 from typing import cast
 
 import pytest
-from conftest import proposal
+from conftest import edge_check, proposal
 from tavily import TavilyClient
 
 from causal_genie.agent.state import DagEdge, ResearchPlan, ResearchRound, RunState
 from causal_genie.agent.steps import dag
 from causal_genie.agent.steps.dag import break_cycles, build_dag, run_dag
+from causal_genie.agent.verdict import common_causes, pick_verdict
 from causal_genie.llm.client import PROMPTS_DIR
 from causal_genie.tools.derive import DATE_RULES
 from causal_genie.tools.metadata import EuropePMC
@@ -22,6 +23,11 @@ def edge(source: str, target: str, *claim_ids: str) -> DagEdge:
     return DagEdge(source=source, target=target, claim_ids=list(claim_ids))
 
 
+def all_support(pairs: int) -> str:
+    """Edge-check output judging every one of `pairs` pairs `supports` (keeps all citations)."""
+    return edge_check(*((f"p{n}", "supports") for n in range(1, pairs + 1)))
+
+
 QUESTION_EDGE = DagEdge(source=QUESTION[0], target=QUESTION[1], claim_ids=[], question=True)
 
 
@@ -34,7 +40,8 @@ def test_edges_cite_ledger_claims_from_the_large_model(
             proposal(
                 ("licorice_gargle", "sore_throat", ["c1"]),
                 ("smoking", "sore_throat", ["s1-adjusted_for"]),
-            )
+            ),
+            all_support(1),
         ]
     )
 
@@ -58,7 +65,8 @@ def test_edge_citing_an_unknown_claim_is_marked_assumed(
             proposal(
                 ("age", "sore_throat", ["c1", "c99"]),
                 ("smoking", "sore_throat", ["c42"]),
-            )
+            ),
+            all_support(1),
         ]
     )
 
@@ -121,7 +129,8 @@ def test_a_null_result_claim_never_supports_an_edge(
             proposal(
                 ("smoking", "sore_throat", ["s1-adjusted_for", "c-null"]),
                 ("age", "sore_throat", ["c-null"]),
-            )
+            ),
+            all_support(1),
         ]
     )
 
@@ -157,7 +166,8 @@ def test_near_copy_of_exposure_name_is_logged(make_llm, sample_state: RunState, 
             proposal(
                 ("licorice_gargling", "sore_throat", ["c1"]),
                 ("sore_throat_severity", "sore_throat", []),
-            )
+            ),
+            all_support(1),
         ]
     )
 
@@ -266,11 +276,13 @@ def test_uncited_edge_goes_back_to_research_and_the_graph_is_rebuilt(
                 ("smoking", "licorice_gargle", ["c1"]),
                 ("smoking", "sore_throat", []),
             ),
+            all_support(1),
             proposal(
                 (*QUESTION, ["c1"]),
                 ("smoking", "licorice_gargle", ["c1"]),
                 ("smoking", "sore_throat", ["s1-adjusted_for"]),
             ),
+            all_support(2),
         ]
     )
     asked: list[list[str]] = []
@@ -509,3 +521,150 @@ def test_uncited_edges_out_of_the_exposure_run_no_round(
     run_dag(researched, llm, *tools)
 
     assert gaps_asked == []
+
+
+# --- T12.6: each cited claim must support its edge in that direction (model judges) ---
+
+BF_EDGES = (
+    ("black_friday_shopping", "money_saved", []),
+    ("impulse_buying", "black_friday_shopping", ["s2d880bcd-effect"]),
+    ("impulse_buying", "money_saved", ["sb019ac42-effect"]),
+    ("retailer_pricing_strategy", "pre_black_friday_price_inflation", ["s20f9a845-effect"]),
+)
+# Pairs are numbered in (source, target, claim id) order:
+# p1 impulse_buying -> black_friday_shopping, p2 impulse_buying -> money_saved,
+# p3 retailer_pricing_strategy -> pre_black_friday_price_inflation.
+
+
+def cited(edges: list[DagEdge]) -> dict[tuple[str, str], list[str]]:
+    """Each edge's cited claim ids, keyed by (source, target)."""
+    return {(e.source, e.target): e.claim_ids for e in edges}
+
+
+def test_edge_check_keeps_only_claims_that_support_the_edge_in_its_direction(
+    make_llm, black_friday_state: RunState, step_logs
+) -> None:
+    llm, _ = make_llm(
+        [
+            proposal(*BF_EDGES),
+            edge_check(("p1", "reverse"), ("p2", "related_only"), ("p3", "supports")),
+        ]
+    )
+
+    edges = cited(build_dag(black_friday_state, llm))
+
+    assert edges[("impulse_buying", "black_friday_shopping")] == []  # quote: discounts drive it
+    assert edges[("impulse_buying", "money_saved")] == []  # quote: deal-chasing, no direction
+    assert edges[("retailer_pricing_strategy", "pre_black_friday_price_inflation")] == [
+        "s20f9a845-effect"
+    ]
+    assert "s2d880bcd-effect" in step_logs.text and "reverse" in step_logs.text
+    assert "sb019ac42-effect" in step_logs.text and "related_only" in step_logs.text
+
+
+def test_black_friday_impulse_buying_is_no_longer_a_common_cause(
+    make_llm, black_friday_state: RunState
+) -> None:
+    llm, _ = make_llm(
+        [
+            proposal(*BF_EDGES),
+            edge_check(("p1", "reverse"), ("p2", "related_only"), ("p3", "supports")),
+        ]
+    )
+
+    black_friday_state.edges = build_dag(black_friday_state, llm)
+
+    assert common_causes(black_friday_state) == []
+    assert pick_verdict(black_friday_state) == "insufficient"
+
+
+def test_without_the_drops_black_friday_still_gives_the_wrong_common_cause(
+    make_llm, black_friday_state: RunState
+) -> None:
+    """Control for the test above: if the model judged both pairs `supports`, the old wrong
+    verdict comes back, so the fixture really reproduces the PR #5 bug."""
+    llm, _ = make_llm(
+        [
+            proposal(*BF_EDGES),
+            edge_check(("p1", "supports"), ("p2", "supports"), ("p3", "supports")),
+        ]
+    )
+
+    black_friday_state.edges = build_dag(black_friday_state, llm)
+
+    assert common_causes(black_friday_state) == ["impulse_buying"]
+    assert pick_verdict(black_friday_state) == "common_cause"
+
+
+def test_edge_check_runs_on_the_large_tier_with_each_pair_and_its_quote(
+    make_llm, black_friday_state: RunState
+) -> None:
+    llm, fake = make_llm(
+        [
+            proposal(*BF_EDGES),
+            edge_check(("p1", "reverse"), ("p2", "related_only"), ("p3", "supports")),
+        ]
+    )
+
+    build_dag(black_friday_state, llm)
+
+    request = fake.requests[1]
+    assert request["model"] == "test/large"
+    sent = request["messages"][1]["content"]
+    assert "Pair p1: impulse_buying -> black_friday_shopping" in sent
+    assert "thereby driving impulsive buying behavior" in sent
+    assert "Pair p3: retailer_pricing_strategy -> pre_black_friday_price_inflation" in sent
+    assert "black_friday_shopping -> money_saved" not in sent  # the question edge cites nothing
+
+
+def test_a_pair_the_model_skips_is_dropped_and_logged(
+    make_llm, black_friday_state: RunState, step_logs
+) -> None:
+    llm, _ = make_llm([proposal(*BF_EDGES), edge_check(("p1", "supports"), ("p3", "supports"))])
+
+    edges = cited(build_dag(black_friday_state, llm))
+
+    assert edges[("impulse_buying", "money_saved")] == []
+    assert edges[("impulse_buying", "black_friday_shopping")] == ["s2d880bcd-effect"]
+    assert "p2" in step_logs.text and "skipped" in step_logs.text
+
+
+def test_no_cited_claims_makes_no_edge_check_call(make_llm, black_friday_state: RunState) -> None:
+    llm, fake = make_llm(
+        [proposal(("black_friday_shopping", "money_saved", []), ("age", "money_saved", []))]
+    )
+
+    build_dag(black_friday_state, llm)
+
+    assert len(fake.requests) == 1
+
+
+def test_pairs_are_sent_in_the_same_order_whatever_the_edge_order(
+    make_llm, black_friday_state: RunState
+) -> None:
+    """Replay finds a recorded call by its exact input, so the input must not depend on the
+    order the model listed its edges in."""
+    judged = edge_check(("p1", "supports"), ("p2", "supports"), ("p3", "supports"))
+    sent = []
+    for edges in (BF_EDGES, tuple(reversed(BF_EDGES))):
+        llm, fake = make_llm([proposal(*edges), judged])
+        build_dag(black_friday_state, llm)
+        sent.append(fake.requests[1]["messages"][1]["content"])
+
+    assert sent[0] == sent[1]
+
+
+def test_edges_dropped_into_an_exogenous_node_are_not_checked(
+    make_llm, black_friday_state: RunState
+) -> None:
+    edges = (*BF_EDGES, ("retailer_pricing_strategy", "age", ["s20f9a845-effect"]))
+    llm, fake = make_llm(
+        [
+            proposal(*edges, exogenous=("age",)),
+            edge_check(("p1", "supports"), ("p2", "supports"), ("p3", "supports")),
+        ]
+    )
+
+    build_dag(black_friday_state, llm)
+
+    assert "-> age" not in fake.requests[1]["messages"][1]["content"]

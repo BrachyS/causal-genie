@@ -523,8 +523,68 @@ def test_comparison_is_dropped_when_no_estimate_was_computed(sample_state, make_
     assert prose.comparison == [] and len(prose.summary) == 1
 
 
+def test_a_cited_path_from_the_exposure_gives_the_report_a_path_entry(sample_state) -> None:
+    """Question 6 (Nov 22): the graph showed rating -> readiness -> admission with sources,
+    but the report never said so, so readers asked why the solid arrows did not count."""
+    sample_state.edges[0].question = True
+    sample_state.edges += [
+        DagEdge(source="licorice_gargle", target="mucosa", claim_ids=["c1"]),
+        DagEdge(source="mucosa", target="sore_throat", claim_ids=["c1"]),
+    ]
+
+    entry = ledger_entries(sample_state)["F-path"]
+
+    assert "licorice_gargle → mucosa → sore_throat" in entry
+    assert "not proof" in entry
+
+
+def test_no_cited_path_means_no_path_entry(sample_state) -> None:
+    sample_state.edges[0].question = True
+
+    assert "F-path" not in ledger_entries(sample_state)
+
+
+def test_cited_causes_of_the_outcome_give_the_report_a_factors_entry(sample_state) -> None:
+    """Black Friday (Nov 23): sources said savings depend on product and store, but the
+    summary only said "insufficient", although "it depends on what and where" is the answer."""
+    sample_state.edges[0].question = True
+    sample_state.edges += [
+        DagEdge(source="dose", target="sore_throat", claim_ids=["c1"]),
+        DagEdge(source="age", target="sore_throat", claim_ids=["c1"]),
+        DagEdge(source="smoking", target="sore_throat", claim_ids=[]),  # assumed: not a factor
+    ]
+
+    entry = ledger_entries(sample_state)["F-factors"]
+
+    assert "age, dose" in entry
+    assert "smoking" not in entry
+
+
+def test_path_nodes_are_not_listed_as_factors(sample_state) -> None:
+    sample_state.edges[0].question = True
+    sample_state.edges += [
+        DagEdge(source="licorice_gargle", target="mucosa", claim_ids=["c1"]),
+        DagEdge(source="mucosa", target="sore_throat", claim_ids=["c1"]),
+    ]
+
+    assert "F-factors" not in ledger_entries(sample_state)
+
+
+def test_shared_causes_are_not_listed_as_factors(sample_state) -> None:
+    sample_state.studies[0].secondary_only = True
+    sample_state.edges[0].question = True
+    sample_state.edges += [
+        DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
+        DagEdge(source="temperature", target="sore_throat", claim_ids=["c1"]),
+    ]
+    sample_state.verdict = "common_cause"
+
+    assert "F-factors" not in ledger_entries(sample_state)
+
+
 def test_common_cause_verdict_gives_the_report_its_shared_causes(sample_state) -> None:
     sample_state.studies[0].secondary_only = True
+    sample_state.edges[0].question = True  # as in real runs: the hypothesis, not cited evidence
     sample_state.edges += [
         DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
         DagEdge(source="temperature", target="sore_throat", claim_ids=["c1"]),
