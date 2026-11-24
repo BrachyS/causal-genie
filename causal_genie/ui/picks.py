@@ -4,9 +4,12 @@ A rule picks the question, not a model: the shown question with the most votes, 
 oldest, among those on the board for at least a day (`MIN_AGE`), so every question gets a full
 day of votes however late GitHub starts the job. Each night the GitHub Action runs
 `python -m causal_genie.ui.picks run`: it answers up to `n` questions, exports each answer to
-`gallery/` with a `pick.json`, and writes a PR body for the user to review. A partial or
-non-causal run marks the question `skipped` and the next candidate gets a try, at most 2 tries
-per slot. The question stays `running` until its PR is merged (U18 marks it answered).
+`gallery/` with a `pick.json`, and writes a PR body for the user to review. A run the model
+couldn't finish, or a non-causal one, marks the question `skipped` and the next candidate gets
+a try, at most 2 tries per slot. A run stopped by a service (LLM API, web search, HTTP) is not
+the question's fault: the question goes back on the board and the night ends with the job
+failed, since every other candidate would fail too. The question stays `running` until its PR
+is merged (U18 marks it answered).
 
 Question text comes from strangers. It only travels through Python and files here; the
 workflow never puts it on a shell line.
@@ -102,6 +105,11 @@ def no_genie(q: Question) -> str | None:
     return None
 
 
+def service_failure(state: RunState) -> bool:
+    """True if a service stopped the run (API, HTTP, search), not the model's output."""
+    return state.failure is not None and not state.failure.startswith("ModelOutputError")
+
+
 def skip_reason(state: RunState) -> str | None:
     """Why a run can't be tonight's answer, or None if it can."""
     if state.failure is not None:
@@ -126,6 +134,8 @@ def nightly(
     """
     cutoff = board_db.now() - MIN_AGE
     candidates = [q for q in rank(board_db.board(db)) if q.created_at <= cutoff]
+    if not candidates:
+        log.info("nightly: no shown question is at least %s old; nothing to answer", MIN_AGE)
     picks: list[Pick] = []
     failed = False
     for slot in range(n):
@@ -141,6 +151,12 @@ def nightly(
                 log.exception("nightly: run for question %d crashed", q.id)
                 board_db.set_status(db, q.id, "shown", reason="run crashed; back on the board")
                 raise
+            if service_failure(state):
+                log.error("nightly: question %d hit a service failure: %s", q.id, state.failure)
+                board_db.set_status(
+                    db, q.id, "shown", reason=f"service failure, back on the board: {state.failure}"
+                )
+                return Nightly(picks=picks, failed=True)
             reason = skip_reason(state)
             if reason:
                 log.warning("nightly: question %d skipped: %s", q.id, reason)

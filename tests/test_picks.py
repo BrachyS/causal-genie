@@ -74,7 +74,7 @@ class FakeRuns:
     """Stands in for a live run: saves a finished, partial or non-causal run per question."""
 
     def __init__(self, outcomes: dict[str, str]) -> None:
-        self.outcomes = outcomes  # question -> "ok" | "partial" | "not_causal"
+        self.outcomes = outcomes  # question -> "ok" | "partial" | "down" | "not_causal"
         self.asked: list[str] = []
 
     def __call__(self, question: str, runs_dir: Path) -> RunState:
@@ -83,7 +83,9 @@ class FakeRuns:
         state = RunState(run_id=f"run-{len(self.asked)}", question=question)
         state.verdict = "not_causal" if outcome == "not_causal" else "published_only"
         if outcome == "partial":
-            state.verdict, state.failure = None, "APIError: provider down"
+            state.verdict, state.failure = None, "ModelOutputError: no valid plan"
+        if outcome == "down":
+            state.verdict, state.failure = None, "APIStatusError: 402 Payment Required"
         state.save(runs_dir)
         return state
 
@@ -156,6 +158,20 @@ def test_two_failures_leave_the_slot_empty_and_fail_the_job(db, tmp_path) -> Non
         "skipped",
         "shown",
     ]
+
+
+def test_a_service_failure_puts_the_question_back_and_stops(db, tmp_path) -> None:
+    first = _shown(db, "Does coffee cause headaches?", votes=3)
+    second = _shown(db, "Does tea cause calm?", votes=1)
+    runs = FakeRuns({"Does coffee cause headaches?": "down"})
+
+    night = _nightly(db, tmp_path, runs, n=2)
+
+    assert runs.asked == ["Does coffee cause headaches?"]  # the next would hit the same outage
+    assert night.picks == [] and night.failed
+    back = board_db.get_question(db, first)
+    assert back.status == "shown" and "402" in (back.reason or "")
+    assert board_db.get_question(db, second).status == "shown"
 
 
 def test_n_answers_up_to_n_questions(db, tmp_path) -> None:
