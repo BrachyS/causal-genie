@@ -11,7 +11,12 @@ from causal_genie.agent.state import (
     Route,
     RunState,
 )
-from causal_genie.agent.verdict import common_causes, pick_verdict, unmeasured_confounders
+from causal_genie.agent.verdict import (
+    cited_paths,
+    common_causes,
+    pick_verdict,
+    unmeasured_confounders,
+)
 
 
 def node(name: str, *columns: str) -> NodeMapping:
@@ -200,6 +205,7 @@ def spurious(researched: RunState) -> RunState:
     blog.design, blog.strategy, blog.peco_match = "other", "other", "indirect"
     blog.secondary_only = True
     researched.certainty = certainty(researched.studies)
+    researched.edges[0].question = True  # as in real runs: the hypothesis, not cited evidence
     researched.edges += [
         DagEdge(source="temperature", target="licorice_gargle", claim_ids=["c1"]),
         DagEdge(source="temperature", target="sore_throat", claim_ids=["c1"]),
@@ -257,6 +263,43 @@ def test_a_chain_with_an_assumed_link_does_not_count(spurious: RunState) -> None
     ]
 
     assert common_causes(spurious) == []
+
+
+def test_a_cited_path_from_the_exposure_to_the_outcome_rules_out_common_cause(spurious) -> None:
+    """Question 6 (Nov 22): family income drove both school rating and admission, but cited
+    edges also ran rating -> academic preparation -> admission. Evidence that the exposure
+    acts through a mediator is not "explained by a common cause"."""
+    spurious.edges += [
+        DagEdge(source="licorice_gargle", target="mucosa", claim_ids=["c1"]),
+        DagEdge(source="mucosa", target="sore_throat", claim_ids=["c1"]),
+    ]
+
+    assert common_causes(spurious) == []
+    assert pick_verdict(spurious) == "insufficient"
+
+
+def test_cited_paths_lists_each_path_from_the_exposure_to_the_outcome(spurious) -> None:
+    spurious.edges += [
+        DagEdge(source="licorice_gargle", target="mucosa", claim_ids=["c1"]),
+        DagEdge(source="mucosa", target="sore_throat", claim_ids=["c1"]),
+        DagEdge(source="licorice_gargle", target="cough", claim_ids=["c1"]),
+        DagEdge(source="cough", target="sore_throat", claim_ids=[]),  # assumed: not a path
+    ]
+
+    assert cited_paths(spurious) == [["licorice_gargle", "mucosa", "sore_throat"]]
+
+
+def test_the_question_edge_is_not_a_cited_path(spurious) -> None:
+    assert cited_paths(spurious) == []
+
+
+def test_a_path_from_the_exposure_with_an_assumed_link_keeps_common_cause(spurious) -> None:
+    spurious.edges += [
+        DagEdge(source="licorice_gargle", target="mucosa", claim_ids=["c1"]),
+        DagEdge(source="mucosa", target="sore_throat", claim_ids=[]),
+    ]
+
+    assert common_causes(spurious) == ["temperature"]
 
 
 @pytest.mark.parametrize("design", ["RCT", "cohort"])

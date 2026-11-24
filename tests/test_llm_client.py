@@ -113,6 +113,19 @@ def test_replay_returns_recorded_output_without_api(make_llm, prompts_dir) -> No
         replay.complete("small", "echo", "a new question", Answer)
 
 
+def test_a_repeated_call_in_a_run_reuses_the_first_answer(make_llm) -> None:
+    """Replay keys answers by (prompt, input), so one run must not record two answers to the
+    same call: D4's DAG was built twice with the same edge-check input and got two labels."""
+    llm, fake = make_llm(['{"value": 7}', '{"value": 8}'])
+
+    first = llm.complete("small", "echo", "same input", Answer)
+    second = llm.complete("small", "echo", "same input", Answer)
+
+    assert first == second == Answer(value=7)
+    assert len(fake.requests) == 1
+    assert [c.response for c in llm.calls] == ['{"value": 7}', '{"value": 7}']
+
+
 def test_load_models_maps_tier_to_model_id() -> None:
     models = load_models()
 
@@ -123,8 +136,8 @@ def test_load_models_maps_tier_to_model_id() -> None:
 def test_each_tier_uses_its_own_token_cap(make_llm) -> None:
     llm, fake = make_llm(['{"value": 7}', '{"value": 7}'])
 
-    llm.complete("small", "echo", "q", Answer)
-    llm.complete("large", "echo", "q", Answer)
+    llm.complete("small", "echo", "q1", Answer)
+    llm.complete("large", "echo", "q2", Answer)
 
     caps = load_max_tokens()
     assert [r["max_tokens"] for r in fake.requests] == [caps["small"], caps["large"]]
@@ -181,6 +194,7 @@ def test_no_thinking_prompts_come_from_models_yaml() -> None:
         "genie_gate",
         "board_check",
         "genie_pick",
+        "check_edge",
     }
 
 

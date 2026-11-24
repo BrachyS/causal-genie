@@ -13,7 +13,12 @@ import re
 
 from causal_genie.agent.certainty import design_tier, evidence_flow
 from causal_genie.agent.state import ReportDraft, RunState, Sentence, Verdict
-from causal_genie.agent.verdict import common_causes, unmeasured_confounders
+from causal_genie.agent.verdict import (
+    cited_paths,
+    common_causes,
+    outcome_factors,
+    unmeasured_confounders,
+)
 from causal_genie.llm.client import LLMClient
 
 log = logging.getLogger(__name__)
@@ -393,6 +398,17 @@ def ledger_entries(state: RunState) -> dict[str, str]:
         entries["F-common-cause"] = (
             "No included trial or observational study tests this link; checked sources name "
             f"causes of both the exposure and the outcome: {', '.join(common_causes(state))}"
+        )
+    if paths := cited_paths(state):
+        entries["F-path"] = (
+            "Checked sources describe how the exposure could act on the outcome: "
+            + "; ".join(" → ".join(p) for p in paths)
+            + ". Each arrow cites a checked quote, but a plausible path is not proof of an effect"
+        )
+    if factors := outcome_factors(state):
+        entries["F-factors"] = (
+            f"Checked sources say these also affect the outcome: {', '.join(factors)}. "
+            "The answer may depend on them"
         )
     if lacking := unmeasured_confounders(state):
         entries["F-unmeasured"] = (

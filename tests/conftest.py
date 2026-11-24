@@ -352,3 +352,80 @@ def proposal(*edges: tuple[str, str, list[str]], exogenous: tuple[str, ...] = ()
             "exogenous": list(exogenous),
         }
     )
+
+
+def edge_check(*judgments: tuple[str, str]) -> str:
+    """Edge-check model output with the given (pair_id, support) judgments."""
+    return json.dumps(
+        {"judgments": [{"pair_id": p, "reason": "test", "support": s} for p, s in judgments]}
+    )
+
+
+def bf_claim(claim_id: str, title: str, quote: str) -> Claim:
+    """A documented effect claim from the Black Friday run (`20261120-182237-e1edf4`)."""
+    return Claim(
+        id=claim_id,
+        text=f"{title}: effect = {quote}",
+        kind="effect_estimate",
+        study_id=claim_id.split("-")[0],
+        quote=quote,
+        result_id=None,
+        status="documented",
+        grounding="quote_found",
+        support="supports",
+    )
+
+
+@pytest.fixture
+def black_friday_state() -> RunState:
+    """The Black Friday question with three cited claims from its saved run (PR #5).
+
+    Two were cited for the edges that made `impulse_buying` a false common cause: one supports
+    only the reverse arrow, one only links deal-chasing to spending. The third supports
+    `retailer_pricing_strategy -> pre_black_friday_price_inflation` in its own direction.
+    """
+    query = CausalQuery(
+        population="shoppers in the US",
+        exposure=Variable(
+            name="black_friday_shopping", definition="making purchases on Black Friday"
+        ),
+        comparator="buying the same items on other days",
+        outcome=Variable(
+            name="money_saved",
+            definition="the difference in total spending between Black Friday purchases and the "
+            "same items purchased at non-Black Friday prices",
+        ),
+        time_window="the holiday shopping season",
+        target="ATE",
+        effect_scale="mean_difference",
+        deviation_strategy="as_assigned",
+        ambiguities=[],
+    )
+    claims = [
+        bf_claim(
+            "s2d880bcd-effect",
+            "A comprehensive study on factors influencing online impulse buying behavior",
+            "Economic benefits, particularly those manifested through price pressure such as "
+            "discounts and flash sales, have a profound influence on consumer excitement and "
+            "arousal, thereby driving impulsive buying behavior",
+        ),
+        bf_claim(
+            "sb019ac42-effect",
+            "The Black Friday Paradox: Americans Spend More to Save More",
+            "Nearly three-quarters (71%) admit to spending more overall to secure a deal, rising "
+            "to 84% among 25- to 34-year-olds, compared with 64% of those aged 65 and over",
+        ),
+        bf_claim(
+            "s20f9a845-effect",
+            "Do stores raise prices just before Black Friday?",
+            "Some retailers have been documented raising prices weeks before Black Friday, then "
+            "advertising discounts based on inflated amounts.",
+        ),
+    ]
+    return RunState(
+        run_id="bf",
+        question="Does shopping on Black Friday save you money?",
+        route=Route(kind="causal", run_id=None, reason="asks about an effect", causal_rewrite=None),
+        query=query,
+        claims=claims,
+    )

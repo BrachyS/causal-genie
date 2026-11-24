@@ -3,7 +3,7 @@
     {
       "case": "D0",
       "expected": "estimated",
-      "run_id": "20261116-035018-2056c9",
+      "run_id": "20261122-214205-3fceb1",
       "verdict": "estimated",
       "verdict_ok": true,
       "failure": null,
@@ -31,11 +31,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 142159,
-        "tokens_out": 29226,
-        "calls": 110,
-        "llm_s": 266.7,
-        "wall_s": 107
+        "tokens_in": 142874,
+        "tokens_out": 29303,
+        "calls": 111,
+        "llm_s": 271.5,
+        "wall_s": 8
       },
       "replay_verdict": "estimated",
       "replay_ok": true,
@@ -44,7 +44,7 @@
     {
       "case": "D1",
       "expected": "estimated",
-      "run_id": "20261115-212135-098533",
+      "run_id": "20261122-214132-3124b6",
       "verdict": "estimated",
       "verdict_ok": true,
       "failure": null,
@@ -69,11 +69,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 165141,
-        "tokens_out": 29046,
+        "tokens_in": 165281,
+        "tokens_out": 28857,
         "calls": 118,
-        "llm_s": 433.7,
-        "wall_s": 126
+        "llm_s": 429.2,
+        "wall_s": 18
       },
       "replay_verdict": "estimated",
       "replay_ok": true,
@@ -82,7 +82,7 @@
     {
       "case": "D3",
       "expected": "estimated",
-      "run_id": "20261116-041958-17a0ce",
+      "run_id": "20261123-003854-ae3bb7",
       "verdict": "estimated",
       "verdict_ok": true,
       "failure": null,
@@ -107,11 +107,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 299611,
-        "tokens_out": 34241,
-        "calls": 203,
-        "llm_s": 548.4,
-        "wall_s": 278
+        "tokens_in": 300929,
+        "tokens_out": 34559,
+        "calls": 204,
+        "llm_s": 591.6,
+        "wall_s": 52
       },
       "replay_verdict": "estimated",
       "replay_ok": true,
@@ -120,18 +120,18 @@
     {
       "case": "D4",
       "expected": "study_plan",
-      "run_id": "20261116-042447-932f43",
+      "run_id": "20261122-214640-1849fa",
       "verdict": "study_plan",
       "verdict_ok": true,
       "failure": null,
       "key_studies": "0/0",
       "key_studies_missing": [],
       "grounding": {
-        "quoted": 47,
-        "quote_found": 46,
-        "checked": 45,
-        "supports": 28,
-        "partial": 6
+        "quoted": 38,
+        "quote_found": 37,
+        "checked": 36,
+        "supports": 22,
+        "partial": 4
       },
       "unsupported_numbers": [],
       "forbidden": [],
@@ -145,11 +145,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 309496,
-        "tokens_out": 35555,
-        "calls": 211,
-        "llm_s": 950.7,
-        "wall_s": 247
+        "tokens_in": 319761,
+        "tokens_out": 35067,
+        "calls": 212,
+        "llm_s": 525.6,
+        "wall_s": 63
       },
       "replay_verdict": "study_plan",
       "replay_ok": true,
@@ -158,7 +158,7 @@
     {
       "case": "D5",
       "expected": "published_only",
-      "run_id": "20261116-040252-3c80cf",
+      "run_id": "20261123-164253-dfba0e",
       "verdict": "published_only",
       "verdict_ok": true,
       "failure": null,
@@ -183,11 +183,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 188394,
-        "tokens_out": 32156,
-        "calls": 153,
-        "llm_s": 414.1,
-        "wall_s": 153
+        "tokens_in": 191770,
+        "tokens_out": 33255,
+        "calls": 155,
+        "llm_s": 464.5,
+        "wall_s": 20
       },
       "replay_verdict": "published_only",
       "replay_ok": true,
@@ -196,7 +196,7 @@
     {
       "case": "D6",
       "expected": "common_cause",
-      "run_id": "20261117-172931-b755cb",
+      "run_id": "20261123-164313-3e8768",
       "verdict": "common_cause",
       "verdict_ok": true,
       "failure": null,
@@ -223,11 +223,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 323607,
-        "tokens_out": 39801,
-        "calls": 243,
-        "llm_s": 1286.8,
-        "wall_s": 423
+        "tokens_in": 327871,
+        "tokens_out": 41718,
+        "calls": 244,
+        "llm_s": 1932.7,
+        "wall_s": 25
       },
       "replay_verdict": "common_cause",
       "replay_ok": true,
@@ -236,18 +236,18 @@
     {
       "case": "G1",
       "expected": "published_only",
-      "run_id": "20261116-042914-72c267",
+      "run_id": "20261123-003622-5d4918",
       "verdict": "published_only",
       "verdict_ok": true,
       "failure": null,
       "key_studies": "2/2",
       "key_studies_missing": [],
       "grounding": {
-        "quoted": 120,
-        "quote_found": 119,
-        "checked": 119,
-        "supports": 86,
-        "partial": 11
+        "quoted": 111,
+        "quote_found": 111,
+        "checked": 111,
+        "supports": 79,
+        "partial": 10
       },
       "unsupported_numbers": [],
       "forbidden": [],
@@ -261,11 +261,11 @@
       },
       "dag_problems": [],
       "cost": {
-        "tokens_in": 261795,
-        "tokens_out": 44847,
-        "calls": 176,
-        "llm_s": 681.7,
-        "wall_s": 218
+        "tokens_in": 298972,
+        "tokens_out": 47860,
+        "calls": 196,
+        "llm_s": 985.5,
+        "wall_s": 136
       },
       "replay_verdict": "published_only",
       "replay_ok": true,
@@ -276,5 +276,5 @@
     "live": "7/7",
     "replay": "7/7"
   },
-  "judge_tokens": 3530
+  "judge_tokens": 3602
 }

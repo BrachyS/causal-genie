@@ -18,6 +18,13 @@ such as `season -> full_moon` cannot turn a calendar factor into a fake confound
 them stay; a name not in the graph is logged and ignored. The nodes and the dropped edges are
 kept in the run state, so the report can show them as the model's assumption.
 
+A claim backing its own quote does not make it evidence for an arrow: "discounts drive impulse
+buying" supports `discounts -> impulse_buying`, not the reverse. So the large model (reasoning
+off) judges every remaining (edge, cited claim) pair in one call, and the harness keeps a claim
+on an edge only if it `supports` that direction. Reversed, direction-free or skipped pairs are
+dropped and logged, so the edge may become assumed and no longer counts as evidence (e.g. for a
+common cause).
+
 The harness then makes the graph a DAG: each cycle loses its weakest-evidence edge. An edge
 with no citation out of a cause of the exposure (a possible backdoor path or instrument) sends
 research back for one more round if rounds are left; every other uncited edge stays assumed.
@@ -28,7 +35,7 @@ import logging
 import networkx as nx
 from rapidfuzz import fuzz
 
-from causal_genie.agent.state import Claim, DagEdge, DagProposal, RunState
+from causal_genie.agent.state import Claim, DagEdge, DagProposal, EdgeCheck, RunState
 from causal_genie.agent.steps.research import MAX_ROUNDS, research_gaps
 from causal_genie.llm.client import LLMClient
 from causal_genie.tools.metadata import EuropePMC
@@ -133,6 +140,48 @@ def drop_into_exogenous(
     return found, kept, dropped
 
 
+def check_edges(edges: list[DagEdge], claims: dict[str, Claim], llm: LLMClient) -> list[DagEdge]:
+    """The edges keeping only the claims whose quote says source -> target in that direction.
+
+    The model judges each (edge, claim) pair; the harness drops (and logs) every pair not
+    judged `supports`, including pairs the model skipped. Pairs are numbered in sorted order,
+    so the call's input, and so its replay, does not depend on the order of the edges.
+    """
+    pairs = sorted((e.source, e.target, i) for e in edges for i in e.claim_ids)
+    if not pairs:
+        return edges
+    ids = {f"p{n}": pair for n, pair in enumerate(pairs, 1)}
+    user = "\n\n".join(
+        f"Pair {pid}: {s} -> {t}\nClaim {i}: {claims[i].text}\nQuote: {claims[i].quote}"
+        for pid, (s, t, i) in ids.items()
+    )
+    check = llm.complete("large", "check_edge", user, EdgeCheck)
+    judged = {ids[j.pair_id]: j for j in check.judgments if j.pair_id in ids}
+    if unknown := [j.pair_id for j in check.judgments if j.pair_id not in ids]:
+        log.warning("edge check judged unknown pairs %s; ignored", unknown)
+    if skipped := [pid for pid, pair in ids.items() if pair not in judged]:
+        log.warning("edge check skipped pairs %s; their claims are dropped", skipped)
+    kept = []
+    for e in edges:
+        verdicts = {i: judged.get((e.source, e.target, i)) for i in e.claim_ids}
+        dropped = {
+            i: (j.support, j.reason) if j else ("skipped", "")
+            for i, j in verdicts.items()
+            if j is None or j.support != "supports"
+        }
+        if dropped:
+            log.warning(
+                "edge %s -> %s: claims do not support it in this direction; dropped %s",
+                e.source,
+                e.target,
+                dropped,
+            )
+        kept.append(
+            e.model_copy(update={"claim_ids": [i for i in e.claim_ids if i not in dropped]})
+        )
+    return kept
+
+
 def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
     """Edges for the question's DAG, each citing documented ledger claims or marked assumed.
 
@@ -197,6 +246,7 @@ def build_dag(state: RunState, llm: LLMClient) -> list[DagEdge]:
     state.exogenous, edges, state.exogenous_dropped = drop_into_exogenous(
         edges, proposed.exogenous, question
     )
+    edges = check_edges(edges, {c.id: c for c in citable}, llm)
     edges = break_cycles(edges, question)
     log.info("dag: %d edges, %d assumed", len(edges), sum(e.assumed for e in edges))
     return edges
