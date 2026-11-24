@@ -141,7 +141,9 @@ def show(state: RunState) -> None:
         st.subheader("Causal graph")
         st.caption(
             "Purple arrow with ?: the question being tested (the answer is above, not the arrow)"
-            " · solid: backed by a cited source · dashed: assumed, no source"
+            " · solid: backed by a cited source · dashed: assumed, no source."
+            " Boxes: purple = the question's cause and effect · green = from the research"
+            " (on at least one cited arrow) · grey, dashed = the model's own idea, no source"
         )
         st.graphviz_chart(dag_dot(state.edges))
         with st.expander("What backs each arrow"):
