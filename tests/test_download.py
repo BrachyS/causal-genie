@@ -274,3 +274,137 @@ def test_fetcher_replay_checks_the_cached_file(make_http, tmp_path: Path) -> Non
     Path(d.path).unlink()
     with pytest.raises(FileNotFoundError, match="re-record"):
         replay.download(CSV_URL, tmp_path, doi=None, license=None)
+
+
+# --- Repository files (T14.1, T14.2): formats from file names, storage redirects, records ---
+
+DATAVERSE_FILE = "https://dataverse.harvard.edu/api/access/datafile/4461133"
+FIGSHARE_FILE = "https://ndownloader.figshare.com/files/69927615"
+FIGSHARE_STORAGE = (
+    "https://44c1cec316ec56bca76dfd65d2882b20.r2.cloudflarestorage.com/figshare-com-storage/"
+    "69927615/growth_form_raw.csv?X-Amz-Signature=abc"
+)
+DATAVERSE_STORAGE = "https://dvn-cloud-iqss.s3.amazonaws.com/10.7910/DVN/SAWC6M/1784b4f3baf?sig=1"
+
+
+def test_file_url_without_extension_uses_the_format_from_its_name(
+    make_http, tmp_path: Path
+) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content=b"a\tb\n1\t2\n"))
+
+    d = download(
+        DATAVERSE_FILE, http, tmp_path, doi="10.7910/DVN/SAWC6M", license=None, suffix=".tsv"
+    )
+
+    assert Path(d.path).suffix == ".tsv"
+    assert d.doi == "10.7910/DVN/SAWC6M"
+
+
+@pytest.mark.parametrize("suffix", [".sav", None])
+def test_file_url_with_a_non_data_or_unknown_format_is_rejected(
+    make_http, tmp_path: Path, suffix: str | None
+) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, content=BODY))
+
+    with pytest.raises(DownloadRejected, match="format"):
+        download(DATAVERSE_FILE, http, tmp_path, doi=None, license=None, suffix=suffix)
+    assert seen == []
+
+
+@pytest.mark.parametrize(
+    ("start", "storage"),
+    [(FIGSHARE_FILE, FIGSHARE_STORAGE), (DATAVERSE_FILE, DATAVERSE_STORAGE)],
+)
+def test_redirect_to_the_repository_storage_bucket_is_followed(
+    make_http, tmp_path: Path, start: str, storage: str
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == start:
+            return httpx.Response(302, headers={"location": storage})
+        return httpx.Response(200, content=BODY)
+
+    http, seen = make_http(handler)
+
+    assert download(start, http, tmp_path, doi=None, license=None, suffix=".csv").bytes == len(BODY)
+    assert len(seen) == 2
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://44c1cec316ec56bca76dfd65d2882b20.r2.cloudflarestorage.com/other-bucket/x.csv",
+        "https://other.r2.cloudflarestorage.com/figshare-com-storage/x.csv",
+        "https://another-bucket.s3.amazonaws.com/x.csv",
+    ],
+)
+def test_other_storage_buckets_are_not_allowlisted(url: str) -> None:
+    assert allowlisted(url) is False
+
+
+def test_peek_follows_allowlisted_redirects_and_uses_the_given_format(make_http) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == DATAVERSE_FILE:
+            return httpx.Response(303, headers={"location": DATAVERSE_STORAGE})
+        return httpx.Response(200, content=b"a\tb\n1\t2\n")
+
+    http, seen = make_http(handler)
+
+    assert peek_columns(DATAVERSE_FILE, http, suffix=".tsv") == ["a", "b"]
+    assert len(seen) == 2
+
+
+def test_peek_rejects_a_redirect_off_the_allowlist(make_http) -> None:
+    http, seen = make_http(
+        lambda r: httpx.Response(302, headers={"location": "https://evil.example/t.csv"})
+    )
+
+    with pytest.raises(DownloadRejected, match="allowlist"):
+        peek_columns(CSV_URL, http)
+    assert len(seen) == 1
+
+
+ZENODO_API = "https://zenodo.org/api/records/7826073"
+ZENODO_RECORD = {
+    "id": 7826073,
+    "doi": "10.5281/zenodo.7826073",
+    "metadata": {"title": "Cloud trails", "license": {"id": "cc-by-4.0"}},
+    "files": [{"key": "fig8_data.csv", "size": 626}],
+}
+
+
+def test_fetcher_records_and_replays_a_repository_record(make_http, no_dns) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, json=ZENODO_RECORD))
+    live = dl.Fetcher(http)
+
+    files = live.record("https://zenodo.org/records/7826073")
+
+    assert [f.name for f in files or []] == ["fig8_data.csv"]
+    assert [str(r.url) for r in seen] == [ZENODO_API]
+    assert [(c.kind, c.url) for c in live.calls] == [("record", ZENODO_API)]
+    replay = dl.Fetcher.from_replay(live.calls)
+    assert replay.record("https://doi.org/10.5281/zenodo.7826073") == files
+
+
+def test_fetcher_record_of_a_non_record_link_makes_no_request(make_http) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, json={}))
+
+    assert dl.Fetcher(http).record("https://osf.io/xdpz5/") is None
+    assert seen == []
+
+
+def test_fetcher_records_a_failed_record_lookup_and_replays_it(make_http) -> None:
+    http, _ = make_http(lambda r: httpx.Response(410))
+    live = dl.Fetcher(http)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        live.record("https://zenodo.org/records/7826073")
+
+    assert live.calls[0].error_type == "http"
+    with pytest.raises(httpx.HTTPError):
+        dl.Fetcher.from_replay(live.calls).record("https://zenodo.org/records/7826073")
+
+
+def test_peek_drops_a_byte_order_mark(make_http) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content="\ufeffsite,year\n1,2\n".encode()))
+
+    assert peek_columns(CSV_URL, http) == ["site", "year"]

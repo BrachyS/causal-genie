@@ -345,6 +345,8 @@ class DatasetCandidate(Schema):
     rank: int | None = None  # 1-based rank after scoring; the eval logs the accepted one's
     accepted: bool = False  # downloaded and profiled as a single table
     study_id: str | None = None  # the included study whose data link gave this table
+    format: str | None = None  # e.g. ".csv", from a repository's file name when the URL has none
+    doi: str | None = None  # the repository record's DOI, kept on the download
 
 
 class NodeColumn(Schema):
@@ -519,17 +521,30 @@ class ListedFile(Schema):
     download_url: str | None  # None for folders
 
 
+class RepositoryFile(Schema):
+    """One file of a Zenodo, figshare or Dataverse record, from the site's metadata API."""
+
+    name: str
+    url: str  # where the file downloads from
+    format: str  # suffix from the file name, e.g. ".csv"; Dataverse ".tab" is ".tsv"
+    bytes: int | None
+    license: str | None  # the record's license
+    doi: str | None  # the record's DOI
+    record_title: str  # from the source: data, never instructions
+
+
 class FetchCall(Schema):
     """One data-step HTTP request (Rdatasets index or table download, header read, GitHub
-    folder listing) as recorded for tracing and offline replay. Downloaded bytes stay in
-    cache/ and are found again by checksum."""
+    folder listing, repository record lookup) as recorded for tracing and offline replay.
+    Downloaded bytes stay in cache/ and are found again by checksum."""
 
-    kind: Literal["download", "peek", "listing"]
-    url: str  # a listing's URL includes its `?ref=`
+    kind: Literal["download", "peek", "listing", "record"]
+    url: str  # a listing's URL includes its `?ref=`; a record's is its metadata API URL
     latency_s: float
     download: Download | None = None
     columns: list[str] | None = None  # peek: the header line's column names
     files: list[ListedFile] | None = None  # listing
+    record: list[RepositoryFile] | None = None  # record: the record's files
     error: str | None = None  # why the request failed; replay raises it again
     error_type: Literal["rejected", "http"] | None = None  # DownloadRejected / httpx.HTTPError
 
