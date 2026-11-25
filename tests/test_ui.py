@@ -237,6 +237,17 @@ def test_app_shows_a_saved_run(ui_state, tmp_path, monkeypatch) -> None:
     assert [m.value for m in at.metric][:3] == ["1", "1", "1"]  # found → deduped → included
 
 
+def test_short_answer_states_the_answer_before_the_verdict(ui_state, tmp_path, monkeypatch):
+    save(ui_state, tmp_path, "20261102-000000-bbbbbb")
+    at = app(tmp_path, monkeypatch, run="20261102-000000-bbbbbb")
+
+    texts = [m.value for m in at.markdown]
+    start = texts.index("#### Short answer")
+    first = ui_state.prose.summary[0].text.split()[0]
+    assert first in texts[start + 1]  # the summary's answer sentence, in plain words
+    assert "✅ Estimated from data" in texts[start + 2]  # then the verdict and what it means
+
+
 def test_no_tabs_and_no_dropdown_the_ask_box_heads_the_page(ui_state, tmp_path, monkeypatch):
     save(ui_state, tmp_path / "runs", "20261102-000000-bbbbbb")
     url = f"sqlite:///{tmp_path / 'board.db'}"

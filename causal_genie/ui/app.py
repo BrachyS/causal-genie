@@ -88,13 +88,14 @@ def prose(
 
 
 def short_answer(state: RunState, entries: dict[str, str], cites: dict[str, Citation]) -> None:
-    """The verdict, what it means, and the summary's first sentence, which states the answer."""
+    """The summary's first sentence, which states the answer in plain words, then the verdict
+    and what it means."""
     assert state.verdict is not None
     with st.container(border=True):
         st.markdown("#### Short answer")
-        st.markdown(f"**{VERDICT_LABELS[state.verdict]}** — {VERDICT_MEANINGS[state.verdict]}")
         if state.prose is not None and state.prose.summary:
             st.markdown(cited(state.prose.summary[:1], entries, cites), unsafe_allow_html=True)
+        st.markdown(f"**{VERDICT_LABELS[state.verdict]}** — {VERDICT_MEANINGS[state.verdict]}")
         with st.expander("What the verdicts mean"):
             st.markdown(verdict_guide(state.verdict))
 
