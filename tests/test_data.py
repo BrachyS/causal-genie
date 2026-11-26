@@ -257,7 +257,7 @@ def test_other_links_are_kept_for_the_rule_filter(http) -> None:
     client, _ = http
 
     (c,) = resolve_link(
-        "https://zenodo.org/records/1",
+        "https://osf.io/xdpz5/",
         "search",
         "t",
         "",
@@ -265,7 +265,120 @@ def test_other_links_are_kept_for_the_rule_filter(http) -> None:
         fetcher=dl.Fetcher(client),
     )
 
-    assert c.url == "https://zenodo.org/records/1"
+    assert c.url == "https://osf.io/xdpz5/"
+
+
+# --- Repository records → files (T14.1, T14.2) ---
+
+REPOS = FIXTURES / "repositories"
+ZENODO_API = "https://zenodo.org/api/records/7826073"
+DATAVERSE_API = (
+    "https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/SAWC6M"
+)
+DATAVERSE_FILE = "https://dataverse.harvard.edu/api/access/datafile/4461133"
+
+
+def test_zenodo_record_page_becomes_one_candidate_per_data_file(http, served) -> None:
+    client, seen = http
+    served[ZENODO_API] = (REPOS / "zenodo_record.json").read_bytes()
+
+    cands = resolve_link(
+        "https://zenodo.org/records/7826073",
+        "search",
+        "Cloud trail data",
+        "snippet",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+
+    assert [c.title for c in cands] == [
+        "Cloud trail data: fig8_data.csv",
+        "Cloud trail data: fig1_simplified_data.csv",
+    ]  # the .nc file is not a table we read
+    assert cands[0].url == "https://zenodo.org/records/7826073/files/fig8_data.csv?download=1"
+    assert (cands[0].license, cands[0].doi, cands[0].bytes, cands[0].format) == (
+        "cc-by-4.0",
+        "10.5281/zenodo.7826073",
+        626,
+        ".csv",
+    )
+    assert seen == [ZENODO_API]
+
+
+def test_dataverse_doi_from_a_paper_gives_a_tsv_candidate_that_passes_the_rules(
+    http, served
+) -> None:
+    client, _ = http
+    served[DATAVERSE_API] = (REPOS / "dataverse_dataset.json").read_bytes()
+
+    (c,) = resolve_link(
+        "https://doi.org/10.7910/DVN/SAWC6M",
+        "paper",
+        "data link from Smith 2019",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+    rule_filter(c, ["parasitoid"])
+
+    assert (c.url, c.format, c.study_id) == (DATAVERSE_FILE, ".tsv", None)
+    assert "experiment1_parasitoids.tab" in c.title
+    assert (c.rejected_reason, c.access, c.license) == (None, "open", "CC0 1.0")
+
+
+def test_record_title_is_used_when_the_link_has_none(http, served) -> None:
+    client, _ = http
+    served[ZENODO_API] = (REPOS / "zenodo_record.json").read_bytes()
+
+    cands = resolve_link(
+        "https://doi.org/10.5281/zenodo.7826073",
+        "paper",
+        "",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+
+    assert cands[0].title == ("Sensible heat fluxes control cloud trail strength: fig8_data.csv")
+
+
+def test_failed_record_lookup_keeps_the_page_for_the_rule_filter(http) -> None:
+    client, _ = http  # the API URL is not served: 404
+    fetcher = dl.Fetcher(client)
+
+    (c,) = resolve_link(
+        "https://zenodo.org/records/7826073",
+        "search",
+        "t",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=fetcher,
+    )
+
+    assert c.url == "https://zenodo.org/records/7826073"
+    assert fetcher.calls[0].error_type == "http"
+
+
+def test_file_without_extension_in_its_url_passes_the_rule_filter_by_its_format() -> None:
+    c = make("https://ndownloader.figshare.com/files/69927615", format=".csv")
+
+    rule_filter(c, KW)
+
+    assert c.rejected_reason is None
+
+
+def test_pick_downloads_with_the_candidate_format_and_doi(
+    http, served, sample_state: RunState, tmp_path: Path
+) -> None:
+    client, _ = http
+    served[DATAVERSE_FILE] = b"treat\tpacu30min_throatPain\n1\t0\n0\t3\n"
+    c = make(DATAVERSE_FILE, format=".tsv", doi="10.7910/DVN/SAWC6M", rank=1, score=1.0)
+    sample_state.datasets = [c]
+
+    assert data.pick(sample_state, dl.Fetcher(client), tmp_path, max_downloads=3) is c
+
+    (d,) = sample_state.downloads
+    assert (Path(d.path).suffix, d.doi) == (".tsv", "10.7910/DVN/SAWC6M")
 
 
 def test_d1_data_found_scored_downloaded_and_profiled(run_find, fake_tavily) -> None:
@@ -546,3 +659,30 @@ def test_harness_covers_only_calendar_nodes_the_model_left_null(make_llm, sample
         "weather": None,  # not a calendar rule
     }
     assert c.score == 4 / 5 and c.rejected_reason is None
+
+
+def test_dryad_page_without_keys_is_kept_with_the_reason(http) -> None:
+    client, seen = http
+    page = "https://datadryad.org/dataset/doi:10.5061/dryad.4b8gthtrz"
+
+    (c,) = resolve_link(
+        page,
+        "search",
+        "licorice gargle",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+    rule_filter(c, KW)
+
+    assert c.url == page
+    assert "DRYAD_CLIENT_ID" in (c.rejected_reason or "")
+    assert seen == []
+
+
+def test_rule_filter_keeps_a_reason_given_earlier() -> None:
+    c = make(LICORICE, rejected_reason="record lookup failed: 410 Gone")
+
+    rule_filter(c, KW)
+
+    assert (c.rejected_reason, c.access) == ("record lookup failed: 410 Gone", "open")

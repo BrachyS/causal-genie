@@ -49,6 +49,8 @@ jobs:
           NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
           NEBIUS_BASE_URL: ${{ secrets.NEBIUS_BASE_URL }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          DRYAD_CLIENT_ID: ${{ secrets.DRYAD_CLIENT_ID }}
+          DRYAD_CLIENT_SECRET: ${{ secrets.DRYAD_CLIENT_SECRET }}
           GENIE_MODE: "1"
           N: ${{ inputs.n || '1' }}
         # Exits 1 if a slot found no answer after 2 tries; the PR step still runs for the others.

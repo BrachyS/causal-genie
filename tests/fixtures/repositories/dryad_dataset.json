@@ -1,0 +1,10 @@
+{
+ "identifier": "doi:10.5061/dryad.4b8gthtrz",
+ "title": "Mo\u02bborea plant herbivory damage type data",
+ "license": "https://spdx.org/licenses/CC0-1.0.html",
+ "_links": {
+  "stash:version": {
+   "href": "/api/v2/versions/450332"
+  }
+ }
+}

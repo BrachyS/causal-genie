@@ -1,0 +1,33 @@
+{
+ "id": 7826073,
+ "doi": "10.5281/zenodo.7826073",
+ "metadata": {
+  "title": "Sensible heat fluxes control cloud trail strength",
+  "license": {
+   "id": "cc-by-4.0"
+  }
+ },
+ "files": [
+  {
+   "key": "fig5_data.nc",
+   "size": 4584046,
+   "links": {
+    "self": "https://zenodo.org/api/records/7826073/files/fig5_data.nc/content"
+   }
+  },
+  {
+   "key": "fig8_data.csv",
+   "size": 626,
+   "links": {
+    "self": "https://zenodo.org/api/records/7826073/files/fig8_data.csv/content"
+   }
+  },
+  {
+   "key": "fig1_simplified_data.csv",
+   "size": 59887,
+   "links": {
+    "self": "https://zenodo.org/api/records/7826073/files/fig1_simplified_data.csv/content"
+   }
+  }
+ ]
+}

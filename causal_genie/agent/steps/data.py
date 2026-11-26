@@ -26,6 +26,7 @@ from causal_genie.agent.state import (
     DataCoverage,
     DatasetCandidate,
     Download,
+    RepositoryFile,
     RunState,
     SourceKind,
 )
@@ -212,6 +213,16 @@ def index_candidate(row: pd.Series, source: SourceKind) -> DatasetCandidate:
     )
 
 
+def repository_candidate(
+    f: RepositoryFile, source: SourceKind, title: str, description: str
+) -> DatasetCandidate:
+    """A candidate for one file of a Zenodo, figshare or Dataverse record, carrying the
+    record's license and DOI and the format from the file's name."""
+    c = candidate(f.url, source, f"{title or f.record_title}: {f.name}", description, f.bytes)
+    c.license, c.doi, c.format = f.license, f.doi, f.format
+    return c
+
+
 def resolve_link(
     url: str,
     source: SourceKind,
@@ -221,11 +232,23 @@ def resolve_link(
     fetcher: Fetcher,
 ) -> list[DatasetCandidate]:
     """The data files a link points to: an R package's docs page → its Rdatasets CSV, a GitHub
-    file → its raw URL, a named GitHub folder → its data files. Other links are returned as
-    they are, for the rule filter to judge."""
+    file → its raw URL, a named GitHub folder → its data files, a Zenodo, figshare or
+    Dataverse record page or DOI → its data files. Other links, and a record whose lookup
+    failed, are returned as they are, for the rule filter to judge."""
     package_doc = RDATASETS_DOC.fullmatch(url) or PKGDOWN_REFERENCE.fullmatch(url)
     if package_doc and package_doc.groups() in index.index:
         return [index_candidate(index.loc[package_doc.groups()], source)]
+    try:
+        files = fetcher.record(url)
+    except (httpx.HTTPError, DownloadRejected) as e:
+        log.warning("record lookup failed for %s: %r", url, e)
+        page = candidate(url, source, title, description)
+        page.rejected_reason = f"record lookup failed: {e}"
+        return [page]
+    if files is not None:
+        tables = [f for f in files if f.format in FORMATS]
+        log.info("record %s: %d of %d files are data files", url, len(tables), len(files))
+        return [repository_candidate(f, source, title, description) for f in tables]
     if m := GITHUB_FILE.fullmatch(url):
         owner, repo, kind, ref, path = m.groups()
         if kind == "blob":
@@ -289,12 +312,15 @@ def unique(found: list[DatasetCandidate]) -> list[DatasetCandidate]:
 
 
 def rule_filter(c: DatasetCandidate, kws: list[str]) -> None:
-    """Set `access` and, if a rule fails, `rejected_reason` (PRD §5.6); no model tokens."""
+    """Set `access` and, if a rule fails, `rejected_reason` (PRD §5.6); no model tokens. A
+    reason set earlier (a failed record lookup) is kept."""
     host = c.host
     restricted = next((h for h in RESTRICTED_HOSTS if host == h or host.endswith(f".{h}")), None)
     multi = next((why for frag, why in MULTI_TABLE.items() if frag in c.url), None)
-    suffix = Path(urlsplit(c.url).path).suffix.lower()
+    suffix = c.format or Path(urlsplit(c.url).path).suffix.lower()
     c.access = "restricted" if restricted else "open" if allowlisted(c.url) else "unknown"
+    if c.rejected_reason is not None:  # e.g. a failed record lookup: keep why
+        return
     if restricted:
         c.rejected_reason = f"restricted access ({restricted}): apply to the data holder"
     elif multi:
@@ -333,7 +359,7 @@ def screen(
     top = passing[:TOP_N]
     for c in top:
         try:
-            c.columns = fetcher.peek(c.url)
+            c.columns = fetcher.peek(c.url, c.format)
         except (DownloadRejected, httpx.HTTPError) as e:
             log.warning("peek failed for %s: %r", c.url, e)
             c.rejected_reason = f"header could not be read: {e}"
@@ -443,7 +469,7 @@ def pick(
     )
     for c in usable[:max_downloads]:
         try:
-            d = fetcher.download(c.url, cache_dir, doi=None, license=c.license)
+            d = fetcher.download(c.url, cache_dir, doi=c.doi, license=c.license, suffix=c.format)
             table = profile(Path(d.path))
         except (DownloadRejected, NotSingleTable, pd.errors.ParserError, httpx.HTTPError) as e:
             log.warning("candidate rank %s failed: %s", c.rank, e)

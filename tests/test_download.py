@@ -1,4 +1,5 @@
 import hashlib
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pytest
 
 from causal_genie.tools import download as dl
 from causal_genie.tools.download import DownloadRejected, allowlisted, download, peek_columns
+from causal_genie.tools.repositories import DryadAuth
 
 CSV_URL = "https://vincentarelbundock.github.io/Rdatasets/csv/medicaldata/licorice_gargle.csv"
 BODY = b"treat,pain\n1,0\n0,3\n"
@@ -274,3 +276,208 @@ def test_fetcher_replay_checks_the_cached_file(make_http, tmp_path: Path) -> Non
     Path(d.path).unlink()
     with pytest.raises(FileNotFoundError, match="re-record"):
         replay.download(CSV_URL, tmp_path, doi=None, license=None)
+
+
+# --- Repository files (T14.1, T14.2): formats from file names, storage redirects, records ---
+
+DATAVERSE_FILE = "https://dataverse.harvard.edu/api/access/datafile/4461133"
+FIGSHARE_FILE = "https://ndownloader.figshare.com/files/69927615"
+FIGSHARE_STORAGE = (
+    "https://44c1cec316ec56bca76dfd65d2882b20.r2.cloudflarestorage.com/figshare-com-storage/"
+    "69927615/growth_form_raw.csv?X-Amz-Signature=abc"
+)
+DATAVERSE_STORAGE = "https://dvn-cloud-iqss.s3.amazonaws.com/10.7910/DVN/SAWC6M/1784b4f3baf?sig=1"
+
+
+def test_file_url_without_extension_uses_the_format_from_its_name(
+    make_http, tmp_path: Path
+) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content=b"a\tb\n1\t2\n"))
+
+    d = download(
+        DATAVERSE_FILE, http, tmp_path, doi="10.7910/DVN/SAWC6M", license=None, suffix=".tsv"
+    )
+
+    assert Path(d.path).suffix == ".tsv"
+    assert d.doi == "10.7910/DVN/SAWC6M"
+
+
+@pytest.mark.parametrize("suffix", [".sav", None])
+def test_file_url_with_a_non_data_or_unknown_format_is_rejected(
+    make_http, tmp_path: Path, suffix: str | None
+) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, content=BODY))
+
+    with pytest.raises(DownloadRejected, match="format"):
+        download(DATAVERSE_FILE, http, tmp_path, doi=None, license=None, suffix=suffix)
+    assert seen == []
+
+
+@pytest.mark.parametrize(
+    ("start", "storage"),
+    [(FIGSHARE_FILE, FIGSHARE_STORAGE), (DATAVERSE_FILE, DATAVERSE_STORAGE)],
+)
+def test_redirect_to_the_repository_storage_bucket_is_followed(
+    make_http, tmp_path: Path, start: str, storage: str
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == start:
+            return httpx.Response(302, headers={"location": storage})
+        return httpx.Response(200, content=BODY)
+
+    http, seen = make_http(handler)
+
+    assert download(start, http, tmp_path, doi=None, license=None, suffix=".csv").bytes == len(BODY)
+    assert len(seen) == 2
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://44c1cec316ec56bca76dfd65d2882b20.r2.cloudflarestorage.com/other-bucket/x.csv",
+        "https://other.r2.cloudflarestorage.com/figshare-com-storage/x.csv",
+        "https://another-bucket.s3.amazonaws.com/x.csv",
+    ],
+)
+def test_other_storage_buckets_are_not_allowlisted(url: str) -> None:
+    assert allowlisted(url) is False
+
+
+def test_peek_follows_allowlisted_redirects_and_uses_the_given_format(make_http) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == DATAVERSE_FILE:
+            return httpx.Response(303, headers={"location": DATAVERSE_STORAGE})
+        return httpx.Response(200, content=b"a\tb\n1\t2\n")
+
+    http, seen = make_http(handler)
+
+    assert peek_columns(DATAVERSE_FILE, http, suffix=".tsv") == ["a", "b"]
+    assert len(seen) == 2
+
+
+def test_peek_rejects_a_redirect_off_the_allowlist(make_http) -> None:
+    http, seen = make_http(
+        lambda r: httpx.Response(302, headers={"location": "https://evil.example/t.csv"})
+    )
+
+    with pytest.raises(DownloadRejected, match="allowlist"):
+        peek_columns(CSV_URL, http)
+    assert len(seen) == 1
+
+
+ZENODO_API = "https://zenodo.org/api/records/7826073"
+ZENODO_RECORD = {
+    "id": 7826073,
+    "doi": "10.5281/zenodo.7826073",
+    "metadata": {"title": "Cloud trails", "license": {"id": "cc-by-4.0"}},
+    "files": [{"key": "fig8_data.csv", "size": 626}],
+}
+
+
+def test_fetcher_records_and_replays_a_repository_record(make_http, no_dns) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, json=ZENODO_RECORD))
+    live = dl.Fetcher(http)
+
+    files = live.record("https://zenodo.org/records/7826073")
+
+    assert [f.name for f in files or []] == ["fig8_data.csv"]
+    assert [str(r.url) for r in seen] == [ZENODO_API]
+    assert [(c.kind, c.url) for c in live.calls] == [("record", ZENODO_API)]
+    replay = dl.Fetcher.from_replay(live.calls)
+    assert replay.record("https://doi.org/10.5281/zenodo.7826073") == files
+
+
+def test_fetcher_record_of_a_non_record_link_makes_no_request(make_http) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, json={}))
+
+    assert dl.Fetcher(http).record("https://osf.io/xdpz5/") is None
+    assert seen == []
+
+
+def test_fetcher_records_a_failed_record_lookup_and_replays_it(make_http) -> None:
+    http, _ = make_http(lambda r: httpx.Response(410))
+    live = dl.Fetcher(http)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        live.record("https://zenodo.org/records/7826073")
+
+    assert live.calls[0].error_type == "http"
+    with pytest.raises(httpx.HTTPError):
+        dl.Fetcher.from_replay(live.calls).record("https://zenodo.org/records/7826073")
+
+
+def test_peek_drops_a_byte_order_mark(make_http) -> None:
+    http, _ = make_http(lambda r: httpx.Response(200, content="\ufeffsite,year\n1,2\n".encode()))
+
+    assert peek_columns(CSV_URL, http) == ["site", "year"]
+
+
+# --- Dryad (T14.1): the token goes to datadryad.org only, never to storage or the record ---
+
+DRYAD_FILE = "https://datadryad.org/api/v2/files/4839169/download"
+DRYAD_STORAGE = (
+    "https://dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com/v3/427233/data/x.csv?sig=1"
+)
+
+
+class FakeDryad(DryadAuth):
+    """`DryadAuth` with a fixed token, counting requests for it."""
+
+    def __init__(self) -> None:
+        super().__init__("id", "s")
+        self.calls = 0
+
+    def headers(self, http: httpx.Client) -> dict[str, str]:
+        self.calls += 1
+        return {"Authorization": "Bearer tok-secret-1"}
+
+
+def dryad_handler(request: httpx.Request) -> httpx.Response:
+    if request.url.host == "datadryad.org":
+        assert request.headers["authorization"] == "Bearer tok-secret-1"
+        return httpx.Response(302, headers={"location": DRYAD_STORAGE})
+    assert "authorization" not in request.headers
+    return httpx.Response(200, content=BODY)
+
+
+def test_dryad_download_sends_the_token_to_dryad_but_not_to_storage(
+    make_http, tmp_path: Path
+) -> None:
+    http, seen = make_http(dryad_handler)
+
+    d = download(
+        DRYAD_FILE, http, tmp_path, doi=None, license=None, suffix=".csv", dryad=FakeDryad()
+    )
+
+    assert d.bytes == len(BODY)
+    assert [r.url.host for r in seen] == [
+        "datadryad.org",
+        "dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com",
+    ]
+
+
+def test_dryad_peek_sends_the_token_too(make_http) -> None:
+    http, _ = make_http(dryad_handler)
+
+    assert peek_columns(DRYAD_FILE, http, suffix=".csv", dryad=FakeDryad()) == ["treat", "pain"]
+
+
+def test_token_is_never_recorded_on_the_run(make_http, tmp_path: Path) -> None:
+    http, _ = make_http(dryad_handler)
+    fetcher = dl.Fetcher(http, dryad=FakeDryad())
+
+    fetcher.peek(DRYAD_FILE, ".csv")
+    fetcher.download(DRYAD_FILE, tmp_path, doi=None, license=None, suffix=".csv")
+
+    assert "tok-secret-1" not in json.dumps([c.model_dump() for c in fetcher.calls])
+
+
+def test_dryad_record_without_keys_is_rejected_and_recorded(make_http) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, json={}))
+    fetcher = dl.Fetcher(http)
+
+    with pytest.raises(DownloadRejected, match="DRYAD_CLIENT_ID"):
+        fetcher.record("https://datadryad.org/dataset/doi:10.5061/dryad.4b8gthtrz")
+
+    assert seen == []
+    assert fetcher.calls[0].error_type == "rejected"

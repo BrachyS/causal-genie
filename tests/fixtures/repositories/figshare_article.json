@@ -1,0 +1,173 @@
+{
+ "id": 34341459,
+ "doi": "10.6084/m9.figshare.34341459.v1",
+ "title": "Data from: Zomer and Ramsay. Post-fire changes in plant growth form composition and diversity in Andean p\u00e1ramo grassland",
+ "license": {
+  "value": 1,
+  "name": "CC BY 4.0",
+  "url": "https://creativecommons.org/licenses/by/4.0/"
+ },
+ "files": [
+  {
+   "id": 69929169,
+   "name": "README_variables.txt",
+   "size": 2982,
+   "download_url": "https://ndownloader.figshare.com/files/69929169",
+   "is_link_only": false
+  },
+  {
+   "id": 69927966,
+   "name": "sampling_design.png",
+   "size": 143465,
+   "download_url": "https://ndownloader.figshare.com/files/69927966",
+   "is_link_only": false
+  },
+  {
+   "id": 69927615,
+   "name": "growth_form_raw.csv",
+   "size": 176430,
+   "download_url": "https://ndownloader.figshare.com/files/69927615",
+   "is_link_only": false
+  },
+  {
+   "id": 69927618,
+   "name": "par_raw.csv",
+   "size": 164401,
+   "download_url": "https://ndownloader.figshare.com/files/69927618",
+   "is_link_only": false
+  },
+  {
+   "id": 69927621,
+   "name": "site_information.csv",
+   "size": 2570,
+   "download_url": "https://ndownloader.figshare.com/files/69927621",
+   "is_link_only": false
+  },
+  {
+   "id": 69927624,
+   "name": "soil_temperature_raw.csv",
+   "size": 8397,
+   "download_url": "https://ndownloader.figshare.com/files/69927624",
+   "is_link_only": false
+  },
+  {
+   "id": 69927627,
+   "name": "vegetation_height_raw.csv",
+   "size": 38446,
+   "download_url": "https://ndownloader.figshare.com/files/69927627",
+   "is_link_only": false
+  },
+  {
+   "id": 69927975,
+   "name": "5.6y, A05 .jpeg",
+   "size": 11464250,
+   "download_url": "https://ndownloader.figshare.com/files/69927975",
+   "is_link_only": false
+  },
+  {
+   "id": 69927978,
+   "name": "8y, A09.jpeg",
+   "size": 13721108,
+   "download_url": "https://ndownloader.figshare.com/files/69927978",
+   "is_link_only": false
+  },
+  {
+   "id": 69927984,
+   "name": "9y, A16.jpeg",
+   "size": 12400789,
+   "download_url": "https://ndownloader.figshare.com/files/69927984",
+   "is_link_only": false
+  },
+  {
+   "id": 69927981,
+   "name": "10y, A08 .jpeg",
+   "size": 10084681,
+   "download_url": "https://ndownloader.figshare.com/files/69927981",
+   "is_link_only": false
+  },
+  {
+   "id": 69927987,
+   "name": "9y, A10.jpeg",
+   "size": 9461795,
+   "download_url": "https://ndownloader.figshare.com/files/69927987",
+   "is_link_only": false
+  },
+  {
+   "id": 69927990,
+   "name": "8y, A15.jpeg",
+   "size": 11565829,
+   "download_url": "https://ndownloader.figshare.com/files/69927990",
+   "is_link_only": false
+  },
+  {
+   "id": 69927993,
+   "name": "7y, A13.jpeg",
+   "size": 11407767,
+   "download_url": "https://ndownloader.figshare.com/files/69927993",
+   "is_link_only": false
+  },
+  {
+   "id": 69927996,
+   "name": "1.5y, B01.jpeg",
+   "size": 12650384,
+   "download_url": "https://ndownloader.figshare.com/files/69927996",
+   "is_link_only": false
+  },
+  {
+   "id": 69927999,
+   "name": "0.5y, A07 .jpeg",
+   "size": 15155773,
+   "download_url": "https://ndownloader.figshare.com/files/69927999",
+   "is_link_only": false
+  },
+  {
+   "id": 69928002,
+   "name": "2.4y, B03 .jpeg",
+   "size": 9331970,
+   "download_url": "https://ndownloader.figshare.com/files/69928002",
+   "is_link_only": false
+  },
+  {
+   "id": 69928005,
+   "name": "<40y, A02.jpeg",
+   "size": 13176667,
+   "download_url": "https://ndownloader.figshare.com/files/69928005",
+   "is_link_only": false
+  },
+  {
+   "id": 69928008,
+   "name": "8y, A06.jpeg",
+   "size": 8807083,
+   "download_url": "https://ndownloader.figshare.com/files/69928008",
+   "is_link_only": false
+  },
+  {
+   "id": 69928014,
+   "name": "10y, A12.jpeg",
+   "size": 12813245,
+   "download_url": "https://ndownloader.figshare.com/files/69928014",
+   "is_link_only": false
+  },
+  {
+   "id": 69928017,
+   "name": "2.4y, B02 .jpeg",
+   "size": 10163584,
+   "download_url": "https://ndownloader.figshare.com/files/69928017",
+   "is_link_only": false
+  },
+  {
+   "id": 69928020,
+   "name": "15y,A14.jpeg",
+   "size": 10791490,
+   "download_url": "https://ndownloader.figshare.com/files/69928020",
+   "is_link_only": false
+  },
+  {
+   "id": 69928023,
+   "name": "8y, A11.jpeg",
+   "size": 11419017,
+   "download_url": "https://ndownloader.figshare.com/files/69928023",
+   "is_link_only": false
+  }
+ ]
+}

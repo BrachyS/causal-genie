@@ -1,0 +1,39 @@
+{
+ "status": "OK",
+ "data": {
+  "persistentUrl": "https://doi.org/10.7910/DVN/SAWC6M",
+  "latestVersion": {
+   "license": {
+    "name": "CC0 1.0",
+    "uri": "http://creativecommons.org/publicdomain/zero/1.0",
+    "iconUri": "https://licensebuttons.net/p/zero/1.0/88x31.png",
+    "rightsIdentifier": "CC0-1.0",
+    "rightsIdentifierScheme": "SPDX",
+    "schemeUri": "https://spdx.org/licenses/",
+    "languageCode": "en"
+   },
+   "files": [
+    {
+     "restricted": false,
+     "dataFile": {
+      "id": 4461133,
+      "filename": "experiment1_parasitoids.tab",
+      "filesize": 15418,
+      "contentType": "text/tab-separated-values",
+      "originalFileName": "experiment1_parasitoids.xlsx"
+     }
+    }
+   ],
+   "metadataBlocks": {
+    "citation": {
+     "fields": [
+      {
+       "typeName": "title",
+       "value": "static, low rate of parasitism"
+      }
+     ]
+    }
+   }
+  }
+ }
+}
