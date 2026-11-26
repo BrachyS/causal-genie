@@ -1,4 +1,5 @@
 import hashlib
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pytest
 
 from causal_genie.tools import download as dl
 from causal_genie.tools.download import DownloadRejected, allowlisted, download, peek_columns
+from causal_genie.tools.repositories import DryadAuth
 
 CSV_URL = "https://vincentarelbundock.github.io/Rdatasets/csv/medicaldata/licorice_gargle.csv"
 BODY = b"treat,pain\n1,0\n0,3\n"
@@ -408,3 +410,74 @@ def test_peek_drops_a_byte_order_mark(make_http) -> None:
     http, _ = make_http(lambda r: httpx.Response(200, content="\ufeffsite,year\n1,2\n".encode()))
 
     assert peek_columns(CSV_URL, http) == ["site", "year"]
+
+
+# --- Dryad (T14.1): the token goes to datadryad.org only, never to storage or the record ---
+
+DRYAD_FILE = "https://datadryad.org/api/v2/files/4839169/download"
+DRYAD_STORAGE = (
+    "https://dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com/v3/427233/data/x.csv?sig=1"
+)
+
+
+class FakeDryad(DryadAuth):
+    """`DryadAuth` with a fixed token, counting requests for it."""
+
+    def __init__(self) -> None:
+        super().__init__("id", "s")
+        self.calls = 0
+
+    def headers(self, http: httpx.Client) -> dict[str, str]:
+        self.calls += 1
+        return {"Authorization": "Bearer tok-secret-1"}
+
+
+def dryad_handler(request: httpx.Request) -> httpx.Response:
+    if request.url.host == "datadryad.org":
+        assert request.headers["authorization"] == "Bearer tok-secret-1"
+        return httpx.Response(302, headers={"location": DRYAD_STORAGE})
+    assert "authorization" not in request.headers
+    return httpx.Response(200, content=BODY)
+
+
+def test_dryad_download_sends_the_token_to_dryad_but_not_to_storage(
+    make_http, tmp_path: Path
+) -> None:
+    http, seen = make_http(dryad_handler)
+
+    d = download(
+        DRYAD_FILE, http, tmp_path, doi=None, license=None, suffix=".csv", dryad=FakeDryad()
+    )
+
+    assert d.bytes == len(BODY)
+    assert [r.url.host for r in seen] == [
+        "datadryad.org",
+        "dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com",
+    ]
+
+
+def test_dryad_peek_sends_the_token_too(make_http) -> None:
+    http, _ = make_http(dryad_handler)
+
+    assert peek_columns(DRYAD_FILE, http, suffix=".csv", dryad=FakeDryad()) == ["treat", "pain"]
+
+
+def test_token_is_never_recorded_on_the_run(make_http, tmp_path: Path) -> None:
+    http, _ = make_http(dryad_handler)
+    fetcher = dl.Fetcher(http, dryad=FakeDryad())
+
+    fetcher.peek(DRYAD_FILE, ".csv")
+    fetcher.download(DRYAD_FILE, tmp_path, doi=None, license=None, suffix=".csv")
+
+    assert "tok-secret-1" not in json.dumps([c.model_dump() for c in fetcher.calls])
+
+
+def test_dryad_record_without_keys_is_rejected_and_recorded(make_http) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, json={}))
+    fetcher = dl.Fetcher(http)
+
+    with pytest.raises(DownloadRejected, match="DRYAD_CLIENT_ID"):
+        fetcher.record("https://datadryad.org/dataset/doi:10.5061/dryad.4b8gthtrz")
+
+    assert seen == []
+    assert fetcher.calls[0].error_type == "rejected"

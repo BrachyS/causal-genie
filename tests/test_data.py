@@ -257,7 +257,7 @@ def test_other_links_are_kept_for_the_rule_filter(http) -> None:
     client, _ = http
 
     (c,) = resolve_link(
-        "https://datadryad.org/dataset/doi:10.5061/dryad.4b8gthtrz",
+        "https://osf.io/xdpz5/",
         "search",
         "t",
         "",
@@ -265,7 +265,7 @@ def test_other_links_are_kept_for_the_rule_filter(http) -> None:
         fetcher=dl.Fetcher(client),
     )
 
-    assert c.url == "https://datadryad.org/dataset/doi:10.5061/dryad.4b8gthtrz"
+    assert c.url == "https://osf.io/xdpz5/"
 
 
 # --- Repository records → files (T14.1, T14.2) ---
@@ -659,3 +659,30 @@ def test_harness_covers_only_calendar_nodes_the_model_left_null(make_llm, sample
         "weather": None,  # not a calendar rule
     }
     assert c.score == 4 / 5 and c.rejected_reason is None
+
+
+def test_dryad_page_without_keys_is_kept_with_the_reason(http) -> None:
+    client, seen = http
+    page = "https://datadryad.org/dataset/doi:10.5061/dryad.4b8gthtrz"
+
+    (c,) = resolve_link(
+        page,
+        "search",
+        "licorice gargle",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+    rule_filter(c, KW)
+
+    assert c.url == page
+    assert "DRYAD_CLIENT_ID" in (c.rejected_reason or "")
+    assert seen == []
+
+
+def test_rule_filter_keeps_a_reason_given_earlier() -> None:
+    c = make(LICORICE, rejected_reason="record lookup failed: 410 Gone")
+
+    rule_filter(c, KW)
+
+    assert (c.rejected_reason, c.access) == ("record lookup failed: 410 Gone", "open")

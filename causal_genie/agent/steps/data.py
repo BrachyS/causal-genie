@@ -240,9 +240,11 @@ def resolve_link(
         return [index_candidate(index.loc[package_doc.groups()], source)]
     try:
         files = fetcher.record(url)
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, DownloadRejected) as e:
         log.warning("record lookup failed for %s: %r", url, e)
-        files = None
+        page = candidate(url, source, title, description)
+        page.rejected_reason = f"record lookup failed: {e}"
+        return [page]
     if files is not None:
         tables = [f for f in files if f.format in FORMATS]
         log.info("record %s: %d of %d files are data files", url, len(tables), len(files))
@@ -310,12 +312,15 @@ def unique(found: list[DatasetCandidate]) -> list[DatasetCandidate]:
 
 
 def rule_filter(c: DatasetCandidate, kws: list[str]) -> None:
-    """Set `access` and, if a rule fails, `rejected_reason` (PRD §5.6); no model tokens."""
+    """Set `access` and, if a rule fails, `rejected_reason` (PRD §5.6); no model tokens. A
+    reason set earlier (a failed record lookup) is kept."""
     host = c.host
     restricted = next((h for h in RESTRICTED_HOSTS if host == h or host.endswith(f".{h}")), None)
     multi = next((why for frag, why in MULTI_TABLE.items() if frag in c.url), None)
     suffix = c.format or Path(urlsplit(c.url).path).suffix.lower()
     c.access = "restricted" if restricted else "open" if allowlisted(c.url) else "unknown"
+    if c.rejected_reason is not None:  # e.g. a failed record lookup: keep why
+        return
     if restricted:
         c.rejected_reason = f"restricted access ({restricted}): apply to the data holder"
     elif multi:

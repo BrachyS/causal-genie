@@ -1,0 +1,89 @@
+{
+ "_links": {
+  "self": {
+   "href": "/api/v2/versions/450332/files"
+  },
+  "first": {
+   "href": "/api/v2/versions/450332/files"
+  },
+  "last": {
+   "href": "/api/v2/versions/450332/files?page=1"
+  }
+ },
+ "count": 7,
+ "total": 7,
+ "_embedded": {
+  "stash:files": [
+   {
+    "path": "dt_metrics_all_species.csv",
+    "size": 24571,
+    "mimeType": "text/csv",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839166/download"
+     }
+    }
+   },
+   {
+    "path": "plant_DT_network_matrix.csv",
+    "size": 11489,
+    "mimeType": "text/csv",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839168/download"
+     }
+    }
+   },
+   {
+    "path": "plant_metrics_all_species.csv",
+    "size": 4007,
+    "mimeType": "text/csv",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839167/download"
+     }
+    }
+   },
+   {
+    "path": "raw_data_leaves.csv",
+    "size": 264230,
+    "mimeType": "text/csv",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839172/download"
+     }
+    }
+   },
+   {
+    "path": "raw_functional_breadth_data.csv",
+    "size": 2074,
+    "mimeType": "text/csv",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839171/download"
+     }
+    }
+   },
+   {
+    "path": "raw_location_data.csv",
+    "size": 1916,
+    "mimeType": "text/csv",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839169/download"
+     }
+    }
+   },
+   {
+    "path": "README.md",
+    "size": 7086,
+    "mimeType": "text/markdown",
+    "_links": {
+     "stash:download": {
+      "href": "/api/v2/files/4839176/download"
+     }
+    }
+   }
+  ]
+ }
+}

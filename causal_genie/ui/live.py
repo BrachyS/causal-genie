@@ -24,6 +24,7 @@ from causal_genie.agent.state import RunState
 from causal_genie.llm.client import LLMClient, load_models, make_openai
 from causal_genie.tools.download import Fetcher
 from causal_genie.tools.metadata import EuropePMC
+from causal_genie.tools.repositories import DryadAuth
 from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ def run_live(question: str, runs_dir: Path) -> RunState:
             llm,
             searcher,
             EuropePMC(http),
-            Fetcher(http),
+            Fetcher(http, dryad=DryadAuth.from_env()),
             runs_dir,
             CACHE_DIR,
             ask=None,

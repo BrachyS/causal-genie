@@ -21,7 +21,13 @@ import httpx
 
 from causal_genie.agent.state import Download, FetchCall, ListedFile, RepositoryFile
 from causal_genie.log import log_step
-from causal_genie.tools.repositories import parse_record, record_api
+from causal_genie.tools.repositories import (
+    DRYAD_HOST,
+    DryadAuth,
+    fetch_record,
+    is_dryad,
+    record_api,
+)
 
 # host → allowed path prefixes (PRD §5.6). GitHub is limited to the named repos.
 GITHUB_REPOS = ("/fivethirtyeight/data/", "/higgi13425/medicaldata/")
@@ -41,6 +47,7 @@ ALLOWLIST: dict[str, tuple[str, ...]] = {
     # these buckets, and only reached as a redirect hop from the repository's own URL.
     "44c1cec316ec56bca76dfd65d2882b20.r2.cloudflarestorage.com": ("/figshare-com-storage/",),
     "dvn-cloud-iqss.s3.amazonaws.com": ("/",),
+    "dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com": ("/",),
 }
 FORMATS = {".csv", ".tsv", ".xlsx", ".parquet", ".zip"}
 MAX_BYTES = 50 * 1024 * 1024
@@ -87,13 +94,18 @@ def url_format(url: str, suffix: str | None) -> str:
 
 
 @contextmanager
-def open_checked(http: httpx.Client, url: str) -> Generator[httpx.Response]:
+def open_checked(
+    http: httpx.Client, url: str, dryad: DryadAuth | None = None
+) -> Generator[httpx.Response]:
     """Stream `url`, following redirects; every hop is re-checked against the allowlist and
-    the private-network rule before it is requested."""
+    the private-network rule before it is requested. With `dryad`, hops to datadryad.org
+    carry its token; no other host (such as the storage a download redirects to) gets it."""
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         check_url(current)
-        with http.stream("GET", current, follow_redirects=False) as response:
+        to_dryad = dryad is not None and urlsplit(current).hostname == DRYAD_HOST
+        headers = dryad.headers(http) if dryad is not None and to_dryad else None
+        with http.stream("GET", current, headers=headers, follow_redirects=False) as response:
             if response.is_redirect:
                 current = urljoin(current, response.headers["location"])
                 continue
@@ -111,6 +123,7 @@ def download(
     license: str | None,
     max_bytes: int = MAX_BYTES,
     suffix: str | None = None,
+    dryad: DryadAuth | None = None,
 ) -> Download:
     """Fetch `url` into `cache_dir` and return its provenance. `suffix` is the format from a
     repository file's name, for URLs without an extension; it must still be a data format."""
@@ -118,7 +131,7 @@ def download(
     with log_step("download", url=url) as rec:
         if suffix not in FORMATS:
             raise DownloadRejected(f"format {suffix or '(none)'} not in {sorted(FORMATS)}: {url}")
-        with open_checked(http, url) as response:
+        with open_checked(http, url, dryad) as response:
             body = read_capped(response, max_bytes)
             final_url = str(response.url)
 
@@ -152,7 +165,11 @@ def read_capped(response: httpx.Response, max_bytes: int) -> bytes:
 
 
 def peek_columns(
-    url: str, http: httpx.Client, max_bytes: int = PEEK_BYTES, suffix: str | None = None
+    url: str,
+    http: httpx.Client,
+    max_bytes: int = PEEK_BYTES,
+    suffix: str | None = None,
+    dryad: DryadAuth | None = None,
 ) -> list[str]:
     """Column names from a CSV or TSV header line, so candidates can be scored before download.
 
@@ -163,7 +180,7 @@ def peek_columns(
     suffix = url_format(url, suffix)
     if suffix not in {".csv", ".tsv"}:
         return []
-    with log_step("peek", url=url) as rec, open_checked(http, url) as response:
+    with log_step("peek", url=url) as rec, open_checked(http, url, dryad) as response:
         head = bytearray()
         for chunk in response.iter_bytes():
             head += chunk
@@ -185,8 +202,14 @@ class Fetcher:
     were checked when recorded); a download is read from the cache by its checksum.
     """
 
-    def __init__(self, http: httpx.Client | None, replay: list[FetchCall] | None = None) -> None:
+    def __init__(
+        self,
+        http: httpx.Client | None,
+        replay: list[FetchCall] | None = None,
+        dryad: DryadAuth | None = None,
+    ) -> None:
         self.http = http
+        self.dryad = dryad  # Dryad keys; without them Dryad records are rejected
         self.replay = {(c.kind, c.url): c for c in replay or []}
         self.calls: list[FetchCall] = []
 
@@ -215,7 +238,9 @@ class Fetcher:
             return d.model_copy(update={"path": str(path)})
         http = self.http
         d = self._live(
-            "download", url, lambda: download(url, http, cache_dir, doi, license, suffix=suffix)
+            "download",
+            url,
+            lambda: download(url, http, cache_dir, doi, license, suffix=suffix, dryad=self.dryad),
         )
         self.calls[-1].download = d
         return d
@@ -225,7 +250,9 @@ class Fetcher:
         if self.http is None:
             return self._replayed("peek", url).columns or []
         http = self.http
-        columns = self._live("peek", url, lambda: peek_columns(url, http, suffix=suffix))
+        columns = self._live(
+            "peek", url, lambda: peek_columns(url, http, suffix=suffix, dryad=self.dryad)
+        )
         self.calls[-1].columns = columns
         return columns
 
@@ -246,8 +273,9 @@ class Fetcher:
         return files
 
     def record(self, url: str) -> list[RepositoryFile] | None:
-        """The files of the Zenodo, figshare or Dataverse record `url` points to, from the
-        site's metadata API or the recording; None (and no request) for any other link."""
+        """The files of the Zenodo, figshare, Dataverse or Dryad record `url` points to, from
+        the site's metadata API or the recording; None (and no request) for any other link.
+        A Dryad record without Dryad keys is rejected (and recorded) before any request."""
         api = record_api(url)
         if api is None:
             return None
@@ -256,9 +284,11 @@ class Fetcher:
         http = self.http
 
         def get() -> list[RepositoryFile]:
-            response = http.get(api)
-            response.raise_for_status()
-            return parse_record(api, response.json())
+            if is_dryad(api) and self.dryad is None:
+                raise DownloadRejected(
+                    "Dryad needs API keys: set DRYAD_CLIENT_ID and DRYAD_CLIENT_SECRET in .env"
+                )
+            return fetch_record(api, http, self.dryad)
 
         files = self._live("record", api, get)
         self.calls[-1].record = files

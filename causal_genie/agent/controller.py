@@ -54,6 +54,7 @@ from causal_genie.tools.identify import detect_design, identify, precision_set
 from causal_genie.tools.metadata import EuropePMC
 from causal_genie.tools.profile import read_table
 from causal_genie.tools.render import render_dag
+from causal_genie.tools.repositories import DryadAuth
 from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
@@ -356,7 +357,7 @@ def main(argv: list[str] | None = None) -> None:
                 llm,
                 searcher,
                 EuropePMC(http),
-                Fetcher(http),
+                Fetcher(http, dryad=DryadAuth.from_env()),
                 RUNS_DIR,
                 CACHE_DIR,
                 ask,
