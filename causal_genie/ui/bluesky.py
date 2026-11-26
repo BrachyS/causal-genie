@@ -1,9 +1,11 @@
 """After a Question of the Day PR is merged (U18): mark the question answered, post to Bluesky.
 
 A daily workflow runs `python -m causal_genie.ui.bluesky publish`. It reads every
-`gallery/*/pick.json`; a pick whose question is still `running` with that run is merged but not
-yet posted. Only the oldest such pick (by run id, which starts with its date) is published per
-run, so the feed gets one question a day and a backlog drains on nights with no new answer.
+`gallery/*/pick.json`; a pick whose question is still `running` is merged but not yet posted.
+The board's run id is not compared: a pick re-run before its PR was merged keeps the first run
+on the board, and `answered` alone stops a second post. Only the oldest such pick (by run id,
+which starts with its date) is published per run, so the feed gets one question a day and a
+backlog drains on nights with no new answer.
 It is marked `answered` first, then posted, so a failed post leaves the answer published on
 the board and fails the job for a retry by hand; a re-run never posts twice.
 
@@ -95,7 +97,7 @@ def publish(
     for path in sorted(gallery.glob("*/pick.json"), key=lambda p: p.parent.name):
         pick = Pick.model_validate_json(path.read_text())
         q = board_db.get_question(db, pick.question_id)
-        if q.status != "running" or q.run_id != pick.run_id:
+        if q.status != "running":
             continue
         board_db.set_status(
             db,

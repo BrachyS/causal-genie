@@ -2,7 +2,7 @@
 # question answered on the board and post it to Bluesky with a link to the run. One post a day
 # even when several pick PRs were merged; a backlog drains on nights with no new answer.
 #
-# Idempotent: only picks whose question is still `running` with that run are published, so a
+# Idempotent: only picks whose question is still `running` are published, so a
 # re-run never posts twice. A failed post fails this job; the question stays answered.
 #
 # Setup (once): Actions secrets BOARD_DB_URL, BLUESKY_HANDLE, BLUESKY_APP_PASSWORD; Actions
