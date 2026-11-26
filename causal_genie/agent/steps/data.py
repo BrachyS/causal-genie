@@ -15,6 +15,7 @@ import io
 import logging
 import math
 import re
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -41,12 +42,13 @@ from causal_genie.tools.download import (
     Fetcher,
     allowlisted,
 )
-from causal_genie.tools.profile import NotSingleTable, profile
+from causal_genie.tools.profile import NotSingleTable, profile, table_parts
 from causal_genie.tools.search import Searcher
 
 log = logging.getLogger(__name__)
 
 RDATASETS = "https://vincentarelbundock.github.io/Rdatasets"
+MULTI_PART_FORMATS = {".xlsx", ".zip"}  # may hold several tables; looked inside while screening
 RDATASETS_INDEX = f"{RDATASETS}/datasets.csv"
 TOP_N = 10
 MAX_DOWNLOADS = 3
@@ -101,7 +103,9 @@ def find_data(
         searcher, f"{words(exposure)} {words(outcome)} dataset", index, fetcher
     )
     found += repository_candidates(index, kws)
-    state.datasets = screen(unique(found), state, llm, fetcher, kws, keywords([outcome]), index)
+    state.datasets = screen(
+        unique(found), state, llm, fetcher, kws, keywords([outcome]), index, cache_dir
+    )
 
     if not any(c.score is not None and c.rejected_reason is None for c in state.datasets):
         missing = missing_nodes(state.datasets, exposure, outcome)
@@ -109,7 +113,9 @@ def find_data(
         seen = {c.url for c in state.datasets}
         query = " ".join(words(n) for n in missing) + " data"
         new = [c for c in search_candidates(searcher, query, index, fetcher) if c.url not in seen]
-        state.datasets += screen(unique(new), state, llm, fetcher, kws, keywords(missing), index)
+        state.datasets += screen(
+            unique(new), state, llm, fetcher, kws, keywords(missing), index, cache_dir
+        )
 
     rank(state.datasets)
     return pick(state, fetcher, cache_dir, max_downloads)
@@ -345,24 +351,33 @@ def screen(
     kws: list[str],
     lead: list[str],
     index: pd.DataFrame,
+    cache_dir: Path,
 ) -> list[DatasetCandidate]:
     """Rule-filter the candidates, read the top 10's headers, have the model score them.
 
     The top 10 come from `shortlist`; `lead` is the outcome's keywords, since a table must
-    hold the outcome while an exposure like moon phase may be derived.
+    hold the outcome while an exposure like moon phase may be derived. A workbook or ZIP in
+    the top 10 is downloaded to read its headers, and each of its tables becomes its own
+    candidate (`split_parts`); the list returned includes them.
     """
     for c in found:
         rule_filter(c, kws)
     passing = shortlist([c for c in found if c.rejected_reason is None], kws, lead, index)
     for c in passing[TOP_N:]:
         c.rejected_reason = f"outside the top {TOP_N} by keyword match"
-    top = passing[:TOP_N]
-    for c in top:
+    top: list[DatasetCandidate] = []
+    for c in passing[:TOP_N]:
+        if file_format(c) in MULTI_PART_FORMATS:
+            parts = split_parts(c, fetcher, cache_dir)
+            found = [p for f in found for p in (parts if f is c else [f])]
+            top += parts
+            continue
         try:
             c.columns = fetcher.peek(c.url, c.format)
         except (DownloadRejected, httpx.HTTPError) as e:
             log.warning("peek failed for %s: %r", c.url, e)
             c.rejected_reason = f"header could not be read: {e}"
+        top.append(c)
     scorable = [c for c in top if c.rejected_reason is None]
     if scorable:
         score(scorable, state, llm)
@@ -373,6 +388,37 @@ def screen(
         len(scorable),
     )
     return found
+
+
+def file_format(c: DatasetCandidate) -> str:
+    """The candidate's file format: from the repository's file name, else the URL."""
+    return c.format or Path(urlsplit(c.url).path).suffix.lower()
+
+
+def split_parts(c: DatasetCandidate, fetcher: Fetcher, cache_dir: Path) -> list[DatasetCandidate]:
+    """A workbook or ZIP candidate as one candidate per table in it (sheet or member), each
+    with its header; a file holding one table stays one candidate, with its header. The file
+    is downloaded to look inside (the download is reused if a part is picked). If it cannot
+    be fetched or read, the candidate is returned rejected with why."""
+    try:
+        d = fetcher.download(c.url, cache_dir, doi=c.doi, license=c.license, suffix=c.format)
+        parts = table_parts(Path(d.path))
+    except (DownloadRejected, httpx.HTTPError, zipfile.BadZipFile, ValueError) as e:
+        log.warning("could not read the tables in %s: %r", c.url, e)
+        c.rejected_reason = f"tables could not be read: {e}"
+        return [c]
+    if not parts:
+        c.rejected_reason = "no sheet or file in it looks like a data table"
+        return [c]
+    if list(parts) == [None]:
+        c.columns = parts[None]
+        return [c]
+    log.info("%s: %d tables %s", c.url, len(parts), list(parts))
+    kind = "sheet" if file_format(c) == ".xlsx" else "file"
+    return [
+        c.model_copy(update={"part": name, "columns": cols, "title": f"{c.title} [{kind} {name}]"})
+        for name, cols in parts.items()
+    ]
 
 
 def dag_nodes(state: RunState) -> list[str]:
@@ -470,7 +516,8 @@ def pick(
     for c in usable[:max_downloads]:
         try:
             d = fetcher.download(c.url, cache_dir, doi=c.doi, license=c.license, suffix=c.format)
-            table = profile(Path(d.path))
+            table = profile(Path(d.path), c.part)
+            d = d.model_copy(update={"part": c.part})
         except (DownloadRejected, NotSingleTable, pd.errors.ParserError, httpx.HTTPError) as e:
             log.warning("candidate rank %s failed: %s", c.rank, e)
             c.rejected_reason = f"download failed: {e}"

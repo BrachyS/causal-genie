@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import math
 import zipfile
@@ -686,3 +687,117 @@ def test_rule_filter_keeps_a_reason_given_earlier() -> None:
     rule_filter(c, KW)
 
     assert (c.rejected_reason, c.access) == ("record lookup failed: 410 Gone", "open")
+
+
+# --- One candidate per sheet or ZIP member (T14.8) ---
+
+WORKBOOK_URL = "https://zenodo.org/records/9/files/licorice_trial.xlsx?download=1"
+
+
+def xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf) as w:
+        for name, frame in sheets.items():
+            frame.to_excel(w, sheet_name=name, index=False)
+    return buf.getvalue()
+
+
+TRIAL_SHEETS = {
+    "1. Patients": pd.DataFrame({"id": [1, 2], "age": [40, 50]}),
+    "1. Metadata": pd.DataFrame({"Notes": ["id is the patient"]}),
+    "2. Outcomes": pd.DataFrame({"treat": [1, 0], "pacu30min_throatPain": [0, 3]}),
+}
+
+
+@pytest.fixture
+def screen_workbook(make_llm, http, served, sample_state: RunState, tmp_path: Path):
+    """Screen one licorice workbook candidate, with the model's coverage outputs given."""
+
+    def run(body: bytes, *outcomes: str):
+        served[WORKBOOK_URL] = body
+        llm, _ = make_llm(list(outcomes))
+        client, seen = http
+        fetcher = dl.Fetcher(client)
+        c = make(WORKBOOK_URL, format=".xlsx", license="cc-by-4.0")
+        found = data.screen(
+            [c], sample_state, llm, fetcher, KW, ["throat"], read_index(INDEX), tmp_path
+        )
+        return found, fetcher, seen
+
+    return run
+
+
+def test_workbook_becomes_one_scored_candidate_per_data_sheet(screen_workbook) -> None:
+    found, _, seen = screen_workbook(
+        xlsx_bytes(TRIAL_SHEETS),
+        coverage({"licorice_gargle": None, "sore_throat": None}, FULL),
+    )
+
+    assert [(c.part, c.columns) for c in found] == [
+        ("1. Patients", ["id", "age"]),
+        ("2. Outcomes", ["treat", "pacu30min_throatPain"]),
+    ]
+    assert found[1].title == "licorice gargle data [sheet 2. Outcomes]"
+    assert (found[0].rejected_reason, found[1].rejected_reason) == (
+        "lacks licorice_gargle, sore_throat",
+        None,
+    )
+    assert {c.license for c in found} == {"cc-by-4.0"}
+    assert seen.count(WORKBOOK_URL) == 1
+
+
+def test_chosen_sheet_is_downloaded_once_profiled_and_kept_on_the_download(
+    screen_workbook, sample_state: RunState, tmp_path: Path
+) -> None:
+    found, fetcher, seen = screen_workbook(
+        xlsx_bytes(TRIAL_SHEETS),
+        coverage({"licorice_gargle": None, "sore_throat": None}, FULL),
+    )
+    sample_state.datasets = found
+    data.rank(found)
+
+    chosen = data.pick(sample_state, fetcher, tmp_path, max_downloads=3)
+
+    assert chosen is not None and chosen.part == "2. Outcomes"
+    assert sample_state.downloads[-1].part == "2. Outcomes"
+    assert sample_state.profile is not None
+    assert [c.name for c in sample_state.profile.columns] == ["treat", "pacu30min_throatPain"]
+    assert seen.count(WORKBOOK_URL) == 1  # the screening download is reused
+
+
+def test_single_sheet_workbook_is_scored_on_its_header(screen_workbook) -> None:
+    sheet = {"Sheet1": TRIAL_SHEETS["2. Outcomes"]}
+    (c,) = screen_workbook(xlsx_bytes(sheet), coverage(FULL))[0]
+
+    assert (c.part, c.columns, c.rejected_reason) == (
+        None,
+        ["treat", "pacu30min_throatPain"],
+        None,
+    )
+
+
+def test_unreadable_workbook_is_rejected_with_the_reason(screen_workbook) -> None:
+    (c,) = screen_workbook(b"not a workbook")[0]
+
+    assert (c.rejected_reason or "").startswith("tables could not be read")
+
+
+def test_workbook_screening_replays_offline(
+    screen_workbook, sample_state, make_llm, tmp_path
+) -> None:
+    out = coverage({"licorice_gargle": None, "sore_throat": None}, FULL)
+    live, fetcher, _ = screen_workbook(xlsx_bytes(TRIAL_SHEETS), out)
+    llm, _ = make_llm([out])
+
+    replayed = data.screen(
+        [make(WORKBOOK_URL, format=".xlsx", license="cc-by-4.0")],
+        sample_state,
+        llm,
+        dl.Fetcher.from_replay(fetcher.calls),
+        KW,
+        ["throat"],
+        read_index(INDEX),
+        tmp_path,
+    )
+
+    assert [c.model_dump() for c in replayed] == [c.model_dump() for c in live]
