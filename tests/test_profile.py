@@ -149,3 +149,14 @@ def test_a_data_sheet_whose_name_merely_starts_like_metadata_is_kept(tmp_path: P
         pd.DataFrame({"c": [1], "d": [2]}).to_excel(w, sheet_name="Notebook entries", index=False)
 
     assert list(table_parts(path)) == ["Metabolism", "Notebook entries"]
+
+
+def test_zip_parts_skip_files_macos_adds(tmp_path: Path) -> None:
+    path = tmp_path / "mac.zip"
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("data/plants.csv", "plot,co2\n1,400\n")
+        z.writestr("__MACOSX/data/._plants.csv", b"\x00\x05\x16\x07Mac OS X\xff\xfe")
+        z.writestr("data/._plants.csv", b"\x00\x05\x16\x07\xff")
+
+    assert table_parts(path) == {None: ["plot", "co2"]}
+    assert list(read_table(path).columns) == ["plot", "co2"]

@@ -481,3 +481,49 @@ def test_dryad_record_without_keys_is_rejected_and_recorded(make_http) -> None:
 
     assert seen == []
     assert fetcher.calls[0].error_type == "rejected"
+
+
+# --- Storage buckets are redirect targets only (T23.1): never a starting URL ---
+
+PORTAL_FILE = "https://ndownloader.figshare.com/files/22136049"
+PORTAL_STORAGE = (
+    "https://s3-eu-west-1.amazonaws.com/pstorage-rs-4828782598/22136049/rsbl20190922_si_004.xlsx"
+    "?X-Amz-Signature=abc"
+)
+
+
+@pytest.mark.parametrize(
+    "url", [FIGSHARE_STORAGE, DATAVERSE_STORAGE, DRYAD_STORAGE, PORTAL_STORAGE]
+)
+def test_storage_bucket_is_not_a_starting_url(make_http, tmp_path: Path, url: str) -> None:
+    http, seen = make_http(lambda r: httpx.Response(200, content=BODY))
+
+    assert allowlisted(url) is False
+    with pytest.raises(DownloadRejected, match="allowlist"):
+        download(url, http, tmp_path, doi=None, license=None, suffix=".csv")
+    assert seen == []
+
+
+def test_redirect_to_a_figshare_portal_bucket_is_followed(make_http, tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == PORTAL_FILE:
+            return httpx.Response(302, headers={"location": PORTAL_STORAGE})
+        return httpx.Response(200, content=BODY)
+
+    http, seen = make_http(handler)
+
+    assert download(
+        PORTAL_FILE, http, tmp_path, doi=None, license=None, suffix=".csv"
+    ).bytes == len(BODY)
+    assert len(seen) == 2
+
+
+def test_redirect_to_another_bucket_on_the_same_s3_host_is_rejected(
+    make_http, tmp_path: Path
+) -> None:
+    other = "https://s3-eu-west-1.amazonaws.com/someone-else/x.csv"
+    http, seen = make_http(lambda r: httpx.Response(302, headers={"location": other}))
+
+    with pytest.raises(DownloadRejected, match="allowlist"):
+        download(PORTAL_FILE, http, tmp_path, doi=None, license=None, suffix=".csv")
+    assert len(seen) == 1

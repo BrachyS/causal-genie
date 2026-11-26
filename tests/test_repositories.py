@@ -254,3 +254,82 @@ def test_dryad_keys_come_from_the_environment(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("DRYAD_CLIENT_ID", "id")
     monkeypatch.setenv("DRYAD_CLIENT_SECRET", "s")
     assert isinstance(DryadAuth.from_env(), DryadAuth)
+
+
+# --- Our World in Data charts (T23.1): each chart page has one full CSV ---
+
+OWID_META = "https://ourworldindata.org/grapher/co-emissions-per-capita.metadata.json"
+OWID_CSV = (
+    "https://ourworldindata.org/grapher/co-emissions-per-capita.csv"
+    "?v=1&csvType=full&useColumnShortNames=false"
+)
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        "https://ourworldindata.org/grapher/co-emissions-per-capita",
+        "https://ourworldindata.org/grapher/co-emissions-per-capita?tab=chart&country=USA~DEU",
+        "https://ourworldindata.org/grapher/co-emissions-per-capita.csv",
+    ],
+)
+def test_owid_chart_pages_map_to_their_metadata(page: str) -> None:
+    assert record_api(page) == OWID_META
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["https://ourworldindata.org/co2-emissions", "https://ourworldindata.org/explorers/co2"],
+)
+def test_owid_articles_and_explorers_are_not_charts(url: str) -> None:
+    assert record_api(url) is None
+
+
+def owid_web(meta: dict, renamed_from: str | None = None):
+    """A fake ourworldindata.org serving the chart metadata, optionally behind a rename."""
+    seen: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        if renamed_from and str(request.url) == renamed_from:
+            return httpx.Response(
+                301, headers={"location": "/grapher/co-emissions-per-capita.metadata.json"}
+            )
+        if str(request.url) == OWID_META:
+            return httpx.Response(200, json=meta)
+        return httpx.Response(404)
+
+    return httpx.Client(transport=httpx.MockTransport(handle)), seen
+
+
+def test_owid_chart_gives_its_full_csv_with_license_and_citation() -> None:
+    http, _ = owid_web(fixture("owid_metadata.json"))
+
+    (f,) = fetch_record(OWID_META, http, None)
+
+    assert (f.name, f.url, f.format) == ("co-emissions-per-capita.csv", OWID_CSV, ".csv")
+    assert f.license == "CC-BY-4.0"
+    assert f.record_title == (
+        "Our World in Data: CO₂ emissions per capita (tonnes per person; "
+        "Global Carbon Budget (2026); Population based on various sources (2024))"
+    )
+
+
+def test_owid_renamed_chart_is_followed_on_the_same_site() -> None:
+    old = "https://ourworldindata.org/grapher/co2-emissions-per-capita.metadata.json"
+    http, seen = owid_web(fixture("owid_metadata.json"), renamed_from=old)
+
+    (f,) = fetch_record(old, http, None)
+
+    assert f.url == OWID_CSV  # the new name, so the download needs no redirect
+    assert seen == [old, OWID_META]
+
+
+def test_owid_metadata_redirect_off_the_site_is_an_error() -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"location": "https://evil.example/m.json"})
+
+    http = httpx.Client(transport=httpx.MockTransport(handle))
+
+    with pytest.raises(httpx.HTTPError, match="left ourworldindata.org"):
+        fetch_record(OWID_META, http, None)

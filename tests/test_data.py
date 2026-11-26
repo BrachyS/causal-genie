@@ -4,6 +4,7 @@ import json
 import math
 import zipfile
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
@@ -801,3 +802,110 @@ def test_workbook_screening_replays_offline(
     )
 
     assert [c.model_dump() for c in replayed] == [c.model_dump() for c in live]
+
+
+# --- Our World in Data (T23.1) ---
+
+
+def test_owid_chart_page_from_search_becomes_its_csv_and_passes_the_rules(http, served) -> None:
+    client, _ = http
+    served["https://ourworldindata.org/grapher/co-emissions-per-capita.metadata.json"] = (
+        REPOS / "owid_metadata.json"
+    ).read_bytes()
+
+    (c,) = resolve_link(
+        "https://ourworldindata.org/grapher/co-emissions-per-capita?tab=chart",
+        "search",
+        "CO2 emissions per capita - Our World in Data",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+    rule_filter(c, ["emission"])
+
+    assert c.url.startswith("https://ourworldindata.org/grapher/co-emissions-per-capita.csv?")
+    assert (c.rejected_reason, c.access, c.license, c.format) == (None, "open", "CC-BY-4.0", ".csv")
+
+
+def test_owid_github_repo_files_are_named_repo_files_with_their_license(http) -> None:
+    client, _ = http
+
+    (c,) = resolve_link(
+        "https://github.com/owid/co2-data/blob/master/owid-co2-data.csv",
+        "search",
+        "",
+        "",
+        index=data.read_index(INDEX),
+        fetcher=dl.Fetcher(client),
+    )
+    rule_filter(c, ["co2"])
+
+    assert c.url == "https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv"
+    assert (c.license, c.rejected_reason) == ("CC-BY-4.0", None)
+
+
+# --- EPA AirData (T23.1): catalog files matched to the question's pollutant and years ---
+
+
+SEARCHED = datetime(2026, 11, 26, tzinfo=UTC)
+
+
+def lockdown_state(sample_state: RunState) -> RunState:
+    assert sample_state.query is not None
+    q = sample_state.query.model_copy(
+        update={
+            "exposure": sample_state.query.exposure.model_copy(update={"name": "covid_lockdown"}),
+            "outcome": sample_state.query.outcome.model_copy(update={"name": "no2_concentration"}),
+            "time_window": "2019 vs 2020",
+        }
+    )
+    return sample_state.model_copy(update={"query": q})
+
+
+def test_airdata_files_for_the_pollutant_and_years_pass_the_rules(sample_state: RunState) -> None:
+    state = lockdown_state(sample_state)
+    kws = keywords(["covid_lockdown", "no2_concentration"])
+
+    cands = data.airdata_candidates(state, kws, SEARCHED)
+    for c in cands:
+        rule_filter(c, kws)
+
+    urls = {c.url for c in cands}
+    assert "https://aqs.epa.gov/aqsweb/airdata/daily_42602_2019.zip" in urls
+    assert "https://aqs.epa.gov/aqsweb/airdata/daily_42602_2020.zip" in urls
+    assert not any("44201" in u for u in urls)  # an ozone file matches neither word
+    assert {(c.rejected_reason, c.access, c.license, c.source) for c in cands} == {
+        (None, "open", "US-Public-Domain", "repository")
+    }
+
+
+def test_no_airdata_files_when_the_question_is_not_about_air(sample_state: RunState) -> None:
+    kws = keywords(["licorice_gargle", "sore_throat"])
+
+    assert data.airdata_candidates(sample_state, kws, SEARCHED) == []
+
+
+def test_airdata_matches_only_pollutant_and_air_words_not_county(sample_state: RunState) -> None:
+    births = keywords(["full_moon", "birth_count"])  # `count` starts "county"
+
+    assert data.airdata_candidates(sample_state, births, SEARCHED) == []
+
+
+def test_owid_license_is_only_for_the_named_owid_repos() -> None:
+    c = candidate(
+        "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/README.md",
+        "search",
+        "t",
+        "",
+    )
+
+    assert c.license is None
+
+
+@pytest.mark.parametrize("lic", ["cc-zero", "CC0 1.0", "https://spdx.org/licenses/CC0-1.0.html"])
+def test_cc0_spellings_count_as_open(lic: str) -> None:
+    c = make(LICORICE, license=lic)
+
+    rule_filter(c, KW)
+
+    assert c.rejected_reason is None
