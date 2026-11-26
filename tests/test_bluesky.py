@@ -143,6 +143,19 @@ def test_publish_marks_merged_picks_answered_and_posts_each_once(db, tmp_path) -
     assert sum(path.endswith("createRecord") for path, _ in fake.requests) == 1
 
 
+def test_a_pick_rerun_before_merging_still_posts(db, tmp_path) -> None:
+    qid = _running(db, tmp_path, "Does tea cause calm?", "r-rerun")
+    board_db.set_status(db, qid, "running", run_id="r-first")  # the board kept the first run
+    fake = FakeBluesky()
+
+    with httpx.Client(transport=httpx.MockTransport(fake)) as http:
+        bluesky.publish(db, tmp_path, http, "genie.bsky.social", "pw", APP)
+
+    q = board_db.get_question(db, qid)
+    assert (q.status, q.run_id) == ("answered", "r-rerun")
+    assert sum(path.endswith("createRecord") for path, _ in fake.requests) == 1
+
+
 def test_publish_posts_only_the_oldest_waiting_pick_each_day(db, tmp_path) -> None:
     newer = _running(db, tmp_path, "Does coffee cause drowsiness?", "20261117-185820-d30072")
     older = _running(db, tmp_path, "Does music cause better exams?", "20261116-040302-aaaaaa")
