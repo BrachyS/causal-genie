@@ -30,12 +30,19 @@ from causal_genie.tools.repositories import (
 )
 
 # host → allowed path prefixes (PRD §5.6). GitHub is limited to the named repos.
-GITHUB_REPOS = ("/fivethirtyeight/data/", "/higgi13425/medicaldata/")
+GITHUB_REPOS = (
+    "/fivethirtyeight/data/",
+    "/higgi13425/medicaldata/",
+    "/owid/co2-data/",  # Our World in Data (CC BY 4.0)
+    "/owid/energy-data/",
+)
 ALLOWLIST: dict[str, tuple[str, ...]] = {
     "zenodo.org": ("/",),
     "dataverse.harvard.edu": ("/",),
     "datadryad.org": ("/",),
     "figshare.com": ("/",),
+    "ourworldindata.org": ("/grapher/",),  # chart CSVs; articles are not data
+    "aqs.epa.gov": ("/aqsweb/airdata/",),  # EPA AirData pre-generated files
     "ndownloader.figshare.com": ("/",),
     "osf.io": ("/",),
     "files.osf.io": ("/",),
@@ -43,11 +50,14 @@ ALLOWLIST: dict[str, tuple[str, ...]] = {
     "clinicaltrials.gov": ("/",),
     "github.com": GITHUB_REPOS,
     "raw.githubusercontent.com": GITHUB_REPOS,
-    # Storage that figshare and Harvard Dataverse downloads redirect to (signed links); only
-    # these buckets, and only reached as a redirect hop from the repository's own URL.
+}
+# Storage that repository downloads redirect to with signed links: allowed only as a redirect
+# hop from an allowlisted URL, never as a starting URL (a search hit or paper link).
+STORAGE: dict[str, tuple[str, ...]] = {
     "44c1cec316ec56bca76dfd65d2882b20.r2.cloudflarestorage.com": ("/figshare-com-storage/",),
-    "dvn-cloud-iqss.s3.amazonaws.com": ("/",),
-    "dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com": ("/",),
+    "s3-eu-west-1.amazonaws.com": ("/pstorage-",),  # figshare portals (journals, institutions)
+    "dvn-cloud-iqss.s3.amazonaws.com": ("/",),  # Harvard Dataverse
+    "dryad-assetstore-merritt-west.s3.us-west-2.amazonaws.com": ("/",),  # Dryad
 }
 FORMATS = {".csv", ".tsv", ".xlsx", ".parquet", ".zip"}
 MAX_BYTES = 50 * 1024 * 1024
@@ -67,19 +77,22 @@ def resolve_ips(host: str) -> list[str]:
     return [str(info[4][0]) for info in socket.getaddrinfo(host, 443)]
 
 
-def allowlisted(url: str) -> bool:
-    """https on an allowlisted host and path; no network, so the rule filter can use it."""
+def allowlisted(url: str, redirect: bool = False) -> bool:
+    """https on an allowlisted host and path; a redirect hop may also go to a repository's
+    storage (`STORAGE`). No network, so the rule filter can use it."""
     parts = urlsplit(url)
-    prefixes = ALLOWLIST.get(parts.hostname or "", ())
+    host = parts.hostname or ""
+    prefixes = ALLOWLIST.get(host, ()) + (STORAGE.get(host, ()) if redirect else ())
     return parts.scheme == "https" and any(parts.path.startswith(p) for p in prefixes)
 
 
-def check_url(url: str) -> None:
-    """Raise `DownloadRejected` unless `url` is https, allowlisted and resolves to public IPs."""
+def check_url(url: str, redirect: bool = False) -> None:
+    """Raise `DownloadRejected` unless `url` is https, allowlisted (storage too when it is a
+    redirect hop) and resolves to public IPs."""
     parts = urlsplit(url)
     if parts.scheme != "https":
         raise DownloadRejected(f"https only: {url}")
-    if not allowlisted(url):
+    if not allowlisted(url, redirect):
         raise DownloadRejected(f"not on the allowlist: {url}")
     host = parts.hostname or ""
     private = [ip for ip in resolve_ips(host) if not ipaddress.ip_address(ip).is_global]
@@ -101,8 +114,8 @@ def open_checked(
     the private-network rule before it is requested. With `dryad`, hops to datadryad.org
     carry its token; no other host (such as the storage a download redirects to) gets it."""
     current = url
-    for _ in range(MAX_REDIRECTS + 1):
-        check_url(current)
+    for hop in range(MAX_REDIRECTS + 1):
+        check_url(current, redirect=hop > 0)
         to_dryad = dryad is not None and urlsplit(current).hostname == DRYAD_HOST
         headers = dryad.headers(http) if dryad is not None and to_dryad else None
         with http.stream("GET", current, headers=headers, follow_redirects=False) as response:

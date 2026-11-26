@@ -1,0 +1,16 @@
+{
+ "chart": {
+  "title": "CO₂ emissions per capita",
+  "citation": "Global Carbon Budget (2026); Population based on various sources (2024)",
+  "originalChartUrl": "https://ourworldindata.org/grapher/co-emissions-per-capita"
+ },
+ "columns": {
+  "Annual CO₂ emissions (per capita)": {
+   "titleShort": "CO₂ emissions per capita",
+   "titleLong": "CO₂ emissions per capita",
+   "unit": "tonnes per person",
+   "citationShort": "Global Carbon Budget (2026); Population based on various sources (2024) – with major processing by Our World in Data",
+   "descriptionShort": "Carbon dioxide (CO₂) emissions from burning fossil fuels and industrial processes. This includes emissions from transport, electricity generation, and heating, but not land-use change."
+  }
+ }
+}

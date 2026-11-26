@@ -10,6 +10,10 @@ Dryad's API and file downloads need a bearer token from the account's client ID 
 (`DRYAD_CLIENT_ID`, `DRYAD_CLIENT_SECRET` in `.env`); `DryadAuth` gets and renews it. The
 token is sent only to datadryad.org and is never logged or recorded on a run.
 
+An Our World in Data chart page maps to its metadata JSON the same way, and gives one file:
+the chart's full CSV (CC BY 4.0 by OWID's terms; third-party source data keeps its own
+terms, so the citation goes in the title).
+
 Not covered: OSF (files sit in nested folders and download from regional storage hosts).
 """
 
@@ -46,6 +50,13 @@ DRYAD = re.compile(
     r"(dryad\.[a-z0-9]+)/?(?:[?#].*)?",
     re.IGNORECASE,
 )
+OWID = re.compile(
+    r"https://ourworldindata\.org/grapher/([a-z0-9-]+?)(?:\.csv|\.metadata\.json)?/?(?:[?#].*)?"
+)
+OWID_HOST = "ourworldindata.org"
+OWID_CSV_QUERY = "?v=1&csvType=full&useColumnShortNames=false"
+OWID_LICENSE = "CC-BY-4.0"
+OWID_MAX_REDIRECTS = 3  # chart renames redirect once; more is not a rename
 DATAVERSE_API = "https://dataverse.harvard.edu/api"
 DRYAD_HOST = "datadryad.org"
 DRYAD_API = f"https://{DRYAD_HOST}/api/v2"
@@ -57,8 +68,8 @@ FORMAT_ALIASES = {".tab": ".tsv"}
 
 
 def record_api(url: str) -> str | None:
-    """The metadata API URL for a Zenodo, figshare or Dataverse record page or DOI link; None
-    for any other link."""
+    """The metadata API URL for a Zenodo, figshare, Dataverse or Dryad record page or DOI
+    link, or an Our World in Data chart page; None for any other link."""
     if m := ZENODO.fullmatch(url):
         return f"https://zenodo.org/api/records/{m[1]}"
     if m := FIGSHARE.fullmatch(url):
@@ -68,6 +79,8 @@ def record_api(url: str) -> str | None:
     # Search results can give Dryad links percent-encoded twice (`doi%253A10.5061%252F…`).
     if m := DRYAD.fullmatch(unquote(unquote(url))):
         return f"{DRYAD_API}/datasets/doi%3A10.5061%2F{m[1].lower()}"
+    if m := OWID.fullmatch(url):
+        return f"https://{OWID_HOST}/grapher/{m[1]}.metadata.json"
     return None
 
 
@@ -118,6 +131,8 @@ class DryadAuth:
 def fetch_record(api_url: str, http: httpx.Client, dryad: DryadAuth | None) -> list[RepositoryFile]:
     """A record's files from its metadata API: one request, or for Dryad the dataset then its
     latest version's file list, page by page, each with the token (`dryad` must be given)."""
+    if api_url.startswith(f"https://{OWID_HOST}/"):
+        return owid_files(api_url, http)
     if not is_dryad(api_url):
         response = http.get(api_url)
         response.raise_for_status()
@@ -166,6 +181,38 @@ def file_format(name: str) -> str:
     """The table format a file name says, lowercased (`x.CSV` → `.csv`, `x.tab` → `.tsv`)."""
     suffix = PurePosixPath(name).suffix.lower()
     return FORMAT_ALIASES.get(suffix, suffix)
+
+
+def owid_files(api_url: str, http: httpx.Client) -> list[RepositoryFile]:
+    """An Our World in Data chart's full CSV, from its metadata. A renamed chart redirects
+    to its new name; that is followed only within ourworldindata.org, and the CSV uses the
+    new name. Each hop's host is checked before it is requested."""
+    response = http.get(api_url)
+    for _ in range(OWID_MAX_REDIRECTS):
+        if not response.is_redirect:
+            break
+        target = response.url.join(response.headers["location"])
+        if target.host != OWID_HOST:
+            raise httpx.HTTPError(f"OWID metadata redirect left {OWID_HOST}: {target}")
+        response = http.get(target)
+    response.raise_for_status()
+    meta = response.json()
+    slug = response.url.path.removeprefix("/grapher/").removesuffix(".metadata.json")
+    chart = meta.get("chart", {})
+    units = sorted({c["unit"] for c in meta.get("columns", {}).values() if c.get("unit")})
+    about = "; ".join([*units, *([chart["citation"]] if chart.get("citation") else [])])
+    title = f"Our World in Data: {chart.get('title', slug)}" + (f" ({about})" if about else "")
+    return [
+        RepositoryFile(
+            name=f"{slug}.csv",
+            url=f"https://{OWID_HOST}/grapher/{slug}.csv{OWID_CSV_QUERY}",
+            format=".csv",
+            bytes=None,
+            license=OWID_LICENSE,
+            doi=None,
+            record_title=title,
+        )
+    ]
 
 
 def parse_record(api_url: str, body: dict) -> list[RepositoryFile]:

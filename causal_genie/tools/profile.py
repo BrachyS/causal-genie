@@ -44,8 +44,15 @@ def read_table(path: Path, part: str | None = None) -> pd.DataFrame:
 
 
 def zip_tables(z: zipfile.ZipFile) -> list[str]:
-    """Members of a ZIP that are tables, by extension."""
-    return [n for n in z.namelist() if PurePosixPath(n).suffix.lower() in TABLE_FORMATS]
+    """Members of a ZIP that are tables, by extension. The `__MACOSX/` folder and `._` files
+    that zipping on a Mac adds are file attributes, not tables, so they are left out."""
+    return [
+        n
+        for n in z.namelist()
+        if PurePosixPath(n).suffix.lower() in TABLE_FORMATS
+        and not n.startswith("__MACOSX/")
+        and not PurePosixPath(n).name.startswith("._")
+    ]
 
 
 def read_bytes(body: bytes, suffix: str, sheet: str | None = None) -> pd.DataFrame:

@@ -32,6 +32,7 @@ from causal_genie.agent.state import (
     SourceKind,
 )
 from causal_genie.llm.client import LLMClient
+from causal_genie.tools.airdata import airdata_files, question_years
 from causal_genie.tools.derive import DATE_RULES
 from causal_genie.tools.download import (
     ALLOWLIST,
@@ -68,13 +69,28 @@ RESTRICTED_HOSTS = (
 MULTI_TABLE = {
     "cdc.gov/nchs/nhanes": "NHANES: separate files joined on SEQN, with survey weights",
 }
-OPEN_LICENSES = ("cc0", "cc-by", "cc by", "mit", "gpl", "bsd", "apache", "odbl", "pddl", "public")
+OPEN_LICENSES = (
+    "cc0",
+    "cc-zero",
+    "cc-by",
+    "cc by",
+    "mit",
+    "gpl",
+    "bsd",
+    "apache",
+    "odbl",
+    "pddl",
+    "public",
+)
 # Licenses of named sources, checked by hand in the T3 dataset audit (URL prefix → license).
 LICENSES = {
     "https://raw.githubusercontent.com/fivethirtyeight/data/": "CC-BY-4.0",
     f"{RDATASETS}/csv/fivethirtyeight/": "CC-BY-4.0",
     "https://raw.githubusercontent.com/higgi13425/medicaldata/": "MIT",
     f"{RDATASETS}/csv/medicaldata/": "MIT",
+    "https://raw.githubusercontent.com/owid/co2-data/": "CC-BY-4.0",
+    "https://raw.githubusercontent.com/owid/energy-data/": "CC-BY-4.0",
+    "https://aqs.epa.gov/aqsweb/airdata/": "US-Public-Domain",
 }
 STOPWORDS = {"the", "and", "for", "with", "from", "any", "per", "day", "post", "pre", "number"}
 
@@ -95,7 +111,9 @@ def find_data(
     `state.downloads` / `state.profile`), or None if no usable single table was found."""
     assert state.query is not None, "frame the question before looking for data"
     exposure, outcome = state.query.exposure.name, state.query.outcome.name
-    index = read_index(fetcher.download(RDATASETS_INDEX, cache_dir, doi=None, license=None).path)
+    listing = fetcher.download(RDATASETS_INDEX, cache_dir, doi=None, license=None)
+    index = read_index(listing.path)
+    searched = datetime.fromisoformat(listing.retrieved_at)  # recorded, so replays agree
     kws = keywords([exposure, outcome])
 
     found = paper_candidates(state, index, fetcher)
@@ -103,6 +121,7 @@ def find_data(
         searcher, f"{words(exposure)} {words(outcome)} dataset", index, fetcher
     )
     found += repository_candidates(index, kws)
+    found += airdata_candidates(state, kws, searched)
     state.datasets = screen(
         unique(found), state, llm, fetcher, kws, keywords([outcome]), index, cache_dir
     )
@@ -307,6 +326,21 @@ def repository_candidates(index: pd.DataFrame, kws: list[str]) -> list[DatasetCa
     """Rdatasets tables whose package, name or title contains a keyword."""
     hits = index_text(index).apply(lambda t: any(mentions(t, kw) for kw in kws))
     return [index_candidate(row, "repository") for _, row in index[hits].iterrows()]
+
+
+def airdata_candidates(
+    state: RunState, kws: list[str], searched: datetime
+) -> list[DatasetCandidate]:
+    """EPA AirData files for the question's years whose title shares a keyword with it (e.g.
+    `no2`, `ozone`, `aqi`); none for a question that names no pollutant or air quality.
+    `searched` is when the data search ran, for the default year."""
+    assert state.query is not None
+    years = question_years(state.query.time_window, searched)
+    return [
+        candidate(f.url, "repository", f.title, f.description)
+        for f in airdata_files(years)
+        if any(mentions(f.topic, kw) for kw in kws)
+    ]
 
 
 def unique(found: list[DatasetCandidate]) -> list[DatasetCandidate]:
