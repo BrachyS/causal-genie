@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from causal_genie.tools.profile import NotSingleTable, profile, read_table
+from causal_genie.tools.profile import NotSingleTable, profile, read_table, table_parts
 
 CSV = "treat,pain,arm\n1,0,zebra\n0,3,okapi\n1,,zebra\n0,5,okapi\n"
 
@@ -67,3 +67,85 @@ def test_xlsx_with_several_sheets_is_not_usable_in_mvp(tmp_path: Path) -> None:
 
     with pytest.raises(NotSingleTable, match="2 sheets"):
         read_table(path)
+
+
+# --- One table per sheet or ZIP member (T14.8): each part is its own candidate ---
+
+
+def workbook(path: Path) -> Path:
+    """A workbook like Dryad's: two data sheets and a one-column metadata sheet."""
+    with pd.ExcelWriter(path) as w:
+        pd.DataFrame({"plot": [1, 2], "herbivory": [0.1, 0.4]}).to_excel(
+            w, sheet_name="1. Field data", index=False
+        )
+        pd.DataFrame({"Notes": ["column plot is..."]}).to_excel(
+            w, sheet_name="1. Metadata", index=False
+        )
+        pd.DataFrame({"plot": [1], "fruits": [3], "deer": [0]}).to_excel(
+            w, sheet_name="2. Fruit data", index=False
+        )
+    return path
+
+
+def test_parts_of_a_workbook_are_its_data_sheets_with_their_headers(tmp_path: Path) -> None:
+    path = workbook(tmp_path / "w.xlsx")
+
+    assert table_parts(path) == {
+        "1. Field data": ["plot", "herbivory"],
+        "2. Fruit data": ["plot", "fruits", "deer"],
+    }  # a sheet with fewer than 2 named columns (notes, metadata) is not a table
+
+
+def test_one_sheet_of_a_workbook_is_read_and_profiled(tmp_path: Path) -> None:
+    path = workbook(tmp_path / "w.xlsx")
+
+    assert list(read_table(path, "2. Fruit data").columns) == ["plot", "fruits", "deer"]
+    assert profile(path, "2. Fruit data").rows == 1
+    with pytest.raises(NotSingleTable):
+        read_table(path)  # still one table per file unless a part is named
+
+
+def test_parts_of_a_zip_are_its_table_members(tmp_path: Path) -> None:
+    path = tmp_path / "two.zip"
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("data/a.csv", "x,y\n1,2\n")
+        z.writestr("data/b.tsv", "u\tv\tw\n1\t2\t3\n")
+        z.writestr("README.txt", "about")
+
+    assert table_parts(path) == {"data/a.csv": ["x", "y"], "data/b.tsv": ["u", "v", "w"]}
+    assert list(read_table(path, "data/b.tsv").columns) == ["u", "v", "w"]
+
+
+def test_parts_of_a_single_table_file_is_that_table(tmp_path: Path) -> None:
+    path = tmp_path / "one.xlsx"
+    pd.DataFrame({"x": [1], "y": [2]}).to_excel(path, index=False)
+
+    assert table_parts(path) == {None: ["x", "y"]}
+
+
+def test_a_missing_part_is_an_error(tmp_path: Path) -> None:
+    path = workbook(tmp_path / "w.xlsx")
+
+    with pytest.raises(ValueError, match="no sheet"):
+        read_table(path, "3. Gone")
+
+
+@pytest.mark.parametrize("name", ["2. Metadata", "README", "Notes", "Codebook", "data dictionary"])
+def test_sheets_named_as_documentation_are_not_tables(tmp_path: Path, name: str) -> None:
+    path = tmp_path / "w.xlsx"
+    with pd.ExcelWriter(path) as w:
+        pd.DataFrame({"a": [1], "b": [2]}).to_excel(w, sheet_name="data", index=False)
+        pd.DataFrame({"Patch": ["p"], "Patch number in the field": ["x"]}).to_excel(
+            w, sheet_name=name, index=False
+        )
+
+    assert list(table_parts(path)) == ["data"]
+
+
+def test_a_data_sheet_whose_name_merely_starts_like_metadata_is_kept(tmp_path: Path) -> None:
+    path = tmp_path / "w.xlsx"
+    with pd.ExcelWriter(path) as w:
+        pd.DataFrame({"a": [1], "b": [2]}).to_excel(w, sheet_name="Metabolism", index=False)
+        pd.DataFrame({"c": [1], "d": [2]}).to_excel(w, sheet_name="Notebook entries", index=False)
+
+    assert list(table_parts(path)) == ["Metabolism", "Notebook entries"]

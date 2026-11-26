@@ -210,6 +210,7 @@ class Fetcher:
     ) -> None:
         self.http = http
         self.dryad = dryad  # Dryad keys; without them Dryad records are rejected
+        self._downloaded: dict[str, Download] = {}  # URL → this run's download of it
         self.replay = {(c.kind, c.url): c for c in replay or []}
         self.calls: list[FetchCall] = []
 
@@ -226,7 +227,11 @@ class Fetcher:
         license: str | None,
         suffix: str | None = None,
     ) -> Download:
-        """`download()` live; in replay, the recorded file from `cache_dir`, checksum checked."""
+        """`download()` live; in replay, the recorded file from `cache_dir`, checksum checked.
+        A URL already downloaded in this run (to look inside a workbook while screening) is
+        not fetched again."""
+        if url in self._downloaded:
+            return self._downloaded[url]
         if self.http is None:
             d = self._replayed("download", url).download
             assert d is not None
@@ -243,6 +248,7 @@ class Fetcher:
             lambda: download(url, http, cache_dir, doi, license, suffix=suffix, dryad=self.dryad),
         )
         self.calls[-1].download = d
+        self._downloaded[url] = d
         return d
 
     def peek(self, url: str, suffix: str | None = None) -> list[str]:

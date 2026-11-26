@@ -185,7 +185,7 @@ def analyze(
     assert mapping is not None
     with state.timed("estimate"):
         table_file = state.downloads[-1]
-        table = node_table(read_table(Path(table_file.path)), mapping)
+        table = node_table(read_table(Path(table_file.path), table_file.part), mapping)
         # A node with no values at all (e.g. a date rule applied to a weekday-name column)
         # would drop every row: leave it out, as if unmapped.
         empty = [node for node in by_node if table[node].isna().all()]

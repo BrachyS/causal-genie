@@ -347,6 +347,7 @@ class DatasetCandidate(Schema):
     study_id: str | None = None  # the included study whose data link gave this table
     format: str | None = None  # e.g. ".csv", from a repository's file name when the URL has none
     doi: str | None = None  # the repository record's DOI, kept on the download
+    part: str | None = None  # the sheet or ZIP member this candidate is, in a multi-table file
 
 
 class NodeColumn(Schema):
@@ -510,6 +511,7 @@ class Download(Schema):
     retrieved_at: str  # ISO 8601, UTC
     doi: str | None
     license: str | None
+    part: str | None = None  # the sheet or ZIP member analysed, in a multi-table file
 
 
 class ListedFile(Schema):
